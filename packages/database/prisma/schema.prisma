@@ -1,0 +1,250 @@
+// =============================================================================
+// DevTechs - Prisma schema
+//
+// Initial version: authentication & permissions domain only.
+// Future modules (RH, Financeiro, Projetos, etc.) will be added in
+// subsequent migrations.
+// =============================================================================
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// Enums
+// -----------------------------------------------------------------------------
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BANNED
+}
+
+enum PermissionModule {
+  RH
+  FINANCEIRO
+  PROJETOS
+  SUPORTE
+  PAGAMENTOS
+  LICENCAS
+  DEVOPS
+  DEVELOPER
+}
+
+enum OAuthProvider {
+  GOOGLE
+  GITHUB
+}
+
+// -----------------------------------------------------------------------------
+// Core identity
+// -----------------------------------------------------------------------------
+
+model User {
+  id              String     @id @default(cuid())
+  email           String     @unique
+  name            String
+  passwordHash    String
+  emailVerified   Boolean    @default(false)
+  emailVerifiedAt DateTime?
+  twoFactorEnabled Boolean   @default(false)
+  twoFactorSecret String?
+  status          UserStatus @default(ACTIVE)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+
+  // Relations
+  roles             UserRole[]
+  extraPermissions  UserPermission[]
+  sessions          Session[]
+  auditLogs         AuditLog[]
+  emailVerifications EmailVerification[]
+  passwordResets    PasswordReset[]
+  oauthAccounts     OAuthAccount[]
+
+  // Relations where this user is the one performing the assignment
+  rolesAssigned       UserRole[]       @relation("UserRoleAssignedBy")
+  permissionsAssigned UserPermission[] @relation("UserPermissionAssignedBy")
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model Role {
+  id                   String   @id @default(cuid())
+  name                 String   @unique
+  description          String?
+  isSystem             Boolean  @default(false)
+  requireEmailVerified Boolean  @default(false)
+  require2FA           Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  name        String
+  description String?
+  module      PermissionModule
+  createdAt   DateTime         @default(now())
+
+  roles RolePermission[]
+  users UserPermission[]
+
+  @@index([module])
+  @@map("permissions")
+}
+
+// -----------------------------------------------------------------------------
+// Join tables
+// -----------------------------------------------------------------------------
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  assignedAt   DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId     String
+  roleId     String
+  assignedBy String?
+  assignedAt DateTime @default(now())
+
+  user     User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     Role  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assigner User? @relation("UserRoleAssignedBy", fields: [assignedBy], references: [id], onDelete: SetNull)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@index([assignedBy])
+  @@map("user_roles")
+}
+
+/// Extra permission granted directly to a user (bypasses role).
+model UserPermission {
+  userId       String
+  permissionId String
+  assignedBy   String?
+  assignedAt   DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  assigner   User?      @relation("UserPermissionAssignedBy", fields: [assignedBy], references: [id], onDelete: SetNull)
+
+  @@id([userId, permissionId])
+  @@index([permissionId])
+  @@index([assignedBy])
+  @@map("user_permissions")
+}
+
+// -----------------------------------------------------------------------------
+// Sessions & tokens
+// -----------------------------------------------------------------------------
+
+model Session {
+  id           String    @id @default(uuid())
+  userId       String
+  token        String    @unique
+  refreshToken String    @unique
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+  revokedAt    DateTime?
+  ipAddress    String?
+  userAgent    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model EmailVerification {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("email_verifications")
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_resets")
+}
+
+model OAuthAccount {
+  id                String        @id @default(cuid())
+  userId            String
+  provider          OAuthProvider
+  providerAccountId String        @unique
+  createdAt         DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
+// -----------------------------------------------------------------------------
+// Audit
+// -----------------------------------------------------------------------------
+
+model AuditLog {
+  id         String           @id @default(cuid())
+  userId     String?
+  action     String
+  module     PermissionModule
+  resourceId String?
+  meta       Json             @default("{}")
+  ipAddress  String?
+  createdAt  DateTime         @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([module])
+  @@index([userId, module])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

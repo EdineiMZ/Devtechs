@@ -1,4 +1,8 @@
 /**
- * @devtechs/database - shared package entrypoint.
+ * @devtechs/database - shared Prisma client and generated types.
+ *
+ * Importers should use the named `prisma` export (a singleton client)
+ * and re-export model/enum types straight from `@prisma/client`.
  */
-export const PACKAGE_NAME = '@devtechs/database';
+export { prisma } from './client';
+export * from '@prisma/client';
