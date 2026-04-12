@@ -1,0 +1,17 @@
+{
+  "name": "@devtechs/utils",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --passWithNoTests"
+  },
+  "devDependencies": {
+    "@devtechs/config": "workspace:*",
+    "typescript": "^5.4.0"
+  }
+}

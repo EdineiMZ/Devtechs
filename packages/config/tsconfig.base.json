@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "incremental": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@devtechs/ui": ["../ui/src"],
+      "@devtechs/ui/*": ["../ui/src/*"],
+      "@devtechs/types": ["../types/src"],
+      "@devtechs/types/*": ["../types/src/*"],
+      "@devtechs/auth": ["../auth/src"],
+      "@devtechs/auth/*": ["../auth/src/*"],
+      "@devtechs/utils": ["../utils/src"],
+      "@devtechs/utils/*": ["../utils/src/*"],
+      "@devtechs/database": ["../database/src"],
+      "@devtechs/database/*": ["../database/src/*"],
+      "@devtechs/storage": ["../storage/src"],
+      "@devtechs/storage/*": ["../storage/src/*"],
+      "@devtechs/license-sdk": ["../license-sdk/src"],
+      "@devtechs/license-sdk/*": ["../license-sdk/src/*"],
+      "@devtechs/config": ["../config"],
+      "@devtechs/config/*": ["../config/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "build", ".next", ".turbo", "coverage"]
+}
