@@ -1,55 +1,427 @@
 version: "3.9"
 
+# -----------------------------------------------------------------------------
+# DevTechs - docker-compose base
+#
+# All services share the `devtechs` network and read secrets from the root
+# `.env` file (copy `.env.example` to `.env` and fill in real values).
+# Each NestJS microservice is built from its own workspace in `services/`
+# via a multi-stage Dockerfile that understands pnpm workspaces.
+# -----------------------------------------------------------------------------
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  env_file:
+    - ../.env
+  networks:
+    - devtechs
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
 services:
+  # ---------------------------------------------------------------------------
+  # Infra
+  # ---------------------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
     container_name: devtechs-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: devtechs
-      POSTGRES_PASSWORD: devtechs
-      POSTGRES_DB: devtechs
+      POSTGRES_USER: ${POSTGRES_USER:-devtechs}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devtechs}
+      POSTGRES_DB: ${POSTGRES_DB:-devtechs}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - devtechs
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-devtechs} -d ${POSTGRES_DB:-devtechs}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
     container_name: devtechs-redis
     restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
-
-  minio:
-    image: minio/minio:latest
-    container_name: devtechs-minio
-    restart: unless-stopped
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - minio_data:/data
+    networks:
+      - devtechs
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   nginx:
-    image: nginx:1.27-alpine
+    image: nginx:alpine
     container_name: devtechs-nginx
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "80:80"
+      - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    networks:
+      - devtechs
     depends_on:
-      - postgres
-      - redis
+      - auth-service
+      - rh-service
+      - finance-service
+      - projects-service
+      - devops-service
+      - support-service
+      - payments-service
+      - notification-service
+      - license-service
+      - developer-service
+      - web
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # NestJS microservices
+  # ---------------------------------------------------------------------------
+  auth-service:
+    <<: *service-defaults
+    container_name: devtechs-auth-service
+    build:
+      context: ..
+      dockerfile: services/auth-service/Dockerfile
+    environment:
+      PORT: 3001
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET}
+    expose:
+      - "3001"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  rh-service:
+    <<: *service-defaults
+    container_name: devtechs-rh-service
+    build:
+      context: ..
+      dockerfile: services/rh-service/Dockerfile
+    environment:
+      PORT: 3002
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+    expose:
+      - "3002"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  finance-service:
+    <<: *service-defaults
+    container_name: devtechs-finance-service
+    build:
+      context: ..
+      dockerfile: services/finance-service/Dockerfile
+    environment:
+      PORT: 3003
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+    expose:
+      - "3003"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  projects-service:
+    <<: *service-defaults
+    container_name: devtechs-projects-service
+    build:
+      context: ..
+      dockerfile: services/projects-service/Dockerfile
+    environment:
+      PORT: 3004
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+    expose:
+      - "3004"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3004/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  devops-service:
+    <<: *service-defaults
+    container_name: devtechs-devops-service
+    build:
+      context: ..
+      dockerfile: services/devops-service/Dockerfile
+    environment:
+      PORT: 3005
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+    expose:
+      - "3005"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3005/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  support-service:
+    <<: *service-defaults
+    container_name: devtechs-support-service
+    build:
+      context: ..
+      dockerfile: services/support-service/Dockerfile
+    environment:
+      PORT: 3006
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+    expose:
+      - "3006"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3006/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  payments-service:
+    <<: *service-defaults
+    container_name: devtechs-payments-service
+    build:
+      context: ..
+      dockerfile: services/payments-service/Dockerfile
+    environment:
+      PORT: 3007
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+    expose:
+      - "3007"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3007/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  notification-service:
+    <<: *service-defaults
+    container_name: devtechs-notification-service
+    build:
+      context: ..
+      dockerfile: services/notification-service/Dockerfile
+    environment:
+      PORT: 3008
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+    expose:
+      - "3008"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3008/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  license-service:
+    <<: *service-defaults
+    container_name: devtechs-license-service
+    build:
+      context: ..
+      dockerfile: services/license-service/Dockerfile
+    environment:
+      PORT: 3009
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      LICENSE_SIGNING_KEY: ${LICENSE_SIGNING_KEY}
+    expose:
+      - "3009"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3009/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  developer-service:
+    <<: *service-defaults
+    container_name: devtechs-developer-service
+    build:
+      context: ..
+      dockerfile: services/developer-service/Dockerfile
+    environment:
+      PORT: 3010
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+    expose:
+      - "3010"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3010/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ---------------------------------------------------------------------------
+  # Next.js frontends
+  # ---------------------------------------------------------------------------
+  web:
+    restart: unless-stopped
+    container_name: devtechs-web
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    env_file:
+      - ../.env
+    environment:
+      PORT: 4000
+    expose:
+      - "4000"
+    networks:
+      - devtechs
+
+  rh:
+    restart: unless-stopped
+    container_name: devtechs-rh
+    build:
+      context: ..
+      dockerfile: apps/rh/Dockerfile
+    env_file:
+      - ../.env
+    environment:
+      PORT: 4001
+    expose:
+      - "4001"
+    networks:
+      - devtechs
+
+  financeiro:
+    restart: unless-stopped
+    container_name: devtechs-financeiro
+    build:
+      context: ..
+      dockerfile: apps/financeiro/Dockerfile
+    env_file:
+      - ../.env
+    environment:
+      PORT: 4002
+    expose:
+      - "4002"
+    networks:
+      - devtechs
+
+  projetos:
+    restart: unless-stopped
+    container_name: devtechs-projetos
+    build:
+      context: ..
+      dockerfile: apps/projetos/Dockerfile
+    env_file:
+      - ../.env
+    environment:
+      PORT: 4003
+    expose:
+      - "4003"
+    networks:
+      - devtechs
+
+  devops:
+    restart: unless-stopped
+    container_name: devtechs-devops
+    build:
+      context: ..
+      dockerfile: apps/devops/Dockerfile
+    env_file:
+      - ../.env
+    environment:
+      PORT: 4004
+    expose:
+      - "4004"
+    networks:
+      - devtechs
+
+  suporte:
+    restart: unless-stopped
+    container_name: devtechs-suporte
+    build:
+      context: ..
+      dockerfile: apps/suporte/Dockerfile
+    env_file:
+      - ../.env
+    environment:
+      PORT: 4005
+    expose:
+      - "4005"
+    networks:
+      - devtechs
+
+  store:
+    restart: unless-stopped
+    container_name: devtechs-store
+    build:
+      context: ..
+      dockerfile: apps/store/Dockerfile
+    env_file:
+      - ../.env
+    environment:
+      PORT: 4006
+    expose:
+      - "4006"
+    networks:
+      - devtechs
+
+  developer:
+    restart: unless-stopped
+    container_name: devtechs-developer
+    build:
+      context: ..
+      dockerfile: apps/developer/Dockerfile
+    env_file:
+      - ../.env
+    environment:
+      PORT: 4007
+    expose:
+      - "4007"
+    networks:
+      - devtechs
+
+networks:
+  devtechs:
+    driver: bridge
 
 volumes:
   postgres_data:
   redis_data:
-  minio_data:
