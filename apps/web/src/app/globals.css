@@ -1,0 +1,190 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * DevTechs design tokens — dark-first palette with electric-blue
+ * primary. Defined on both `:root` and `.dark` so shadcn/ui components
+ * (which check the `dark` class on <html>) render identically whether
+ * or not a higher-level dark-mode toggle is added later.
+ */
+@layer base {
+  :root,
+  .dark {
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+
+    --card: 222 47% 7%;
+    --card-foreground: 213 31% 91%;
+
+    --popover: 224 71% 4%;
+    --popover-foreground: 213 31% 91%;
+
+    /* Electric blue — #2F8BFF-ish */
+    --primary: 214 100% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 222 47% 11%;
+    --secondary-foreground: 213 31% 91%;
+
+    --muted: 223 47% 11%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 216 34% 17%;
+    --accent-foreground: 213 31% 91%;
+
+    --destructive: 0 63% 45%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 216 34% 20%;
+    --input: 216 34% 17%;
+    --ring: 214 100% 60%;
+
+    --radius: 0.5rem;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* Header is 4rem tall; keep a little breathing room so anchor jumps
+       don't land a headline flush against the bottom of the nav. */
+    scroll-padding-top: 5rem;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont,
+      'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+
+  ::selection {
+    background-color: hsl(var(--primary) / 0.35);
+    color: hsl(var(--foreground));
+  }
+}
+
+/*
+ * Custom utilities used by the landing page:
+ *  - .animate-fade-up / -delay-N for entrance animations with
+ *    staggered timing (no JS, no IntersectionObserver, cheap to ship).
+ *  - .bg-grid for the subtle grid backdrop behind the hero.
+ *  - .bg-hero-glow for the radial electric-blue glow.
+ *  - .text-gradient for the primary-accented headline word.
+ */
+@layer utilities {
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes glow-pulse {
+    0%,
+    100% {
+      opacity: 0.7;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  .animate-fade-up {
+    animation: fade-up 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .animate-fade-up-delay-1 {
+    animation: fade-up 800ms cubic-bezier(0.22, 1, 0.36, 1) 100ms both;
+  }
+  .animate-fade-up-delay-2 {
+    animation: fade-up 800ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+  }
+  .animate-fade-up-delay-3 {
+    animation: fade-up 800ms cubic-bezier(0.22, 1, 0.36, 1) 300ms both;
+  }
+  .animate-fade-up-delay-4 {
+    animation: fade-up 800ms cubic-bezier(0.22, 1, 0.36, 1) 400ms both;
+  }
+  .animate-fade-in {
+    animation: fade-in 900ms ease-out both;
+  }
+  .animate-glow-pulse {
+    animation: glow-pulse 6s ease-in-out infinite;
+  }
+
+  /* Faint grid backdrop — faded radially so it doesn't fight the content. */
+  .bg-grid {
+    background-image: linear-gradient(
+        to right,
+        hsl(var(--border) / 0.4) 1px,
+        transparent 1px
+      ),
+      linear-gradient(to bottom, hsl(var(--border) / 0.4) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 60% 50% at 50% 40%, black 40%, transparent 80%);
+    -webkit-mask-image: radial-gradient(
+      ellipse 60% 50% at 50% 40%,
+      black 40%,
+      transparent 80%
+    );
+  }
+
+  /* Radial electric-blue glow behind the hero headline. */
+  .bg-hero-glow {
+    background: radial-gradient(
+      ellipse 80% 50% at 50% 30%,
+      hsl(var(--primary) / 0.18),
+      transparent 70%
+    );
+  }
+
+  .text-gradient-primary {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)) 0%,
+      hsl(200 100% 70%) 100%
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  /*
+   * Respect prefers-reduced-motion. Any user who asked the OS to
+   * tone down motion should see a plain fade-in (or nothing at all)
+   * rather than the sliding entrances.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-up,
+    .animate-fade-up-delay-1,
+    .animate-fade-up-delay-2,
+    .animate-fade-up-delay-3,
+    .animate-fade-up-delay-4,
+    .animate-fade-in,
+    .animate-glow-pulse {
+      animation: none;
+    }
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}

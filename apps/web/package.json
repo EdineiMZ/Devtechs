@@ -11,17 +11,25 @@
     "test": "jest --passWithNoTests"
   },
   "dependencies": {
+    "@devtechs/types": "workspace:*",
+    "@devtechs/ui": "workspace:*",
+    "@hookform/resolvers": "^3.6.0",
+    "ioredis": "^5.4.1",
     "next": "^14.2.0",
+    "next-auth": "5.0.0-beta.25",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "@devtechs/ui": "workspace:*",
-    "@devtechs/types": "workspace:*"
+    "react-hook-form": "^7.52.0",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "@devtechs/config": "workspace:*",
     "@types/node": "^20.12.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
     "typescript": "^5.4.0"
   }
 }

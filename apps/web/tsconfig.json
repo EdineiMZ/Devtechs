@@ -4,7 +4,15 @@
     "jsx": "preserve",
     "noEmit": true,
     "incremental": true,
-    "plugins": [{ "name": "next" }]
+    "plugins": [{ "name": "next" }],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@devtechs/ui": ["../../packages/ui/src"],
+      "@devtechs/ui/*": ["../../packages/ui/src/*"],
+      "@devtechs/types": ["../../packages/types/src"],
+      "@devtechs/types/*": ["../../packages/types/src/*"]
+    }
   },
   "include": ["next-env.d.ts", "src/**/*.ts", "src/**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules", ".next", "dist"]
