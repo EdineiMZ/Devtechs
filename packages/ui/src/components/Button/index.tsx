@@ -49,14 +49,31 @@ export interface ButtonProps
 
 /**
  * Accessible button component with intent/size variants and loading state.
+ *
+ * When `asChild` is true we render a Radix `Slot` that clones the single
+ * child element and merges the button's classes onto it. `Slot` uses
+ * `React.Children.only` internally, so we MUST pass it exactly one child
+ * — this is why the loading spinner is rendered only on the plain-button
+ * branch. Callers that want a loading state should keep `asChild` off;
+ * `asChild` is meant for composition with routed <Link> elements where
+ * a native <button> would break navigation semantics.
  */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, loading = false, disabled, children, ...props }, ref) => {
-    const Comp = asChild ? Slot : 'button';
+    const classes = cn(buttonVariants({ variant, size }), className);
+
+    if (asChild) {
+      return (
+        <Slot ref={ref} className={classes} {...props}>
+          {children}
+        </Slot>
+      );
+    }
+
     return (
-      <Comp
+      <button
         ref={ref}
-        className={cn(buttonVariants({ variant, size }), className)}
+        className={classes}
         disabled={disabled || loading}
         aria-busy={loading || undefined}
         {...props}
@@ -68,7 +85,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           />
         ) : null}
         {children}
-      </Comp>
+      </button>
     );
   },
 );
