@@ -1,0 +1,64 @@
+name: Setup monorepo
+description: >
+  Install pnpm + Node, restore the node_modules cache keyed on
+  pnpm-lock.yaml, and run a frozen install. Invoked after
+  actions/checkout by every job in the CI and deploy workflows.
+
+inputs:
+  node-version:
+    description: Node.js major to install
+    required: false
+    default: '20'
+  pnpm-version:
+    description: pnpm major to install via corepack
+    required: false
+    default: '9'
+
+runs:
+  using: composite
+  steps:
+    # --- pnpm ---
+    # pnpm/action-setup reads `packageManager` from the root
+    # package.json when present; passing `version` explicitly keeps
+    # the action deterministic even if the field is stripped.
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: ${{ inputs.pnpm-version }}
+        run_install: false
+
+    # --- Node + pnpm store cache ---
+    # `cache: pnpm` caches `~/.local/share/pnpm/store` automatically,
+    # keyed on pnpm-lock.yaml. Combined with the node_modules cache
+    # below this gives us two-layer caching: store for fresh installs
+    # on cold runners, node_modules for warm reruns.
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+
+    # --- node_modules cache ---
+    # Caches every workspace's node_modules dir (root + apps + packages
+    # + services) keyed on the lockfile hash. Hits mean `pnpm install`
+    # is a no-op beyond symlink verification.
+    - name: Restore node_modules
+      id: nm-cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          node_modules
+          apps/*/node_modules
+          packages/*/node_modules
+          services/*/node_modules
+        key: nm-${{ runner.os }}-node${{ inputs.node-version }}-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: |
+          nm-${{ runner.os }}-node${{ inputs.node-version }}-
+
+    # --- Install ---
+    # We always run install (not just on cache miss) so pnpm can
+    # re-link binaries (.bin shims) after a cache restore. With both
+    # caches warm this is fast.
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile --prefer-offline

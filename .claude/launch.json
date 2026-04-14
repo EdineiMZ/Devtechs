@@ -1,0 +1,113 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/web", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "rh",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/rh", "dev"],
+      "port": 3001
+    },
+    {
+      "name": "financeiro",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/financeiro", "dev"],
+      "port": 3002
+    },
+    {
+      "name": "projetos",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/projetos", "dev"],
+      "port": 3003
+    },
+    {
+      "name": "devops",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/devops", "dev"],
+      "port": 3004
+    },
+    {
+      "name": "suporte",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/suporte", "dev"],
+      "port": 3005
+    },
+    {
+      "name": "store",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/store", "dev"],
+      "port": 3006
+    },
+    {
+      "name": "developer",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/developer", "dev"],
+      "port": 3007
+    },
+    {
+      "name": "auth-service",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/auth-service", "dev"],
+      "port": 3001
+    },
+    {
+      "name": "rh-service",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/rh-service", "dev"],
+      "port": 3002
+    },
+    {
+      "name": "finance-service",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/finance-service", "dev"],
+      "port": 3003
+    },
+    {
+      "name": "projects-service",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/projects-service", "dev"],
+      "port": 3004
+    },
+    {
+      "name": "devops-service",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/devops-service", "dev"],
+      "port": 3005
+    },
+    {
+      "name": "support-service",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/support-service", "dev"],
+      "port": 3006
+    },
+    {
+      "name": "payments-service",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/payments-service", "dev"],
+      "port": 3007
+    },
+    {
+      "name": "notification-service",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/notification-service", "dev"],
+      "port": 3008
+    },
+    {
+      "name": "license-service",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/license-service", "dev"],
+      "port": 3009
+    },
+    {
+      "name": "developer-service",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@devtechs/developer-service", "dev"],
+      "port": 3010
+    }
+  ]
+}

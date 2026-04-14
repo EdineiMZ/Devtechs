@@ -1,0 +1,85 @@
+# =============================================================================
+# DevTechs .dockerignore
+#
+# Scoped to the *repo root* since both Dockerfile.service and Dockerfile.app
+# use the root as build context. Everything in here is EXCLUDED from the
+# context that Docker uploads to BuildKit — keep this list tight so builds
+# stay fast and secrets never end up baked into images.
+# =============================================================================
+
+# ---- Dependencies (reinstalled inside the builder stage) ----
+node_modules
+**/node_modules
+.pnpm-store
+.pnp
+.pnp.js
+
+# ---- Build outputs (produced inside the builder stage) ----
+dist
+**/dist
+build
+**/build
+out
+**/out
+.next
+**/.next
+.turbo
+**/.turbo
+.swc
+**/.swc
+coverage
+**/coverage
+*.tsbuildinfo
+
+# ---- Environment files (NEVER copy these into an image) ----
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
+
+# ---- VCS / metadata ----
+.git
+.gitignore
+.gitattributes
+.github
+.claude
+
+# ---- Editor / OS ----
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ---- Logs ----
+*.log
+logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---- Docs that bloat the context but aren't needed at runtime ----
+*.md
+!packages/database/prisma/schema.prisma
+
+# ---- Docker artefacts themselves ----
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# ---- Tests and fixtures we don't ship ----
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# ---- Misc ----
+*.pem
+*.key
+*.crt

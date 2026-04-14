@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# Cancel in-flight runs on the same branch when a new commit lands.
+# CI on stale commits wastes minutes and delays fresh feedback.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# TURBO_TOKEN + TURBO_TEAM are picked up automatically by the turbo
+# CLI and enable the remote cache. Jobs that produce artifacts push
+# them to the shared cache; later jobs (and later runs, and local
+# developer machines) hit the cache instead of rebuilding.
+#
+# FORCE_COLOR keeps the logs readable — GitHub's runners strip colors
+# without it.
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9'
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+  TURBO_REMOTE_ONLY: 'true'
+  FORCE_COLOR: '3'
+
+jobs:
+  # -------------------------------------------------------------------
+  # Four independent jobs run in parallel. Each does its own setup
+  # and its own turbo invocation. They share nothing beyond the
+  # composite action and the remote cache, so a lint failure doesn't
+  # block the typecheck/test/build signal.
+  # -------------------------------------------------------------------
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+      - name: pnpm turbo run lint
+        run: pnpm turbo run lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+      - name: Generate Prisma client
+        run: pnpm --filter @devtechs/database prisma:generate
+      - name: pnpm turbo run typecheck
+        run: pnpm turbo run typecheck
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+      - name: Generate Prisma client
+        run: pnpm --filter @devtechs/database prisma:generate
+      - name: pnpm turbo run test
+        run: pnpm turbo run test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+      - name: Generate Prisma client
+        run: pnpm --filter @devtechs/database prisma:generate
+      - name: pnpm turbo run build
+        run: pnpm turbo run build

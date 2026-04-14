@@ -1,0 +1,354 @@
+name: Deploy · Production
+
+on:
+  push:
+    branches: [main]
+  # Manual fallback so release managers can redeploy main without a
+  # no-op commit.
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9'
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+  TURBO_REMOTE_ONLY: 'true'
+
+jobs:
+  # -------------------------------------------------------------------
+  # 1. detect-changes — same logic as deploy-staging.yml, but scoped
+  #    to the diff between origin/main's previous HEAD and the newly
+  #    landed commit. Since every commit on main comes from a merged
+  #    PR, HEAD^1 is always the previous release tip.
+  # -------------------------------------------------------------------
+  detect-changes:
+    name: Detect changed packages
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.changed.outputs.services }}
+      apps: ${{ steps.changed.outputs.apps }}
+      has-changes: ${{ steps.changed.outputs.has-changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+
+      - name: Compute affected packages
+        id: changed
+        run: |
+          set -euo pipefail
+
+          JSON=$(pnpm turbo run build --filter='...[HEAD^1]' --dry-run=json 2>/dev/null || echo '{"packages":[]}')
+
+          SERVICES=$(echo "$JSON" | jq -c '[.packages[] | select(endswith("-service"))]')
+          APPS=$(echo "$JSON" | jq -c '[.packages[] | select(test("^@devtechs/(web|rh|financeiro|projetos|devops|suporte|store|developer)$"))]')
+
+          TOTAL=$(echo "$JSON" | jq '.packages | length')
+          HAS="false"
+          if [ "$TOTAL" -gt 0 ]; then HAS="true"; fi
+
+          echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
+          echo "apps=$APPS" >> "$GITHUB_OUTPUT"
+          echo "has-changes=$HAS" >> "$GITHUB_OUTPUT"
+
+  # -------------------------------------------------------------------
+  # 2. version — compute the next semver tag from conventional-commits
+  #    on main since the last tag. Runs BEFORE the build matrices so
+  #    the resulting version can be used as a Docker tag alongside the
+  #    sha. `dry_run: true` keeps this job from actually pushing the
+  #    tag — that happens after a successful deploy in the `release`
+  #    job below, so a failed deploy doesn't burn a version number.
+  # -------------------------------------------------------------------
+  version:
+    name: Compute next version
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      new-version: ${{ steps.bump.outputs.new_version }}
+      new-tag: ${{ steps.bump.outputs.new_tag }}
+      changelog: ${{ steps.bump.outputs.changelog }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history — required to walk conventional commits
+
+      - name: Preview next tag
+        id: bump
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: patch
+          release_branches: main
+          dry_run: true  # just compute, don't tag yet
+          tag_prefix: v
+
+  # -------------------------------------------------------------------
+  # 3a. build-services
+  # -------------------------------------------------------------------
+  build-services:
+    name: Build service · ${{ matrix.package }}
+    needs: [detect-changes, version]
+    if: needs.detect-changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJson(needs.detect-changes.outputs.services) }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve image name
+        id: meta
+        run: |
+          NAME=$(echo "${{ matrix.package }}" | sed 's|@devtechs/||')
+          SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "image=${{ env.IMAGE_PREFIX }}/$NAME" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA_SHORT" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build & push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.service
+          build-args: |
+            PACKAGE_NAME=${{ matrix.package }}
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}:latest
+            ${{ steps.meta.outputs.image }}:prod
+            ${{ steps.meta.outputs.image }}:${{ needs.version.outputs.new-tag }}
+            ${{ steps.meta.outputs.image }}:prod-${{ steps.meta.outputs.sha }}
+          cache-from: type=gha,scope=${{ steps.meta.outputs.name }}
+          cache-to: type=gha,scope=${{ steps.meta.outputs.name }},mode=max
+
+  # -------------------------------------------------------------------
+  # 3b. build-apps
+  # -------------------------------------------------------------------
+  build-apps:
+    name: Build app · ${{ matrix.package }}
+    needs: [detect-changes, version]
+    if: needs.detect-changes.outputs.apps != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJson(needs.detect-changes.outputs.apps) }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve image name
+        id: meta
+        run: |
+          NAME=$(echo "${{ matrix.package }}" | sed 's|@devtechs/||')
+          SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "image=${{ env.IMAGE_PREFIX }}/$NAME" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA_SHORT" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build & push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.app
+          build-args: |
+            PACKAGE_NAME=${{ matrix.package }}
+            APP_NAME=${{ steps.meta.outputs.name }}
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}:latest
+            ${{ steps.meta.outputs.image }}:prod
+            ${{ steps.meta.outputs.image }}:${{ needs.version.outputs.new-tag }}
+            ${{ steps.meta.outputs.image }}:prod-${{ steps.meta.outputs.sha }}
+          cache-from: type=gha,scope=${{ steps.meta.outputs.name }}
+          cache-to: type=gha,scope=${{ steps.meta.outputs.name }},mode=max
+
+  # -------------------------------------------------------------------
+  # 4. deploy — gated by `environment: production` so GitHub's
+  #    Environment Protection Rules (reviewers, wait timer, branch
+  #    allow-list) apply before the job runs. Configure them in
+  #    Settings → Environments → production on the repo.
+  #
+  #    Pre-deploy step: `pg_dumpall` inside the postgres container,
+  #    gzipped to /opt/devtechs/backups on the VPS. 30-day retention.
+  # -------------------------------------------------------------------
+  deploy:
+    name: Deploy to production
+    needs: [detect-changes, version, build-services, build-apps]
+    if: |
+      !cancelled() &&
+      needs.detect-changes.outputs.has-changes == 'true' &&
+      (needs.build-services.result == 'success' || needs.build-services.result == 'skipped') &&
+      (needs.build-apps.result == 'success' || needs.build-apps.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://devtechs.io
+    steps:
+      - name: Backup Postgres
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            mkdir -p /opt/devtechs/backups
+            TS=$(date -u +%Y%m%d_%H%M%SZ)
+            OUT="/opt/devtechs/backups/db_${TS}.sql.gz"
+            docker exec devtechs-postgres pg_dumpall -U "${POSTGRES_USER:-devtechs}" \
+              | gzip > "$OUT"
+            echo "Backup written: $OUT ($(du -h "$OUT" | cut -f1))"
+            # Retention: keep 30 days of backups.
+            find /opt/devtechs/backups -maxdepth 1 -name 'db_*.sql.gz' -mtime +30 -delete
+
+      - name: Pull + restart containers
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/devtechs
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker logout ghcr.io
+            docker image prune -f
+
+      - name: Wait for /health (60s timeout each)
+        env:
+          HOST: ${{ secrets.PROD_HOST }}
+        run: |
+          set -euo pipefail
+
+          ENDPOINTS=(
+            "https://${HOST}/api/auth/health"
+            "https://${HOST}/api/rh/health"
+            "https://${HOST}/api/finance/health"
+            "https://${HOST}/api/projects/health"
+            "https://${HOST}/api/devops/health"
+            "https://${HOST}/api/support/health"
+          )
+
+          for URL in "${ENDPOINTS[@]}"; do
+            echo "::group::Health-check $URL"
+            OK="false"
+            for i in $(seq 1 60); do
+              if curl -fsS --max-time 3 "$URL" > /dev/null 2>&1; then
+                echo "✓ healthy after ${i}s"
+                OK="true"
+                break
+              fi
+              sleep 1
+            done
+            echo "::endgroup::"
+            if [ "$OK" != "true" ]; then
+              echo "::error::$URL did not respond within 60s — consider rollback"
+              exit 1
+            fi
+          done
+
+  # -------------------------------------------------------------------
+  # 5. release — tag the commit, push the tag, create a GitHub Release
+  #    with the conventional-commits changelog. Runs ONLY when deploy
+  #    succeeded so we never burn a version number on a rollback.
+  # -------------------------------------------------------------------
+  release:
+    name: Tag release
+    needs: [version, deploy]
+    if: needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag and push
+        id: tag
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: patch
+          release_branches: main
+          tag_prefix: v
+
+      - name: Create GitHub release
+        if: steps.tag.outputs.new_tag
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.new_tag }}
+          name: ${{ steps.tag.outputs.new_tag }}
+          body: ${{ steps.tag.outputs.changelog }}
+          generate_release_notes: true
+
+  # -------------------------------------------------------------------
+  # 6. notify — runs after everything else with `if: always()` so
+  #    Slack gets a message for success AND failure paths.
+  # -------------------------------------------------------------------
+  notify:
+    name: Notify Slack
+    needs: [detect-changes, deploy, release]
+    if: always() && needs.detect-changes.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack message
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "Production deploy *${{ needs.deploy.result }}* — ${{ needs.release.outputs.new-tag || github.sha }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Production deploy ${{ needs.deploy.result }}*\n${{ github.event.head_commit.message }}\n<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|`${{ github.sha }}`> by ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
