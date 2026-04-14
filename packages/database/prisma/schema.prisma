@@ -27,6 +27,7 @@ enum UserStatus {
 }
 
 enum PermissionModule {
+  AUTH
   RH
   FINANCEIRO
   PROJETOS
@@ -73,6 +74,11 @@ model User {
   // Relations where this user is the one performing the assignment
   rolesAssigned       UserRole[]       @relation("UserRoleAssignedBy")
   permissionsAssigned UserPermission[] @relation("UserPermissionAssignedBy")
+
+  // Inverse of Employee.userId — each User may have at most one employee
+  // profile in the RH module. Users without an employee profile are
+  // typically admins / devs without an HR record.
+  employee Employee?
 
   @@index([status])
   @@index([createdAt])
@@ -247,4 +253,291 @@ model AuditLog {
   @@index([userId, module])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// =============================================================================
+// RH module — employees, positions, departments, documents.
+//
+// Migration name: add_rh_module
+//
+// Design notes:
+//   - Employee.userId is nullable — not every person on HR's roster has
+//     a platform account. The link is a soft reference via SetNull so
+//     deleting a user keeps the employee row but detaches it.
+//   - Department.managerId points at an Employee (circular with
+//     Employee.department), resolved via a named relation pair. Both
+//     sides use SetNull on delete so the graph never cascades out of
+//     control when a manager leaves.
+//   - Employee.managerId is a self-reference for the org hierarchy.
+//   - VacationRequest and PerformanceReview are declared as minimal
+//     stubs here so Employee's forward relations resolve cleanly.
+//     They get fleshed out in their own modules in future turns.
+// =============================================================================
+
+enum EmployeeStatus {
+  ACTIVE
+  ON_LEAVE
+  DISMISSED
+}
+
+enum PositionLevel {
+  JUNIOR
+  MID
+  SENIOR
+  LEAD
+  MANAGER
+  DIRECTOR
+}
+
+enum EmployeeDocumentType {
+  CONTRACT
+  ID
+  CERTIFICATE
+  OTHER
+}
+
+model Employee {
+  id          String         @id @default(cuid())
+  /// Optional soft link to a platform user. A person can exist in HR
+  /// without ever having an auth account, and a user can be deleted
+  /// without losing their employee row (SetNull).
+  userId      String?        @unique
+  name        String
+  email       String         @unique
+  phone       String?
+  cpf         String         @unique
+  birthDate   DateTime       @db.Date
+  hireDate    DateTime       @db.Date
+  dismissDate DateTime?      @db.Date
+  status      EmployeeStatus @default(ACTIVE)
+
+  positionId   String
+  departmentId String
+  /// Self-reference for the org hierarchy. Nullable so the CEO (or a
+  /// freshly created employee with no manager yet) can have a null
+  /// here without breaking the relation.
+  managerId    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ---- Relations ----
+  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  position   Position   @relation(fields: [positionId], references: [id], onDelete: Restrict)
+  department Department @relation("DepartmentEmployees", fields: [departmentId], references: [id], onDelete: Restrict)
+
+  manager      Employee?  @relation("EmployeeHierarchy", fields: [managerId], references: [id], onDelete: SetNull)
+  subordinates Employee[] @relation("EmployeeHierarchy")
+
+  documents          EmployeeDocument[]
+  performanceReviews PerformanceReview[]
+
+  // Vacation requests this employee has submitted.
+  vacationRequests         VacationRequest[] @relation("VacationRequester")
+  // Vacation requests this employee has reviewed (approved/rejected).
+  // Separate named relation from the requester side so Prisma can
+  // disambiguate the two FKs on the same target table.
+  vacationRequestsReviewed VacationRequest[] @relation("VacationReviewer")
+
+  // Work schedules assigned to this employee over time. The current
+  // one is whichever has the latest `effectiveFrom <= now()`.
+  workSchedules WorkSchedule[]
+
+  // Inverse of Department.managerId — this employee may manage zero
+  // or more departments. Named so Prisma can disambiguate from the
+  // DepartmentEmployees relation above.
+  managedDepartments Department[] @relation("DepartmentManager")
+
+  @@index([status])
+  @@index([departmentId])
+  @@index([positionId])
+  @@index([managerId])
+  @@index([hireDate])
+  @@map("rh_employees")
+}
+
+model Position {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  description String?
+  level       PositionLevel
+  /// Nullable so HR can create a position before the band has been
+  /// finalized. `Decimal(12, 2)` covers R$ 999,999,999.99 which is
+  /// comfortably beyond any real salary.
+  salary      Decimal?      @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employees Employee[]
+
+  @@index([level])
+  @@map("rh_positions")
+}
+
+model Department {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  /// The manager IS an employee (SetNull on delete so removing an
+  /// employee doesn't cascade into the department row). Optional
+  /// because freshly created departments may not have a manager yet.
+  managerId   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  manager   Employee?  @relation("DepartmentManager", fields: [managerId], references: [id], onDelete: SetNull)
+  employees Employee[] @relation("DepartmentEmployees")
+
+  @@index([managerId])
+  @@map("rh_departments")
+}
+
+model EmployeeDocument {
+  id         String               @id @default(cuid())
+  employeeId String
+  name       String
+  type       EmployeeDocumentType @default(OTHER)
+  /// Opaque key into the `@devtechs/storage` adapter (R2 or local).
+  /// The storage adapter resolves this to the real object at download
+  /// time — this column is intentionally format-agnostic so swapping
+  /// R2 for another S3 provider requires no schema change.
+  fileKey    String
+  fileSize   Int?
+  mimeType   String?
+  uploadedAt DateTime             @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([type])
+  @@map("rh_employee_documents")
+}
+
+// -----------------------------------------------------------------------------
+// Vacations + absences (migration: add_rh_vacations)
+// -----------------------------------------------------------------------------
+
+enum VacationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum VacationRequestType {
+  VACATION
+  SICK_LEAVE
+  PERSONAL
+  MATERNITY
+  PATERNITY
+  OTHER
+}
+
+/// Vacation / absence request. Covers both planned vacations and
+/// ad-hoc absences (sick leave, personal, parental) under a single
+/// model, discriminated by the `type` enum. The whole lifecycle
+/// (request → review → approval/rejection → cancellation) is tracked
+/// in-place on the same row so HR can audit every decision without
+/// a separate history table.
+model VacationRequest {
+  id              String                @id @default(cuid())
+  employeeId      String
+  type            VacationRequestType   @default(VACATION)
+  startDate       DateTime              @db.Date
+  endDate         DateTime              @db.Date
+  /// Number of business days the request covers — computed by the
+  /// service (excluding weekends) when the row is created. Stored
+  /// rather than recomputed on every read so queries that filter by
+  /// "days off this year" stay fast.
+  daysCount       Int
+  status          VacationRequestStatus @default(PENDING)
+
+  /// When the employee submitted the request. Renamed from the old
+  /// `createdAt` so the column name tells the whole story.
+  requestedAt     DateTime              @default(now())
+  /// When the review decision (approve/reject) was recorded. Null
+  /// while the request is still PENDING.
+  reviewedAt      DateTime?
+  /// FK to the reviewing employee. Nullable both because it's unset
+  /// while PENDING and because the reviewer may be deleted later
+  /// (SetNull) without losing the rest of the audit trail.
+  reviewedById    String?
+  /// Free-text notes submitted by the requester, e.g. "trip to family
+  /// wedding". Optional.
+  notes           String?
+  /// Populated only when the request is REJECTED — the reviewer's
+  /// explanation, surfaced to the employee via the notification.
+  rejectionReason String?
+  updatedAt       DateTime              @updatedAt
+
+  employee   Employee  @relation("VacationRequester", fields: [employeeId], references: [id], onDelete: Cascade)
+  reviewedBy Employee? @relation("VacationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([type])
+  @@index([startDate, endDate])
+  @@index([reviewedById])
+  @@map("rh_vacation_requests")
+}
+
+/// Weekly work schedule for an employee. A new row is created every
+/// time the schedule changes — the "current" schedule is whichever
+/// row has the latest `effectiveFrom <= now()`. Previous rows are
+/// never updated or deleted, giving HR an immutable history.
+///
+/// Each day stores the number of HOURS the employee is expected to
+/// work. `0` means "day off" (weekends or a shortened week).
+/// Int (not Decimal) because DevTechs's schedules never need
+/// sub-hour precision and integers are cheaper to compare.
+model WorkSchedule {
+  id            String   @id @default(cuid())
+  employeeId    String
+
+  monday    Int @default(0)
+  tuesday   Int @default(0)
+  wednesday Int @default(0)
+  thursday  Int @default(0)
+  friday    Int @default(0)
+  saturday  Int @default(0)
+  sunday    Int @default(0)
+
+  /// First date this schedule applies. The service enforces
+  /// uniqueness per (employeeId, effectiveFrom) to prevent two
+  /// schedules from claiming the same start date.
+  effectiveFrom DateTime @db.Date
+  /// Optional free-text explanation — "reduced hours during maternity
+  /// leave", "remote Fridays", etc.
+  notes         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, effectiveFrom])
+  @@index([employeeId])
+  @@index([effectiveFrom])
+  @@map("rh_work_schedules")
+}
+
+model PerformanceReview {
+  id          String   @id @default(cuid())
+  employeeId  String
+  reviewerId  String?
+  /// Period label, e.g. "2026-Q1" or "2026-H1". Kept as text rather
+  /// than two dates because review cadence differs across departments.
+  period      String
+  score       Float?
+  feedback    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([period])
+  @@map("rh_performance_reviews")
 }
