@@ -2,6 +2,7 @@
   "name": "@devtechs/storage",
   "version": "0.1.0",
   "private": true,
+  "description": "DevTechs - storage adapter pattern (Cloudflare R2 + local filesystem)",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
@@ -10,8 +11,23 @@
     "typecheck": "tsc --noEmit",
     "test": "jest --passWithNoTests"
   },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@aws-sdk/s3-request-presigner": "^3.600.0"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/config": "^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/common": { "optional": true },
+    "@nestjs/config": { "optional": true }
+  },
   "devDependencies": {
     "@devtechs/config": "workspace:*",
+    "@nestjs/common": "^10.3.0",
+    "@nestjs/config": "^3.2.0",
+    "@types/node": "^20.12.0",
     "typescript": "^5.4.0"
   }
 }
