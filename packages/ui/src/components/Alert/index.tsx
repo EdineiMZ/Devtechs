@@ -32,7 +32,7 @@ const iconByVariant = {
 } as const;
 
 export interface AlertProps
-  extends HTMLAttributes<HTMLDivElement>,
+  extends Omit<HTMLAttributes<HTMLDivElement>, 'title'>,
     VariantProps<typeof alertVariants> {
   title?: ReactNode;
   /** Hide the default icon. */

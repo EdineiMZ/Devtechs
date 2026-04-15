@@ -80,6 +80,43 @@ model User {
   // typically admins / devs without an HR record.
   employee Employee?
 
+  // Projects module — every relation a user can have to a Project.
+  // Six named relations because Project / Task / TimeEntry each
+  // touch User from multiple sides (owner, client, assignee,
+  // reporter, member, time logger).
+  projectsOwned      Project[]         @relation("ProjectOwner")
+  projectsAsClient   Project[]         @relation("ProjectClient")
+  projectMemberships ProjectMember[]
+  tasksAssigned      Task[]            @relation("TaskAssignee")
+  tasksReported      Task[]            @relation("TaskReporter")
+  timeEntries        TimeEntry[]
+
+  // Finance module — the user may play three roles against
+  // finance records. Named relations because FinanceTransaction
+  // only touches the creator, while Invoice touches both the
+  // client (billed party) and the creator (issuer), so a single
+  // unnamed relation would clash.
+  financeTransactionsCreated FinanceTransaction[] @relation("FinanceTransactionCreator")
+  invoicesAsClient           Invoice[]            @relation("InvoiceClient")
+  invoicesCreated            Invoice[]            @relation("InvoiceCreator")
+
+  // Notifications module — in-app notifications addressed to
+  // this user. Cascade on delete so removing a user also removes
+  // their notification inbox (no orphan rows).
+  notifications Notification[]
+
+  // Support module — a user can open tickets, be assigned to
+  // tickets, and author messages on tickets. Named relations
+  // because Ticket touches User from multiple sides (client,
+  // assignee) and we need Prisma to disambiguate.
+  ticketsOpened    Ticket[]          @relation("TicketClient")
+  ticketsAssigned  Ticket[]          @relation("TicketAssignee")
+  ticketMessages   TicketMessage[]   @relation("TicketMessageAuthor")
+
+  // DevOps module — a user may execute deployments. Restricted
+  // FK on delete so the audit trail survives user removal.
+  deploymentsTriggered Deployment[] @relation("DeploymentDeployedBy")
+
   @@index([status])
   @@index([createdAt])
   @@map("users")
@@ -540,4 +577,875 @@ model PerformanceReview {
   @@index([employeeId])
   @@index([period])
   @@map("rh_performance_reviews")
+}
+
+// =============================================================================
+// Projects module — projects, sprints, kanban boards, tasks, time tracking.
+//
+// Migration name: add_projects_module
+//
+// Performance design:
+//   - Tasks carry an `order` int per column so the board query can
+//     return them sorted with a single index lookup. The `(columnId,
+//     order)` composite index is the hot path — every drag-and-drop
+//     and every board fetch uses it.
+//   - The board endpoint (`GET /projects/:id/board`) issues ONE
+//     Prisma query with nested includes — Prisma's join planner
+//     resolves it into 2-3 batched SQL queries (board → columns →
+//     tasks), never N+1 per task.
+//   - `(boardId, order)` on Column for the column-ordering query.
+//   - Composite `(projectId, status)` on Project + Sprint for the
+//     "active sprint" lookup, which the burndown endpoint hits.
+//   - `(taskId, date)` on TimeEntry for the per-day burndown rollup.
+// =============================================================================
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum ProjectMemberRole {
+  OWNER
+  MANAGER
+  DEVELOPER
+  VIEWER
+}
+
+enum SprintStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+}
+
+enum TaskType {
+  STORY
+  BUG
+  TASK
+  EPIC
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(PLANNING)
+  startDate   DateTime      @db.Date
+  /// Nullable for open-ended projects with no committed end date.
+  endDate     DateTime?     @db.Date
+
+  /// Optional client (a User in the auth domain). Internal projects
+  /// have no client. SetNull on user delete so the project history
+  /// survives a user being removed.
+  clientId    String?
+  /// Project owner — the principal accountable person. Required.
+  /// Restricted on delete so we never orphan a project; admins must
+  /// reassign ownership before deleting a user.
+  ownerId     String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client  User? @relation("ProjectClient", fields: [clientId], references: [id], onDelete: SetNull)
+  owner   User  @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  members ProjectMember[]
+  sprints Sprint[]
+  boards  Board[]
+  tasks   Task[]
+
+  // Finance module back-references.
+  financeTransactions FinanceTransaction[]
+  costCenters         CostCenter[]
+
+  // DevOps module back-references — one project can own many
+  // environments and many pipelines.
+  environments Environment[]
+  pipelines    Pipeline[]
+
+  @@index([status])
+  @@index([ownerId])
+  @@index([clientId])
+  @@map("projects")
+}
+
+model ProjectMember {
+  projectId String
+  userId    String
+  role      ProjectMemberRole @default(DEVELOPER)
+  joinedAt  DateTime          @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+  @@index([userId])
+  @@index([role])
+  @@map("project_members")
+}
+
+model Sprint {
+  id        String       @id @default(cuid())
+  projectId String
+  name      String
+  goal      String?
+  startDate DateTime     @db.Date
+  endDate   DateTime     @db.Date
+  status    SprintStatus @default(PLANNED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  @@index([projectId])
+  /// Composite — the "active sprint" lookup hits this directly.
+  @@index([projectId, status])
+  @@map("project_sprints")
+}
+
+model Board {
+  id        String @id @default(cuid())
+  projectId String
+  name      String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  columns Column[]
+
+  @@index([projectId])
+  @@map("project_boards")
+}
+
+model Column {
+  id       String @id @default(cuid())
+  boardId  String
+  name     String
+  /// Display order within the board. Hot index for the board fetch
+  /// (column ordering) — see `@@index([boardId, order])` below.
+  order    Int    @default(0)
+  /// Optional Work-In-Progress limit (number of tasks allowed in
+  /// this column). The service enforces it on `move-to-column`;
+  /// `null` means unlimited.
+  wipLimit Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  board Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  /// Hot path — used by `GET /projects/:id/board` to fetch columns
+  /// in display order in a single index range scan.
+  @@index([boardId, order])
+  @@map("project_columns")
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  projectId   String
+  /// Optional sprint assignment. Tasks in the backlog have no sprint.
+  sprintId    String?
+  /// The current Kanban column. Required because every task lives
+  /// on the board somewhere — the "backlog" is itself a column.
+  columnId    String
+
+  title       String
+  description String?
+  type        TaskType     @default(TASK)
+  priority    TaskPriority @default(MEDIUM)
+  status      TaskStatus   @default(TODO)
+
+  /// Nullable for open work items (community-tagged tickets). When
+  /// set, must be a member of the project (enforced by the service).
+  assigneeId  String?
+  /// The reporter is required — every task has someone who created
+  /// it. Restricted on delete so audit trails survive user removal.
+  reporterId  String
+
+  /// Decimal (10, 2) is plenty — no real task tracks fractional
+  /// minutes finer than 0.01h. Estimates are nullable because new
+  /// tasks may not have a sizing yet.
+  estimatedHours Decimal? @db.Decimal(10, 2)
+  loggedHours    Decimal  @default(0) @db.Decimal(10, 2)
+
+  /// Optional deadline. Different from the sprint endDate — a task
+  /// can have its own due date inside a sprint or out of one.
+  dueDate DateTime? @db.Date
+
+  /// Display order within the task's column. The board fetch returns
+  /// tasks sorted by `(columnId, order)`. Drag-and-drop reorders
+  /// renumber within the affected columns inside one $transaction.
+  order   Int      @default(0)
+
+  /// Free-form tag list. Postgres `text[]` so labels stay queryable
+  /// without a separate join table for the typical small cardinality.
+  labels  String[] @default([])
+
+  /// Self-reference for subtasks. Cascade on delete so removing a
+  /// parent epic also removes its children.
+  parentId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sprint     Sprint?   @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  column     Column    @relation(fields: [columnId], references: [id], onDelete: Restrict)
+  assignee   User?     @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  reporter   User      @relation("TaskReporter", fields: [reporterId], references: [id], onDelete: Restrict)
+  parent     Task?     @relation("TaskSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks   Task[]    @relation("TaskSubtasks")
+  timeEntries TimeEntry[]
+
+  /// HOTTEST INDEX — every board fetch and every drag-and-drop hits
+  /// this composite. With it, "all tasks in column X ordered by
+  /// position" is one index range scan.
+  @@index([columnId, order])
+
+  /// Used by the sprint board / burndown endpoint and by the
+  /// per-status filters on the project view.
+  @@index([projectId, status])
+
+  /// Used by `GET /projects/:id/sprint/active` to pull the sprint's
+  /// task list with one query.
+  @@index([sprintId])
+
+  /// "My open tasks" dashboard query.
+  @@index([assigneeId, status])
+
+  /// Subtask resolution — used when expanding an epic.
+  @@index([parentId])
+
+  @@map("project_tasks")
+}
+
+model TimeEntry {
+  id          String   @id @default(cuid())
+  taskId      String
+  userId      String
+  description String?
+  hours       Decimal  @db.Decimal(10, 2)
+  /// Date the work was performed (not the day it was logged).
+  /// Drives the burndown rollup on the active-sprint endpoint.
+  date        DateTime @db.Date
+
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  /// Burndown rollup — `(taskId, date)` is the composite the sprint
+  /// burndown query groups on, so the per-day sum is an index-only
+  /// scan instead of a heap scan.
+  @@index([taskId, date])
+  @@index([userId, date])
+  @@map("project_time_entries")
+}
+
+// =============================================================================
+// Finance module — transactions, cost centers, invoices.
+//
+// Migration name: add_finance_module
+//
+// Design notes:
+//   - `FinanceTransaction` (not `Transaction`) — `Transaction` is a
+//     reserved word inside the generated Prisma client (collides
+//     with `$transaction`), so the public model name is prefixed.
+//     The table is still mapped to `finance_transactions`.
+//   - Decimal(14, 2) everywhere so no real R$ amount ever overflows
+//     and cents are always preserved. 14 digits cover R$ 999 bilhões.
+//   - Every filterable column on FinanceTransaction has an index so
+//     the DRE / cashflow groupBy hits the index instead of the heap.
+//   - Composite `(status, dueDate)` index powers the daily OVERDUE
+//     sweep — the BullMQ job filters by exactly those two columns
+//     (`status = PENDING AND dueDate < now()`), so the composite
+//     turns the sweep into an index range scan.
+//   - Invoice.number is generated by the service (YYYY-0001), kept
+//     unique so the finance UI can look an invoice up by number
+//     alone and so accidental duplicates are impossible.
+// =============================================================================
+
+enum FinanceTransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum FinanceTransactionCategory {
+  SALARY
+  SERVICE
+  PRODUCT
+  TAX
+  INFRA
+  MARKETING
+  OTHER
+}
+
+enum FinanceTransactionStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+/// A single financial record — either income (customer payment,
+/// invoice settlement) or expense (payroll, infrastructure cost,
+/// tax). Drives the DRE and cash-flow reports.
+///
+/// `projectId` + `costCenterId` are both optional so one-off
+/// transactions with no project attribution (e.g. company-wide
+/// AWS bill) can still be recorded; the reports treat `null` as
+/// "general overhead".
+model FinanceTransaction {
+  id            String                     @id @default(cuid())
+  type          FinanceTransactionType
+  category      FinanceTransactionCategory
+  description   String
+  /// The signed amount of the transaction. ALWAYS stored as a
+  /// positive number — direction (income vs expense) is encoded
+  /// in `type`, never via sign. This makes aggregations simple
+  /// and avoids signed/unsigned bugs in the DRE query.
+  amount        Decimal                    @db.Decimal(14, 2)
+  /// Business date the transaction relates to (not when it was
+  /// recorded). Drives the period filter on the DRE / cashflow.
+  date          DateTime                   @db.Date
+  status        FinanceTransactionStatus   @default(PENDING)
+  /// When payment is due. Nullable because cash-basis transactions
+  /// may not have a separate due date from `date`.
+  dueDate       DateTime?                  @db.Date
+  /// When payment was actually recorded. Set together with the
+  /// PAID status transition.
+  paidAt        DateTime?
+  projectId     String?
+  costCenterId  String?
+  /// Opaque key into the `@devtechs/storage` adapter (R2/local)
+  /// for the supporting document (receipt, invoice PDF).
+  attachmentKey String?
+  notes         String?
+  createdBy     String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project    Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  costCenter CostCenter? @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
+  creator    User        @relation("FinanceTransactionCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+
+  /// DRE / cashflow hot path — groupBy(type, category, date) slices
+  /// by each column independently, so single-column indexes on the
+  /// discriminators keep those queries index-only.
+  @@index([type])
+  @@index([category])
+  @@index([status])
+  @@index([date])
+  @@index([projectId])
+  @@index([costCenterId])
+  @@index([createdBy])
+  /// Hottest index — the daily OVERDUE sweep filters by
+  /// `status = PENDING AND dueDate < now()`. The composite turns
+  /// that sweep into a single index range scan.
+  @@index([status, dueDate])
+  @@map("finance_transactions")
+}
+
+/// Named buckets that group transactions for management accounting.
+/// A cost center can either be project-scoped (one per project) or
+/// company-wide (projectId = null for shared overhead).
+model CostCenter {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  projectId   String?
+  /// Optional monthly budget ceiling. The reports flag a cost
+  /// center as "over budget" when the sum of its EXPENSE
+  /// transactions for the period exceeds this value.
+  budget      Decimal? @db.Decimal(14, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project      Project?             @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  transactions FinanceTransaction[]
+
+  @@index([projectId])
+  @@index([name])
+  @@map("finance_cost_centers")
+}
+
+/// Customer-facing invoice — header row. Line items live in
+/// `InvoiceItem`. `subtotal`, `tax`, and `total` are all stored
+/// rather than recomputed on read so the PDF renderer and the
+/// financial reports see the same frozen values even if the
+/// underlying items are edited on a draft later.
+model Invoice {
+  id        String        @id @default(cuid())
+  /// Human-friendly invoice number (e.g. "2026-0001"). Generated
+  /// by the service on insert; unique across the whole table so
+  /// lookups by number alone are possible.
+  number    String        @unique
+  clientId  String
+  subtotal  Decimal       @db.Decimal(14, 2)
+  tax       Decimal       @default(0) @db.Decimal(14, 2)
+  total     Decimal       @db.Decimal(14, 2)
+  status    InvoiceStatus @default(DRAFT)
+  issuedAt  DateTime
+  dueDate   DateTime      @db.Date
+  paidAt    DateTime?
+  notes     String?
+  createdBy String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client  User          @relation("InvoiceClient", fields: [clientId], references: [id], onDelete: Restrict)
+  creator User          @relation("InvoiceCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  items   InvoiceItem[]
+
+  @@index([clientId])
+  @@index([status])
+  @@index([issuedAt])
+  @@index([dueDate])
+  @@index([status, dueDate])
+  @@map("finance_invoices")
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  description String
+  /// Decimal (not Int) so fractional units (hours, kg) are
+  /// representable without ad-hoc scaling.
+  quantity    Decimal @db.Decimal(14, 3)
+  unitPrice   Decimal @db.Decimal(14, 2)
+  total       Decimal @db.Decimal(14, 2)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("finance_invoice_items")
+}
+
+// =============================================================================
+// Notifications module — in-app notifications.
+//
+// Migration name: add_notifications
+//
+// Design notes:
+//   - `type` is a free-form string (not an enum) because the set of
+//     notification kinds evolves fast — the notification-service
+//     adds new ones without requiring a schema migration each time.
+//   - `read` is a denormalized boolean alongside `readAt` so the
+//     unread-count query is a simple index range scan instead of
+//     a `WHERE readAt IS NULL` on a nullable column.
+//   - `(userId, read)` composite index is the hot path: the inbox
+//     UI fetches `user's unread notifications` on every page load.
+//   - `(userId, createdAt)` is the secondary path for paginated
+//     history. Both indexes are cheap on a write-light table.
+// =============================================================================
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  /// Free-form type key, e.g. "vacation.approved", "payment.due",
+  /// "contact.confirmation". Frontends branch on this to pick an
+  /// icon and a click-through destination.
+  type      String
+  read      Boolean   @default(false)
+  readAt    DateTime?
+  /// Optional deep-link URL the frontend navigates to when the
+  /// notification is clicked. Null for purely informational items.
+  link      String?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Hottest index — the inbox fetch filters by userId and the
+  /// unread flag in one composite range scan.
+  @@index([userId, read])
+  /// Secondary — paginated history by recency for the full inbox.
+  @@index([userId, createdAt])
+  @@index([type])
+  @@map("notifications")
+}
+
+// =============================================================================
+// Support module — tickets, messages, attachments, SLA.
+//
+// Migration name: add_support_module
+//
+// Design notes:
+//   - `Ticket.number` is an auto-incrementing Int separate from the
+//     cuid primary key so humans can reference "#1042" instead of a
+//     25-char opaque id. A Postgres sequence backs it; uniqueness is
+//     enforced at the DB level.
+//   - `status` has no `CANCELLED` value — closed tickets move to
+//     CLOSED after RESOLVED, which makes SLA reporting simpler
+//     (RESOLVED means SLA fulfilled; CLOSED means the conversation
+//     is over and includes abandoned/duplicate cases).
+//   - `firstResponseAt` is set once (by the first non-client message),
+//     never overwritten. Drives the first-response-SLA metric.
+//   - `resolvedAt` is set when the status flips to RESOLVED. Drives
+//     the resolution-SLA metric. Re-opening a ticket does NOT clear
+//     resolvedAt — we keep the original for reporting and instead
+//     stamp a new resolvedAt only if the agent re-resolves.
+//   - Hot indexes: (status), (assigneeId, status), (clientId, status)
+//     so the three main inbox queries are all index-only scans.
+// =============================================================================
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_CLIENT
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TicketCategory {
+  BUG
+  FEATURE
+  QUESTION
+  BILLING
+  OTHER
+}
+
+model Ticket {
+  id              String         @id @default(cuid())
+  /// Auto-incrementing human-friendly number. Uses a Postgres
+  /// sequence via @default(autoincrement()); the migration creates
+  /// the sequence explicitly.
+  number          Int            @unique @default(autoincrement())
+  title           String
+  description     String
+  status          TicketStatus   @default(OPEN)
+  priority        TicketPriority @default(MEDIUM)
+  category        TicketCategory @default(QUESTION)
+  clientId        String
+  /// Optional because a fresh ticket lives in OPEN with no assignee
+  /// until someone in support picks it up (or the triage bot assigns
+  /// it based on category).
+  assigneeId      String?
+  /// Computed at creation time from the matching SLAPolicy plus the
+  /// business-hours calendar. Stored rather than recomputed on read
+  /// so SLA reports are consistent with what the client saw when
+  /// their ticket was opened.
+  slaDeadline     DateTime?
+  /// First time a non-client user sent a message on this ticket.
+  /// Null until the first agent reply lands. Never re-opened.
+  firstResponseAt DateTime?
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+  /// CSAT rating 1-5, captured after the client clicks the rating
+  /// link in the closure email. Null while the ticket is still open.
+  rating          Int?
+  ratingComment   String?
+  /// Free-form tag list. Small cardinality per ticket (usually
+  /// 0-3), so Postgres text[] is cheaper than a join table.
+  tags            String[]       @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client      User                @relation("TicketClient", fields: [clientId], references: [id], onDelete: Restrict)
+  assignee    User?               @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  messages    TicketMessage[]
+  attachments TicketAttachment[]
+
+  @@index([status])
+  @@index([priority])
+  @@index([category])
+  @@index([clientId, status])
+  @@index([assigneeId, status])
+  @@index([slaDeadline])
+  @@index([createdAt])
+  @@map("support_tickets")
+}
+
+model TicketMessage {
+  id         String   @id @default(cuid())
+  ticketId   String
+  authorId   String
+  body       String
+  /// Internal note — visible only to support staff, never to the
+  /// client. Enforced in the service layer, not at the DB.
+  isInternal Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  ticket      Ticket             @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author      User               @relation("TicketMessageAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  attachments TicketAttachment[]
+
+  @@index([ticketId, createdAt])
+  @@index([authorId])
+  @@map("support_ticket_messages")
+}
+
+model TicketAttachment {
+  id         String   @id @default(cuid())
+  ticketId   String
+  /// Nullable because an attachment can be attached to the ticket
+  /// itself (e.g. the initial payload) without belonging to any
+  /// single message yet.
+  messageId  String?
+  /// Opaque key into the `@devtechs/storage` adapter.
+  fileKey    String
+  filename   String
+  size       Int
+  mimeType   String
+  uploadedAt DateTime @default(now())
+
+  ticket  Ticket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  message TicketMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId])
+  @@index([messageId])
+  @@map("support_ticket_attachments")
+}
+
+/// SLA policy — one active row per priority level. The service
+/// reads the row for the ticket's priority at creation time and
+/// computes `slaDeadline` from it. `isActive` lets ops toggle a
+/// policy on/off without deleting history.
+model SLAPolicy {
+  id                  String         @id @default(cuid())
+  priority            TicketPriority @unique
+  /// How many business hours after ticket creation the first agent
+  /// response must land.
+  firstResponseHours  Int
+  /// How many business hours after ticket creation the ticket
+  /// must be RESOLVED.
+  resolutionHours     Int
+  isActive            Boolean        @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("support_sla_policies")
+}
+
+// =============================================================================
+// DevOps module — environments, pipelines, deployments.
+//
+// Migration name: add_devops_module
+//
+// Design notes:
+//   - `Environment.status` is the CURRENT health cached from the
+//     last health-check run. Historical samples live in a
+//     separate `EnvironmentHealthCheck` table so the history
+//     query never joins the main row.
+//   - `Pipeline.externalId` is the GitHub/GitLab run-id (string,
+//     not int, because providers differ). `(provider, externalId)`
+//     is unique so the webhook handler can upsert by id idempotently
+//     even if the same webhook fires twice.
+//   - `Pipeline.status` uses DB-managed enum with all four states.
+//     `duration` is stored on the row (precomputed when finishedAt
+//     lands) instead of recomputed on read — the list query stays
+//     index-only.
+//   - Hot indexes: `(projectId, status)` for the board,
+//     `(status)` for the "all running pipelines" filter,
+//     `(externalId, provider)` unique composite for webhook upserts.
+//   - `PipelineLog` has `(pipelineId, startedAt)` composite to
+//     fetch the log stream in chronological order without a sort.
+// =============================================================================
+
+enum EnvironmentType {
+  PRODUCTION
+  STAGING
+  DEVELOPMENT
+}
+
+enum EnvironmentStatus {
+  HEALTHY
+  DEGRADED
+  DOWN
+  UNKNOWN
+}
+
+enum PipelineProvider {
+  GITHUB_ACTIONS
+  GITLAB_CI
+}
+
+enum PipelineStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+enum PipelineLogStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
+enum DeploymentStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+  ROLLED_BACK
+}
+
+model Environment {
+  id          String            @id @default(cuid())
+  name        String
+  type        EnvironmentType
+  projectId   String
+  /// Public URL the health-check job pings every 5 minutes.
+  /// Stored as TEXT so query strings and path suffixes are fine.
+  url         String
+  status      EnvironmentStatus @default(UNKNOWN)
+  /// When the status field was last refreshed by the health
+  /// check. Null while the environment hasn't been probed yet.
+  lastCheckAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project     Project                  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  deployments Deployment[]
+  history     EnvironmentHealthCheck[]
+
+  @@index([projectId])
+  @@index([status])
+  @@map("devops_environments")
+}
+
+/// Time-series row appended by the health-check job on every
+/// probe. The (environmentId, checkedAt) index powers the history
+/// endpoint's date-range query.
+model EnvironmentHealthCheck {
+  id              String            @id @default(cuid())
+  environmentId   String
+  status          EnvironmentStatus
+  /// HTTP status code the probe received. Null when the request
+  /// failed before a response (DNS, TCP, TLS, timeout).
+  httpStatus      Int?
+  /// Round-trip time in milliseconds. Null on failed probes.
+  responseTimeMs  Int?
+  /// Free-form error string when the probe failed. Limited to
+  /// 500 chars so misbehaving upstreams can't bloat the table.
+  error           String?
+  checkedAt       DateTime          @default(now())
+
+  environment Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+
+  @@index([environmentId, checkedAt])
+  @@map("devops_environment_health_checks")
+}
+
+model Pipeline {
+  id             String           @id @default(cuid())
+  name           String
+  projectId      String
+  provider       PipelineProvider
+  /// CI/CD provider's own run id. Used to upsert from webhooks
+  /// and to call the provider's REST API for a live re-fetch.
+  externalId     String
+  branch         String
+  status         PipelineStatus   @default(QUEUED)
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  triggeredBy    String?
+  commitSha      String
+  commitMessage  String?
+  /// Total duration in seconds, computed when finishedAt lands
+  /// so the list view doesn't recompute it per row.
+  duration       Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  logs        PipelineLog[]
+  deployments Deployment[]
+
+  /// Webhook idempotency — the webhook handler upserts on this
+  /// composite so the same delivery never creates two rows.
+  @@unique([provider, externalId])
+  @@index([projectId, status])
+  @@index([status])
+  @@index([branch])
+  @@index([startedAt])
+  @@map("devops_pipelines")
+}
+
+model PipelineLog {
+  id          String            @id @default(cuid())
+  pipelineId  String
+  /// Human-readable step name (usually the job/step name from
+  /// the provider — "install", "test", "deploy").
+  step        String
+  /// Raw output from the step. TEXT so huge logs don't overflow.
+  /// The service caps per-row at 1MB when persisting via webhook.
+  output      String
+  status      PipelineLogStatus
+  startedAt   DateTime
+  finishedAt  DateTime?
+
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  @@index([pipelineId, startedAt])
+  @@map("devops_pipeline_logs")
+}
+
+model Deployment {
+  id            String           @id @default(cuid())
+  pipelineId    String
+  environmentId String
+  status        DeploymentStatus @default(PENDING)
+  deployedAt    DateTime         @default(now())
+  rolledBackAt  DateTime?
+  /// The user who triggered the deployment. Restricted on delete
+  /// so the audit trail survives — admins must reassign before
+  /// removing a user who has deployments on record.
+  deployedBy    String
+
+  pipeline    Pipeline    @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  environment Environment @relation(fields: [environmentId], references: [id], onDelete: Restrict)
+  user        User        @relation("DeploymentDeployedBy", fields: [deployedBy], references: [id], onDelete: Restrict)
+
+  @@index([pipelineId])
+  @@index([environmentId, deployedAt])
+  @@index([status])
+  @@index([deployedBy])
+  @@map("devops_deployments")
 }

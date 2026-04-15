@@ -1,83 +1,42 @@
-import { ExecutionContext, Injectable } from '@nestjs/common';
-import {
-  ThrottlerException,
-  ThrottlerGuard,
-  ThrottlerLimitDetail,
-  ThrottlerRequest,
-} from '@nestjs/throttler';
-import type { Request, Response } from 'express';
+import { Injectable } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 import type { CurrentUserPayload } from '../decorators/current-user.decorator';
 import { THROTTLERS } from './rate-limit.module';
 
-interface RequestWithUser extends Request {
+interface RequestWithUser {
   user?: CurrentUserPayload;
+  ip?: string;
 }
 
 /**
- * Extends the stock `@nestjs/throttler` guard with two behaviors the
- * auth-service needs:
+ * Extends the stock `@nestjs/throttler` guard with per-user tracking
+ * for the `email-verification` bucket. Every other bucket falls back
+ * to the default IP-based tracker.
  *
- *  1. **Per-user tracking for the `email-verification` bucket**.
- *     By default the throttler tracks by IP, but the spec wants
- *     `POST /auth/email/send-verification` limited to 3/hour *per user*.
- *     We override `getTracker()` so that bucket keys off `user:<id>`
- *     whenever the request is authenticated.
- *
- *  2. **`Retry-After` header on 429 responses.** The throttler sets
- *     `X-RateLimit-*` headers but not the canonical HTTP spec header,
- *     so we compute it from the `timeToExpire` field and attach it
- *     before re-throwing.
+ * NOTE: `@nestjs/throttler@5.x` (what this repo pins today) has a
+ * narrower public API than v6+, so more invasive customizations
+ * (custom `handleRequest`, `throwThrottlingException` with detail
+ * objects) aren't available on this version. The per-user tracker
+ * override is the only customization we need for the spec.
  */
 @Injectable()
 export class CustomThrottlerGuard extends ThrottlerGuard {
   /**
-   * Decide what key a given request is bucketed under, based on which
-   * named throttler is being evaluated.
+   * Decide the bucket key for a given request. For the
+   * email-verification throttler we key on the authenticated user
+   * so rate limits are per-user (3/hour). For every other bucket
+   * we key on the IP, which is the default behavior.
    */
-  protected override async getTracker(
+  protected override getTracker(
     req: Record<string, unknown>,
     throttlerName?: string,
   ): Promise<string> {
-    // Per-user bucket for the email-verification throttler.
     if (throttlerName === THROTTLERS.EMAIL_VERIFICATION) {
       const user = (req as RequestWithUser).user;
-      if (user?.id) return `user:${user.id}`;
+      if (user?.id) return Promise.resolve(`user:${user.id}`);
     }
-    // Fallback to IP for everything else (login, register, default).
-    const ip = (req as { ip?: string }).ip;
-    return ip ?? 'unknown';
-  }
-
-  /**
-   * Called by the base guard when a limit is exceeded. We mirror its
-   * behavior but attach a `Retry-After` header (in seconds) first so
-   * well-behaved clients back off cleanly.
-   */
-  protected override async throwThrottlingException(
-    context: ExecutionContext,
-    throttlerLimitDetail: ThrottlerLimitDetail,
-  ): Promise<void> {
-    const res = context.switchToHttp().getResponse<Response>();
-    const retryAfterSeconds = Math.max(
-      1,
-      Math.ceil(throttlerLimitDetail.timeToExpire),
-    );
-    res.setHeader('Retry-After', String(retryAfterSeconds));
-    throw new ThrottlerException(
-      `Too many requests. Retry after ${retryAfterSeconds}s.`,
-    );
-  }
-
-  /**
-   * Small ergonomic tweak: the base implementation forwards the full
-   * `ThrottlerRequest` to `handleRequest`. We keep it verbatim here so
-   * the subclass stays a drop-in replacement; this stub exists solely
-   * as a hook for future custom-logic without changing call sites.
-   */
-  protected override async handleRequest(
-    requestProps: ThrottlerRequest,
-  ): Promise<boolean> {
-    return super.handleRequest(requestProps);
+    const ip = (req as RequestWithUser).ip;
+    return Promise.resolve(ip ?? 'unknown');
   }
 }

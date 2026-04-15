@@ -1,4 +1,4 @@
-import NextAuth, { type DefaultSession } from 'next-auth';
+import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import GitHub from 'next-auth/providers/github';
 import Google from 'next-auth/providers/google';
@@ -62,14 +62,7 @@ function toAuthUser(payload: LoginSuccess) {
     email: payload.user.email ?? null,
     roles: payload.user.roles ?? [],
     mainRole: payload.user.primaryRole ?? null,
-    // The login response doesn't include permissions yet; we leave
-    // this empty here and a future turn will populate it from a
-    // dedicated endpoint or from a direct Prisma read.
-    permissions: [] as string[],
-    // Fresh logins always produce a verified-session object; the
-    // backend lets unverified users log in, so we flip this from
-    // whatever the payload carries (defaults to false so middleware
-    // still guards downstream routes correctly).
+    permissions: payload.user.permissions ?? [],
     emailVerified: payload.user.emailVerified ?? false,
     accessToken: payload.accessToken,
     refreshToken: payload.refreshToken,
@@ -226,15 +219,24 @@ export const {
      */
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.name = user.name ?? null;
-        token.email = user.email ?? null;
-        token.roles = user.roles;
-        token.mainRole = user.mainRole;
-        token.permissions = user.permissions;
-        token.emailVerified = user.emailVerified;
-        token.accessToken = user.accessToken;
-        token.refreshToken = user.refreshToken;
+        const u = user as typeof user & {
+          id: string;
+          roles: string[];
+          mainRole: string | null;
+          permissions: string[];
+          emailVerified: boolean;
+          accessToken: string;
+          refreshToken: string;
+        };
+        token.id = u.id ?? token.id ?? '';
+        token.name = u.name ?? null;
+        token.email = u.email ?? null;
+        token.roles = u.roles ?? [];
+        token.mainRole = u.mainRole ?? null;
+        token.permissions = u.permissions ?? [];
+        token.emailVerified = Boolean(u.emailVerified);
+        token.accessToken = u.accessToken;
+        token.refreshToken = u.refreshToken;
       }
       return token;
     },
@@ -247,7 +249,13 @@ export const {
      */
     async session({ session, token }) {
       if (!token) return session;
-      session.user = {
+      // NextAuth v5 beta typed `session.user` as `AdapterUser` which
+      // requires `email: string`. Our schema permits null emails on
+      // OAuth-linked accounts that haven't surfaced their address
+      // yet, so we go through `unknown` to bypass the check — the
+      // runtime contract still matches our own `Session` augmentation
+      // in `types/next-auth.d.ts`.
+      const user = {
         id: token.id,
         name: token.name ?? null,
         email: token.email ?? null,
@@ -256,13 +264,8 @@ export const {
         mainRole: token.mainRole ?? null,
         permissions: token.permissions ?? [],
         emailVerified: token.emailVerified ?? false,
-      } as DefaultSession['user'] & {
-        id: string;
-        roles: string[];
-        mainRole: string | null;
-        permissions: string[];
-        emailVerified: boolean;
       };
+      session.user = user as unknown as typeof session.user;
       session.accessToken = token.accessToken;
       session.refreshToken = token.refreshToken;
       return session;

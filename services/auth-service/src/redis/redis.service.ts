@@ -8,38 +8,109 @@ import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
 /**
- * Redis client used by the auth-service for pub/sub (e.g. emitting
- * `auth.user.registered` events consumed by notification-service).
+ * Redis client used by the auth-service for pub/sub, the permission
+ * cache, 2FA temporary secrets, and the login rate-limit counters.
  *
- * Exposes `publish()` as a thin wrapper that serializes payloads as JSON
- * and logs transport errors rather than bubbling them up — event publishing
- * must never break the user-facing request.
+ * DEV TOLERANCE: in development (NODE_ENV !== 'production') the client
+ * is configured with `lazyConnect: true` + a soft retry strategy so a
+ * missing Redis never brings the whole service down or spams the
+ * console. Read/write methods catch connection failures and return
+ * null/no-op, which matches the fail-soft expectations the rest of
+ * the codebase already has (PermissionGuard, audit writes, etc.).
+ *
+ * Production still uses the hard retry strategy — a missing Redis
+ * in prod is an ops alarm.
  */
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
   private client!: Redis;
+  private readonly devMode: boolean;
+  private warnedOffline = false;
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(private readonly config: ConfigService) {
+    this.devMode = (process.env.NODE_ENV ?? 'development') !== 'production';
+  }
 
   onModuleInit(): void {
     const url = this.config.get<string>('REDIS_URL');
     const host = this.config.get<string>('REDIS_HOST', 'redis');
     const port = Number(this.config.get<string>('REDIS_PORT', '6379'));
 
-    this.client = url
-      ? new Redis(url, { lazyConnect: false, maxRetriesPerRequest: 3 })
-      : new Redis({ host, port, lazyConnect: false, maxRetriesPerRequest: 3 });
+    const commonOptions = {
+      maxRetriesPerRequest: this.devMode ? 1 : 3,
+      lazyConnect: this.devMode,
+      enableOfflineQueue: false,
+      retryStrategy: this.devMode
+        ? () => null // Don't auto-retry in dev — avoids connect spam
+        : undefined,
+    } as const;
 
-    this.client.on('connect', () => this.logger.log('Redis connected'));
-    this.client.on('error', (err) =>
-      this.logger.error(`Redis error: ${err.message}`),
-    );
+    this.client = url
+      ? new Redis(url, commonOptions)
+      : new Redis({ host, port, ...commonOptions });
+
+    this.client.on('connect', () => {
+      this.logger.log('Redis connected');
+      this.warnedOffline = false;
+    });
+    this.client.on('error', (err) => {
+      if (this.devMode) {
+        // Only log the first offline warning, not every reconnect attempt.
+        if (!this.warnedOffline) {
+          this.logger.warn(
+            `Redis unavailable (${err.message}). Running in degraded dev mode — rate-limiting and cache disabled.`,
+          );
+          this.warnedOffline = true;
+        }
+      } else {
+        this.logger.error(`Redis error: ${err.message}`);
+      }
+    });
+
+    if (!this.devMode) {
+      // In prod, force the initial connect so startup fails fast on
+      // a misconfigured deployment. In dev we let lazyConnect defer
+      // the first connect until a real command.
+      this.client.connect().catch(() => {
+        /* error already logged via the 'error' handler */
+      });
+    }
   }
 
   async onModuleDestroy(): Promise<void> {
-    await this.client?.quit();
-    this.logger.log('Redis disconnected');
+    try {
+      await this.client?.quit();
+      this.logger.log('Redis disconnected');
+    } catch {
+      /* already disconnected, nothing to clean up */
+    }
+  }
+
+  /**
+   * Run a Redis command with dev-mode tolerance: if Redis is offline
+   * in dev we return `fallback` instead of throwing. In production we
+   * let the error propagate so the caller decides.
+   */
+  private async run<T>(op: () => Promise<T>, fallback: T): Promise<T> {
+    if (this.devMode && this.client.status !== 'ready') {
+      // Try a lazy connect once; on failure return the fallback.
+      try {
+        if (this.client.status === 'wait' || this.client.status === 'end') {
+          await this.client.connect();
+        }
+      } catch {
+        return fallback;
+      }
+    }
+    try {
+      return await op();
+    } catch (err) {
+      if (this.devMode) {
+        return fallback;
+      }
+      throw err;
+    }
   }
 
   /**
@@ -47,57 +118,45 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
    * errors so the caller can stay focused on its business logic.
    */
   async publish<T>(channel: string, payload: T): Promise<void> {
-    try {
-      const message = JSON.stringify({
-        channel,
-        publishedAt: new Date().toISOString(),
-        payload,
-      });
-      await this.client.publish(channel, message);
-    } catch (err) {
-      const reason = err instanceof Error ? err.message : String(err);
-      this.logger.error(`Failed to publish to ${channel}: ${reason}`);
-    }
+    const message = JSON.stringify({
+      channel,
+      publishedAt: new Date().toISOString(),
+      payload,
+    });
+    await this.run(() => this.client.publish(channel, message).then(() => undefined), undefined);
   }
 
-  // -------------------------------------------------------------------
-  // Key/value helpers (used for short-lived state like 2FA setup
-  // secrets, rate-limit counters, etc.). Errors bubble up here —
-  // unlike publish(), these operations are load-bearing for the
-  // caller's request, so silent failure would mask bugs.
-  // -------------------------------------------------------------------
-
   async get(key: string): Promise<string | null> {
-    return this.client.get(key);
+    return this.run(() => this.client.get(key), null);
   }
 
   async set(key: string, value: string): Promise<void> {
-    await this.client.set(key, value);
+    await this.run(() => this.client.set(key, value).then(() => undefined), undefined);
   }
 
   async setWithTTL(key: string, value: string, ttlSeconds: number): Promise<void> {
-    await this.client.set(key, value, 'EX', ttlSeconds);
+    await this.run(
+      () => this.client.set(key, value, 'EX', ttlSeconds).then(() => undefined),
+      undefined,
+    );
   }
 
   async del(key: string): Promise<void> {
-    await this.client.del(key);
+    await this.run(() => this.client.del(key).then(() => undefined), undefined);
   }
 
-  /** Atomic increment. Creates the key with value 1 if it doesn't exist. */
   async incr(key: string): Promise<number> {
-    return this.client.incr(key);
+    return this.run(() => this.client.incr(key), 0);
   }
 
-  /** Set (or refresh) the TTL on an existing key, in seconds. */
   async expire(key: string, ttlSeconds: number): Promise<void> {
-    await this.client.expire(key, ttlSeconds);
+    await this.run(
+      () => this.client.expire(key, ttlSeconds).then(() => undefined),
+      undefined,
+    );
   }
 
-  /**
-   * Returns the remaining TTL of a key in seconds.
-   * -2 if the key does not exist, -1 if it has no associated expire.
-   */
   async ttl(key: string): Promise<number> {
-    return this.client.ttl(key);
+    return this.run(() => this.client.ttl(key), -2);
   }
 }

@@ -7,7 +7,6 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import type { Prisma } from '@devtechs/database';
 
 import { AuditAction } from '../../common/constants/audit-actions';
 import { PrismaService } from '../../prisma/prisma.service';

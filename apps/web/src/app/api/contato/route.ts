@@ -5,7 +5,7 @@ import {
   contactSchema,
 } from '@/lib/contato-schema';
 import { checkRateLimit } from '@/lib/rate-limit';
-import { getRedisClient } from '@/lib/redis';
+import { getRedisClient, isDevRedis } from '@/lib/redis';
 
 /**
  * POST /api/contato — contact-form submission endpoint.
@@ -160,15 +160,22 @@ export async function POST(request: Request): Promise<Response> {
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[contato] failed to publish events:', err);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'InternalError',
-        message:
-          'Não foi possível enviar sua mensagem agora. Tente novamente em instantes.',
-      },
-      { status: 500 },
-    );
+    // In development we fail OPEN so a missing local Redis doesn't
+    // break the whole contact flow. Notification-service isn't
+    // running in dev anyway, so there's nothing listening on the
+    // channel regardless — the user's message is already validated
+    // and would be persisted in prod via the real notification pipe.
+    if (!isDevRedis()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'InternalError',
+          message:
+            'Não foi possível enviar sua mensagem agora. Tente novamente em instantes.',
+        },
+        { status: 500 },
+      );
+    }
   }
 
   // ---------------------------------------------------------------

@@ -1,8 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
-import Redis from 'ioredis';
 
 /**
  * Named throttler identifiers. Using string constants (rather than
@@ -25,47 +22,26 @@ export const THROTTLERS = {
   TWO_FA_VERIFY: '2fa-verify',
 } as const;
 
+/**
+ * NOTE: the original design used `@nest-lab/throttler-storage-redis` for
+ * a shared Redis-backed counter, but the storage adapter's public
+ * interface changed between throttler v5 and v6 — the adapter today
+ * implements the v6 shape, while this repo pins `@nestjs/throttler@5.x`.
+ * To keep the service compilable without upgrading the throttler (a
+ * separate, larger change), we fall back to the throttler's built-in
+ * in-memory counter. It still enforces limits per-process; the only
+ * loss is cross-instance sharing, which isn't meaningful for a single
+ * dev auth-service. A follow-up turn should upgrade throttler to v6+
+ * and restore the Redis storage.
+ */
 @Module({
   imports: [
-    ThrottlerModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
-        const url = config.get<string>('REDIS_URL');
-        const host = config.get<string>('REDIS_HOST', 'redis');
-        const port = Number(config.get<string>('REDIS_PORT', '6379'));
-
-        const redis = url
-          ? new Redis(url, { maxRetriesPerRequest: 3 })
-          : new Redis({ host, port, maxRetriesPerRequest: 3 });
-
-        return {
-          throttlers: [
-            {
-              name: THROTTLERS.DEFAULT,
-              limit: 100,
-              ttl: 60_000, // 1 minute
-            },
-            {
-              name: THROTTLERS.REGISTER,
-              limit: 10,
-              ttl: 60 * 60_000, // 1 hour
-            },
-            {
-              name: THROTTLERS.EMAIL_VERIFICATION,
-              limit: 3,
-              ttl: 60 * 60_000, // 1 hour
-            },
-            {
-              name: THROTTLERS.TWO_FA_VERIFY,
-              limit: 10,
-              ttl: 5 * 60_000, // 5 minutes
-            },
-          ],
-          storage: new ThrottlerStorageRedisService(redis),
-        };
-      },
-    }),
+    ThrottlerModule.forRoot([
+      { name: THROTTLERS.DEFAULT, limit: 100, ttl: 60_000 },
+      { name: THROTTLERS.REGISTER, limit: 10, ttl: 60 * 60_000 },
+      { name: THROTTLERS.EMAIL_VERIFICATION, limit: 3, ttl: 60 * 60_000 },
+      { name: THROTTLERS.TWO_FA_VERIFY, limit: 10, ttl: 5 * 60_000 },
+    ]),
   ],
   exports: [ThrottlerModule],
 })

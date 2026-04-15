@@ -2,18 +2,26 @@ import Link from 'next/link';
 
 import { Button } from '@devtechs/ui';
 
+import { auth } from '@/auth';
+import { getRedirectForRole } from '@/lib/role-redirect';
+
 import { ArrowRightIcon } from './icons';
 
 /**
  * Top-of-page navigation.
+ *
+ * Server component so it can read the NextAuth session directly
+ * without a client round-trip. When a user is logged in the CTA
+ * switches from "Entrar" to "Ir para a plataforma" and points at
+ * the role-aware dashboard (admin → /admin, member → /perfil, etc.).
  *
  * - Sticky with a translucent backdrop blur so content scrolls under it.
  * - Uses plain anchor links (`#services`, `#sobre`, `#contato`) so
  *   smooth-scroll is handled entirely by the `scroll-behavior: smooth`
  *   rule on <html> — zero JS for scroll behavior.
  * - The mobile breakpoint drops the inline nav and keeps only the
- *   brand + "Entrar" button, which is the minimum viable mobile UX
- *   for a single-page landing.
+ *   brand + CTA, which is the minimum viable mobile UX for a
+ *   single-page landing.
  */
 const NAV_LINKS = [
   { href: '#servicos', label: 'Serviços' },
@@ -21,7 +29,14 @@ const NAV_LINKS = [
   { href: '#contato', label: 'Contato' },
 ];
 
-export function Header(): JSX.Element {
+export async function Header(): Promise<JSX.Element> {
+  const session = await auth();
+  const isAuthenticated = Boolean(session?.user);
+  const ctaHref = isAuthenticated
+    ? getRedirectForRole(session?.user?.mainRole)
+    : '/login';
+  const ctaLabel = isAuthenticated ? 'Ir para a plataforma' : 'Entrar';
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
@@ -69,8 +84,8 @@ export function Header(): JSX.Element {
         </nav>
 
         <Button asChild size="sm" className="gap-1.5">
-          <Link href="/login">
-            Entrar
+          <Link href={ctaHref}>
+            {ctaLabel}
             <ArrowRightIcon className="h-4 w-4" />
           </Link>
         </Button>

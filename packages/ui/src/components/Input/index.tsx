@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from 'class-variance-authority';
-import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, useId, type InputHTMLAttributes, type ReactNode } from 'react';
 
 import { cn } from '../../lib/cn';
 
@@ -43,7 +43,10 @@ export interface InputProps
  */
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, variant, size, label, hint, error, id, ...props }, ref) => {
-    const inputId = id ?? `input-${Math.random().toString(36).slice(2, 9)}`;
+    // useId is stable across server and client — avoids hydration
+    // mismatches that Math.random() would introduce.
+    const generatedId = useId();
+    const inputId = id ?? `input-${generatedId}`;
     const hintId = hint ? `${inputId}-hint` : undefined;
     const errorId = error ? `${inputId}-error` : undefined;
     const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined;

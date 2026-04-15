@@ -1,5 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 
+// Declared locally instead of importing `@types/node` — the `database`
+// package avoids node-type deps so the Prisma client definitions can be
+// consumed by both Node services and (in the future) edge runtimes.
+declare const process: { env: { NODE_ENV?: string } };
+
 /**
  * Shared Prisma client instance.
  *

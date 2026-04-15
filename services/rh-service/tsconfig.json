@@ -4,11 +4,20 @@
     "module": "CommonJS",
     "moduleResolution": "Node",
     "target": "ES2022",
-    "outDir": "dist",
     "rootDir": "src",
+    "outDir": "dist",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "baseUrl": ".",
+    "paths": {
+      "@devtechs/database": ["../../packages/database/dist"],
+      "@devtechs/database/*": ["../../packages/database/dist/*"],
+      "@devtechs/storage": ["../../packages/storage/dist"],
+      "@devtechs/storage/*": ["../../packages/storage/dist/*"]
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "test"]

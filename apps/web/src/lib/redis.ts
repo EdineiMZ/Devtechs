@@ -15,36 +15,62 @@ import Redis from 'ioredis';
  *     `redis://localhost:6379` or `rediss://user:pass@host:6379/0`.
  *   - Fallback: `REDIS_HOST` + `REDIS_PORT`, both optional.
  *
- * Connection errors are logged but never thrown from here — callers
- * should try/catch around actual Redis commands instead, so a Redis
- * outage surfaces as a 5xx on the specific route rather than a
- * boot-time crash.
+ * Dev tolerance: in development we enable `lazyConnect` and a no-retry
+ * strategy so a missing local Redis doesn't log-spam the dev server on
+ * every request. Callers that actually NEED the command to succeed
+ * still try/catch and decide what to do — see `/api/contato`.
+ *
+ * Production still uses the hard retry strategy — a missing Redis in
+ * prod is an ops alarm, not a soft failure.
  */
 
 interface GlobalWithRedis {
   __devtechs_redis__?: Redis;
+  __devtechs_redis_warned__?: boolean;
 }
 
 const globalForRedis = globalThis as unknown as GlobalWithRedis;
+
+export const isDevRedis = (): boolean =>
+  (process.env.NODE_ENV ?? 'development') !== 'production';
 
 export function getRedisClient(): Redis {
   if (globalForRedis.__devtechs_redis__) {
     return globalForRedis.__devtechs_redis__;
   }
 
+  const dev = isDevRedis();
+  const commonOptions = {
+    maxRetriesPerRequest: dev ? 1 : 3,
+    lazyConnect: dev,
+    enableOfflineQueue: false,
+    retryStrategy: dev ? () => null : undefined,
+  } as const;
+
   const url = process.env.REDIS_URL;
   const client = url
-    ? new Redis(url, { maxRetriesPerRequest: 3, lazyConnect: false })
+    ? new Redis(url, commonOptions)
     : new Redis({
         host: process.env.REDIS_HOST ?? '127.0.0.1',
         port: Number(process.env.REDIS_PORT ?? 6379),
-        maxRetriesPerRequest: 3,
-        lazyConnect: false,
+        ...commonOptions,
       });
 
   client.on('error', (err) => {
-    // eslint-disable-next-line no-console
-    console.error('[redis] connection error:', err.message);
+    if (dev) {
+      // Only log the first offline warning per process, so a dev box
+      // without Redis doesn't drown the Next.js terminal.
+      if (!globalForRedis.__devtechs_redis_warned__) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[redis] unavailable (${err.message}) — running in degraded dev mode.`,
+        );
+        globalForRedis.__devtechs_redis_warned__ = true;
+      }
+    } else {
+      // eslint-disable-next-line no-console
+      console.error('[redis] connection error:', err.message);
+    }
   });
 
   globalForRedis.__devtechs_redis__ = client;

@@ -21,6 +21,7 @@ export interface LoginUserDto {
   roles: string[];
   primaryRole: string | null;
   emailVerified?: boolean;
+  permissions?: string[];
 }
 
 export interface LoginSuccessDto {

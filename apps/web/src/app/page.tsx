@@ -7,16 +7,14 @@ import { Hero } from '@/components/landing/hero';
 import { Services } from '@/components/landing/services';
 
 /**
- * Force the App Router to statically generate this page. The landing
- * is pure content with no per-request data, so it should be served as
- * a flat HTML file from the edge with zero cold-start cost.
- *
- * `revalidate: false` keeps it permanently cached until the next
- * deploy; a future CMS integration can switch this to a number (ISR)
- * without touching any component below.
+ * The landing page's body is pure content, but the top header needs
+ * the auth session to switch the CTA between "Entrar" and
+ * "Ir para a plataforma". Reading the session forces a per-request
+ * render, so we let Next's default inference treat the route as
+ * dynamic. A future anonymous CDN cache is still fine — the header
+ * is rendered on the Node layer, not the edge.
  */
-export const dynamic = 'force-static';
-export const revalidate = false;
+export const dynamic = 'force-dynamic';
 
 export default function HomePage(): JSX.Element {
   return (
