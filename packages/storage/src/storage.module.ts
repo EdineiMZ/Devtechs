@@ -2,7 +2,6 @@ import { DynamicModule, Global, Module, Provider } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { StorageFactory, type StorageEnv } from './factory';
-import type { StorageAdapter } from './types';
 
 /**
  * Injection token for the active `StorageAdapter`. Use `@Inject(STORAGE)`

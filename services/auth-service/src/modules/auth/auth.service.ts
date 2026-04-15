@@ -190,9 +190,16 @@ export class AuthService {
       where: { id: userId },
       include: {
         roles: {
-          include: { role: true },
+          include: {
+            role: {
+              include: {
+                permissions: { include: { permission: true } },
+              },
+            },
+          },
           orderBy: { assignedAt: 'asc' },
         },
+        extraPermissions: { include: { permission: true } },
       },
     });
 
@@ -224,12 +231,27 @@ export class AuthService {
       data: { lastLoginAt: new Date() },
     });
 
+    // Flatten role-level + extra-user permissions into a single unique
+    // key set the frontend middleware can branch on. Dedup via Set so
+    // a permission granted via two different roles only appears once.
+    const permissionSet = new Set<string>();
+    for (const ur of user.roles) {
+      for (const rp of ur.role.permissions) {
+        permissionSet.add(rp.permission.key);
+      }
+    }
+    for (const up of user.extraPermissions) {
+      permissionSet.add(up.permission.key);
+    }
+
     const authenticatedUser: AuthenticatedUser = {
       id: user.id,
       email: user.email,
       name: user.name,
       roles: user.roles.map((r) => r.role.name),
       primaryRole: user.roles[0]?.role.name ?? null,
+      emailVerified: user.emailVerified,
+      permissions: Array.from(permissionSet).sort(),
     };
 
     this.logger.log(`User logged in: ${user.email} (${user.id})`);

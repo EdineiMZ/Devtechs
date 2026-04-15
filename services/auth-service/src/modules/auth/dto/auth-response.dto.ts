@@ -15,6 +15,12 @@ export interface AuthenticatedUser {
    * Controllers should use this when they only want one role to display.
    */
   primaryRole: string | null;
+  /** Whether the user has verified their email. The frontend bounces
+   *  to /verificar-email when false so it needs to be in the payload. */
+  emailVerified: boolean;
+  /** All permission keys granted to the user via roles + direct grants.
+   *  Frontend middleware uses this for per-route authorization checks. */
+  permissions: string[];
 }
 
 /**

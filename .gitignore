@@ -48,3 +48,17 @@ coverage/
 *.pid.lock
 .cache/
 .eslintcache
+
+# Claude session artifacts (local helper scripts + scheduler state)
+.claude/scheduled_tasks.lock
+.claude/test-*.js
+.claude/create-client.js
+
+# Stray Prisma client emit (the real client lives in packages/database/dist)
+packages/database/src/*.js
+packages/database/src/*.js.map
+packages/database/src/*.d.ts
+packages/database/src/*.d.ts.map
+
+# One-off SQL helper scripts
+services/auth-service/create-client.cjs

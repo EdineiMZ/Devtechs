@@ -4,12 +4,24 @@
   "private": true,
   "description": "DevTechs monorepo - apps, services and shared packages",
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --parallel",
+    "dev:web": "pnpm --filter @devtechs/web dev",
+    "dev:services": "turbo run dev --parallel --filter='./services/*'",
+    "dev:apps": "turbo run dev --parallel --filter='./apps/*'",
+    "dev:full": "turbo run dev --parallel --filter='./apps/*' --filter='./services/*'",
     "build": "turbo run build",
+    "build:packages": "turbo run build --filter='./packages/*'",
+    "start": "turbo run start --parallel",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "db:generate": "pnpm --filter @devtechs/database prisma:generate",
+    "db:migrate": "pnpm --filter @devtechs/database prisma:migrate",
+    "db:migrate:deploy": "pnpm --filter @devtechs/database prisma:migrate:deploy",
+    "db:seed": "pnpm --filter @devtechs/database db:seed",
+    "db:studio": "pnpm --filter @devtechs/database prisma:studio",
+    "bootstrap": "pnpm install && pnpm build:packages && pnpm db:generate && pnpm db:migrate:deploy && pnpm db:seed"
   },
   "devDependencies": {
     "turbo": "^2.0.0",
