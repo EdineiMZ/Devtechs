@@ -1,3 +1,5 @@
-export default function Page() {
-  return <main>DevTechs - store app</main>;
+import { redirect } from 'next/navigation';
+
+export default function Home() {
+  redirect('/planos');
 }

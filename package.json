@@ -24,10 +24,11 @@
     "bootstrap": "pnpm install && pnpm build:packages && pnpm db:generate && pnpm db:migrate:deploy && pnpm db:seed"
   },
   "devDependencies": {
-    "turbo": "^2.0.0",
-    "typescript": "^5.4.0",
+    "eslint": "^8.57.0",
+    "playwright": "^1.59.1",
     "prettier": "^3.2.5",
-    "eslint": "^8.57.0"
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0"
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {

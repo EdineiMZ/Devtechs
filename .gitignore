@@ -64,3 +64,6 @@ packages/database/src/*.d.ts.map
 
 # One-off SQL helper scripts
 services/auth-service/create-client.cjs
+
+# E2E test scripts (local only)
+test-license-e2e.*

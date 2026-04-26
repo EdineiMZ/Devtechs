@@ -117,6 +117,17 @@ model User {
   // FK on delete so the audit trail survives user removal.
   deploymentsTriggered Deployment[] @relation("DeploymentDeployedBy")
 
+  // Payments module — subscriptions and payment history.
+  subscriptions Subscription[]
+  payments      Payment[]
+
+  // License module — product bindings, tokens issued/revoked, activations.
+  clientProductBindings   ClientProductBinding[] @relation("LicenseClient")
+  productBindingsGranted  ClientProductBinding[] @relation("LicenseAssignedBy")
+  activationTokensOwned   ActivationToken[]      @relation("TokenClient")
+  activationTokensIssued  ActivationToken[]      @relation("TokenIssuedBy")
+  activationTokensRevoked ActivationToken[]      @relation("TokenRevokedBy")
+
   @@index([status])
   @@index([createdAt])
   @@map("users")
@@ -1448,4 +1459,247 @@ model Deployment {
   @@index([status])
   @@index([deployedBy])
   @@map("devops_deployments")
+}
+
+// =============================================================================
+// Payments module — plans, subscriptions, payments, coupons.
+//
+// Migration name: add_payments_module
+//
+// Design notes:
+//   - `Subscription.externalId` is the Mercado Pago subscription
+//     ID (preapproval_id). The webhook handler upserts by this
+//     field so re-deliveries never create duplicates.
+//   - `Payment.externalId` is the MP payment_id. Same upsert
+//     strategy. `externalUrl` stores the MP init_point for PIX
+//     QR / boleto link so the frontend can redirect directly.
+//   - `Payment.metadata` is a Json column for provider-specific
+//     fields (pix_qr_code, barcode, card_last_four, etc.) that
+//     don't warrant their own typed columns.
+//   - `Coupon.code` is case-insensitive unique. The service
+//     lowercases on insert and lookup so "WELCOME" and "welcome"
+//     resolve to the same row.
+//   - Hot indexes: (userId, status) on Subscription, (userId)
+//     on Payment, (subscriptionId) on Payment.
+// =============================================================================
+
+enum PlanInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  TRIALING
+  EXPIRED
+}
+
+enum PaymentMethod {
+  PIX
+  BOLETO
+  CREDIT_CARD
+  DEBIT_CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  EXPIRED
+}
+
+enum CouponType {
+  PERCENTAGE
+  FIXED
+}
+
+model Plan {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  price       Decimal      @db.Decimal(14, 2)
+  interval    PlanInterval
+  /// Feature list displayed on the pricing page. Postgres
+  /// text[] for small cardinality without a join table.
+  features    String[]     @default([])
+  /// Free trial length in days. 0 means no trial.
+  trialDays   Int          @default(0)
+  isActive    Boolean      @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@index([isActive])
+  @@map("payments_plans")
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  userId             String
+  planId             String
+  status             SubscriptionStatus @default(TRIALING)
+  /// Provider subscription id (MP preapproval_id / Stripe sub_xxx).
+  externalId         String?            @unique
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelledAt        DateTime?
+  /// Trial end — null when the plan has trialDays=0.
+  trialEnd           DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  plan     Plan      @relation(fields: [planId], references: [id], onDelete: Restrict)
+  payments Payment[]
+
+  @@index([userId, status])
+  @@index([externalId])
+  @@index([status])
+  @@map("payments_subscriptions")
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  subscriptionId String?
+  userId         String
+  amount         Decimal       @db.Decimal(14, 2)
+  currency       String        @default("BRL")
+  method         PaymentMethod
+  status         PaymentStatus @default(PENDING)
+  /// Provider payment id (MP payment_id / Stripe pi_xxx).
+  externalId     String?       @unique
+  /// Checkout URL — the MP init_point or Stripe checkout
+  /// session URL the frontend redirects to.
+  externalUrl    String?
+  paidAt         DateTime?
+  expiresAt      DateTime?
+  /// Freeform provider-specific data — pix QR code, boleto
+  /// barcode, card last 4 digits, etc.
+  metadata       Json          @default("{}")
+
+  createdAt DateTime @default(now())
+
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([subscriptionId])
+  @@index([userId])
+  @@index([externalId])
+  @@index([status])
+  @@map("payments_payments")
+}
+
+model Coupon {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  discount  Decimal    @db.Decimal(14, 2)
+  type      CouponType
+  maxUses   Int        @default(0)
+  usedCount Int        @default(0)
+  expiresAt DateTime?
+  isActive  Boolean    @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("payments_coupons")
+}
+
+// ──────────────────────────────────────────────
+// License Module
+// ──────────────────────────────────────────────
+
+enum TokenStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+model LicensedProduct {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  /// Unique application identifier used by client SDKs during verification.
+  appId       String   @unique
+
+  createdAt DateTime @default(now())
+
+  bindings         ClientProductBinding[]
+  activationTokens ActivationToken[]
+
+  @@map("license_products")
+}
+
+model ClientProductBinding {
+  id         String    @id @default(cuid())
+  clientId   String
+  productId  String
+  assignedBy String
+  assignedAt DateTime  @default(now())
+  revokedAt  DateTime?
+
+  client  User            @relation("LicenseClient", fields: [clientId], references: [id], onDelete: Restrict)
+  product LicensedProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+  granter User            @relation("LicenseAssignedBy", fields: [assignedBy], references: [id], onDelete: Restrict)
+
+  @@unique([clientId, productId])
+  @@index([clientId])
+  @@index([productId])
+  @@map("license_client_bindings")
+}
+
+model ActivationToken {
+  id          String      @id @default(cuid())
+  /// UUID v4 activation key delivered to the client.
+  key         String      @unique
+  /// SHA-256 hex digest of `key` — enables offline verification
+  /// without exposing the raw key in the database.
+  hash        String
+  clientId    String
+  productId   String
+  maxUses     Int?
+  usedCount   Int         @default(0)
+  expiresAt   DateTime?
+  /// If set, the token is bound to this specific hardware fingerprint.
+  hardwareId  String?
+  status      TokenStatus @default(ACTIVE)
+  issuedBy    String
+  issuedAt    DateTime    @default(now())
+  revokedBy   String?
+  revokedAt   DateTime?
+  revokeReason String?
+
+  client  User            @relation("TokenClient", fields: [clientId], references: [id], onDelete: Restrict)
+  product LicensedProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+  issuer  User            @relation("TokenIssuedBy", fields: [issuedBy], references: [id], onDelete: Restrict)
+  revoker User?           @relation("TokenRevokedBy", fields: [revokedBy], references: [id], onDelete: SetNull)
+
+  activations TokenActivation[]
+
+  @@index([clientId])
+  @@index([productId])
+  @@index([status])
+  @@index([hash])
+  @@map("license_activation_tokens")
+}
+
+model TokenActivation {
+  id          String   @id @default(cuid())
+  tokenId     String
+  hardwareId  String?
+  appVersion  String?
+  ipAddress   String?
+  activatedAt DateTime @default(now())
+
+  token ActivationToken @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+
+  @@index([tokenId])
+  @@map("license_token_activations")
 }
