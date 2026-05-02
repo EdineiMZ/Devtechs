@@ -2,6 +2,10 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module';
+import { writeFileSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+
+import { setupSwagger } from "./swagger";
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 /**
@@ -47,6 +51,34 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   const port = Number(process.env.RH_SERVICE_PORT ?? process.env.PORT ?? 3002);
+  // -----------------------------------------------------------------------
+  // Swagger / OpenAPI
+  // -----------------------------------------------------------------------
+  const document = setupSwagger(app, {
+    service: "rh",
+    title: "DevTechs — RH Service API",
+    description: "Employees, vacations, schedules, departments, payroll documents.",
+    tags: [
+      { name: "employees" },
+      { name: "vacations" },
+      { name: "schedules" },
+      { name: "documents" },
+      { name: "departments" },
+      { name: "positions" },
+      { name: "health" },
+    ],
+  });
+
+  if (process.env.OPENAPI_EXTRACT_TO && document) {
+    const outPath = process.env.OPENAPI_EXTRACT_TO;
+    mkdirSync(dirname(outPath), { recursive: true });
+    writeFileSync(outPath, JSON.stringify(document, null, 2));
+    // eslint-disable-next-line no-console
+    console.info("[rh-service] OpenAPI written to " + outPath);
+    await app.close();
+    return;
+  }
+
   await app.listen(port, '0.0.0.0');
   // eslint-disable-next-line no-console
   console.info(`[rh-service] listening on port ${port}`);

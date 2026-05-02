@@ -12,6 +12,13 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../../common/decorators/current-user.decorator';
@@ -40,6 +47,8 @@ import { RolesService } from './roles.service';
  *   2. `PermissionGuard` — checks metadata from `@RequirePermission()`;
  *      bypassed when `user.roles` contains `admin`.
  */
+@ApiTags('roles')
+@ApiBearerAuth('bearer')
 @Controller('roles')
 @UseGuards(PermissionGuard)
 @RequirePermission('dev:config:edit')
@@ -48,6 +57,77 @@ export class RolesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create a new role with attached permissions',
+    description:
+      'Atomically creates a role and links the listed permissions to it. ' +
+      'The actor must hold `dev:config:edit` (admins bypass). Audit log ' +
+      'records action `ROLE_CREATED` with the role + permission IDs.',
+  })
+  @ApiBody({
+    type: CreateRoleDto,
+    examples: {
+      supportAgent: {
+        summary: 'Create the support-agent role',
+        value: {
+          name: 'support-agent',
+          description: 'Atende chamados de suporte e gerencia base de conhecimento.',
+          requireEmailVerified: true,
+          require2FA: false,
+          permissionIds: [
+            'cln9p1ab0001qe7zabc12345',
+            'cln9p1ab0002qe7zabc67890',
+            'cln9p1ab0003qe7zabcKB001',
+          ],
+        },
+      },
+      readOnlyAuditor: {
+        summary: 'Read-only auditor (no permissions yet)',
+        value: {
+          name: 'auditor',
+          description: 'Leitura de logs e relatórios.',
+          requireEmailVerified: true,
+          require2FA: true,
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Role created, permissions attached.',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', example: 'cln9px8s90001qe7zsupportid' },
+        name: { type: 'string', example: 'support-agent' },
+        description: {
+          type: 'string',
+          nullable: true,
+          example: 'Atende chamados de suporte e gerencia base de conhecimento.',
+        },
+        isSystem: { type: 'boolean', example: false },
+        requireEmailVerified: { type: 'boolean', example: true },
+        require2FA: { type: 'boolean', example: false },
+        createdAt: { type: 'string', format: 'date-time' },
+        permissions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              key: { type: 'string', example: 'support:tickets:close' },
+              name: { type: 'string' },
+              module: { type: 'string', example: 'SUPORTE' },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Validation failed (bad name pattern, unknown permissionIds).' })
+  @ApiResponse({ status: 401, description: 'No bearer token.' })
+  @ApiResponse({ status: 403, description: 'Caller lacks `dev:config:edit`.' })
+  @ApiResponse({ status: 409, description: 'A role with this name already exists.' })
   create(
     @Body() dto: CreateRoleDto,
     @CurrentUser() actor: CurrentUserPayload,

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Header,
   HttpCode,
@@ -9,9 +10,11 @@ import {
   Param,
   Post,
   Put,
+  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
 import type { Response } from 'express';
 
 import {
@@ -20,31 +23,60 @@ import {
 } from '../../common/decorators/current-user.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { PermissionGuard } from '../../common/guards/permission.guard';
+import { PermissionResolverService } from '../../common/permissions/permission-resolver.service';
 
 import { CreateInvoiceDto, UpdateInvoiceDto } from './dto/invoice.dto';
+
+class InvoiceActionDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reason?: string;
+}
 import { InvoicePdfService } from './invoice-pdf.service';
 import { InvoicesService } from './invoices.service';
 
-/** Invoice CRUD — every write requires `finance:invoices:issue`. */
+const INVOICE_PERMISSION = 'finance:invoices:issue';
+
+/** Invoice CRUD — writes require `finance:invoices:issue`. Clients can read their own. */
 @Controller('invoices')
 @UseGuards(PermissionGuard)
 export class InvoicesController {
   constructor(
     private readonly invoices: InvoicesService,
     private readonly pdf: InvoicePdfService,
+    private readonly resolver: PermissionResolverService,
   ) {}
 
+  /** Staff see all invoices; clients only see their own (clientId forced to self). */
   @Get()
   @HttpCode(HttpStatus.OK)
-  @RequirePermission('finance:invoices:issue')
-  list(): Promise<unknown[]> {
-    return this.invoices.list();
+  async list(
+    @Query('projectId') projectId?: string,
+    @Query('clientId') clientId?: string,
+    @CurrentUser() user?: CurrentUserPayload,
+  ): Promise<unknown[]> {
+    if (!user) throw new ForbiddenException('Authentication required');
+    const perms = await this.resolver.getPermissions(user.id);
+    if (!perms.has(INVOICE_PERMISSION)) {
+      // Clients may only see their own invoices
+      return this.invoices.list({ projectId, clientId: user.id });
+    }
+    return this.invoices.list({ projectId, clientId });
   }
 
+  /** Staff see any invoice; clients only see invoices belonging to them. */
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  @RequirePermission('finance:invoices:issue')
-  get(@Param('id') id: string): Promise<unknown> {
+  async get(
+    @Param('id') id: string,
+    @CurrentUser() user?: CurrentUserPayload,
+  ): Promise<unknown> {
+    if (!user) throw new ForbiddenException('Authentication required');
+    const perms = await this.resolver.getPermissions(user.id);
+    if (!perms.has(INVOICE_PERMISSION)) {
+      return this.invoices.getForClient(id, user.id);
+    }
     return this.invoices.get(id);
   }
 
@@ -75,6 +107,30 @@ export class InvoicesController {
     return this.invoices.remove(id);
   }
 
+  /** Cancel an invoice (not yet paid). Marks status CANCELLED, notifies client. */
+  @Post(':id/cancel')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('finance:invoices:issue')
+  cancel(
+    @Param('id') id: string,
+    @Body() dto: InvoiceActionDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ): Promise<unknown> {
+    return this.invoices.cancel(id, dto.reason, user.id);
+  }
+
+  /** Refund a paid invoice. Marks status REFUNDED, notifies client. */
+  @Post(':id/refund')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('finance:invoices:issue')
+  refund(
+    @Param('id') id: string,
+    @Body() dto: InvoiceActionDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ): Promise<unknown> {
+    return this.invoices.refund(id, dto.reason, user.id);
+  }
+
   /**
    * GET /invoices/:id/pdf — renders the invoice to a PDF via
    * Puppeteer and streams it back with
@@ -82,13 +138,17 @@ export class InvoicesController {
    * as `nota-fiscal-${number}.pdf`.
    */
   @Get(':id/pdf')
-  @RequirePermission('finance:invoices:issue')
   @Header('Content-Type', 'application/pdf')
   async downloadPdf(
     @Param('id') id: string,
     @Res() res: Response,
+    @CurrentUser() user?: CurrentUserPayload,
   ): Promise<void> {
-    const invoice = await this.invoices.findWithItems(id);
+    if (!user) throw new ForbiddenException('Authentication required');
+    const perms = await this.resolver.getPermissions(user.id);
+    const invoice = perms.has(INVOICE_PERMISSION)
+      ? await this.invoices.findWithItems(id)
+      : await this.invoices.findWithItemsForClient(id, user.id);
     const buffer = await this.pdf.render({
       number: invoice.number,
       subtotal: Number(invoice.subtotal),

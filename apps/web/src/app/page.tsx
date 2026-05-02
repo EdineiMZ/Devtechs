@@ -1,33 +1,35 @@
 import { About } from '@/components/landing/about';
 import { CtaFinal } from '@/components/landing/cta-final';
 import { Differentiators } from '@/components/landing/differentiators';
-import { Footer } from '@/components/landing/footer';
-import { Header } from '@/components/landing/header';
+import { Faq } from '@/components/landing/faq';
 import { Hero } from '@/components/landing/hero';
+import { LandingNavbar } from '@/components/landing/navbar';
 import { Services } from '@/components/landing/services';
+import { Stats } from '@/components/landing/stats';
+import { TechStack } from '@/components/landing/tech-stack';
+import { Testimonials } from '@/components/landing/testimonials';
 
 /**
- * The landing page's body is pure content, but the top header needs
- * the auth session to switch the CTA between "Entrar" and
- * "Ir para a plataforma". Reading the session forces a per-request
- * render, so we let Next's default inference treat the route as
- * dynamic. A future anonymous CDN cache is still fine — the header
- * is rendered on the Node layer, not the edge.
+ * Landing page — pure client-side rendering for the interactive sections.
+ * force-dynamic ensures the navbar can read the auth session per request.
  */
 export const dynamic = 'force-dynamic';
 
 export default function HomePage(): JSX.Element {
   return (
     <>
-      <Header />
-      <main id="inicio">
+      <LandingNavbar />
+      <main>
         <Hero />
+        <TechStack />
         <Services />
         <Differentiators />
+        <Stats />
         <About />
+        <Testimonials />
+        <Faq />
         <CtaFinal />
       </main>
-      <Footer />
     </>
   );
 }

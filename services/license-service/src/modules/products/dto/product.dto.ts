@@ -13,3 +13,14 @@ export class CreateProductDto {
   @MinLength(2)
   appId!: string;
 }
+
+export class UpdateProductDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+}

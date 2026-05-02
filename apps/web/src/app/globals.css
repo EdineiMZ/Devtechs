@@ -1,3 +1,16 @@
+/* ── Landing page fontsource ── */
+@import "@fontsource/space-grotesk/300.css";
+@import "@fontsource/space-grotesk/400.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/600.css";
+@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/dm-sans/300.css";
+@import "@fontsource/dm-sans/400.css";
+@import "@fontsource/dm-sans/500.css";
+@import "@fontsource/dm-sans/600.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -13,6 +26,19 @@
   .dark {
     --background: 224 71% 4%;
     --foreground: 213 31% 91%;
+
+    /* ── Landing page copper/acid palette (additive — does NOT replace primary blue) ── */
+    --ink:    220 14% 8%;
+    --carbon: 220 10% 13%;
+    --copper: 28 72% 58%;
+    --ember:  16 68% 40%;
+    --acid:   160 100% 48%;
+    --ash:    220 8% 60%;
+
+    /* ── Font roles for landing page ── */
+    --font-display: "Space Grotesk", "Helvetica Neue", system-ui, sans-serif;
+    --font-body:    "DM Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --font-mono:    "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
 
     --card: 222 47% 7%;
     --card-foreground: 213 31% 91%;
@@ -186,5 +212,100 @@
     html {
       scroll-behavior: auto;
     }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────
+   LANDING PAGE COMPONENTS — liquid-glass / terminal aesthetic
+   ───────────────────────────────────────────────────────── */
+@layer components {
+  /* Glass padrão — cards de serviço, depoimentos */
+  .liquid-glass {
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    position: relative;
+    overflow: hidden;
+  }
+  .liquid-glass::before {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(160deg,
+      rgba(255,255,255,0.10) 0%,
+      rgba(255,255,255,0.03) 30%,
+      rgba(255,255,255,0) 60%,
+      rgba(255,255,255,0.06) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Glass forte — hero overlays, CTA panels */
+  .liquid-glass-strong {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    box-shadow: 4px 4px 8px rgba(0,0,0,0.25), inset 0 1px 1px rgba(255,255,255,0.08);
+    position: relative;
+    overflow: hidden;
+  }
+  .liquid-glass-strong::before {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(160deg,
+      rgba(255,255,255,0.16) 0%,
+      rgba(255,255,255,0.05) 30%,
+      rgba(255,255,255,0) 60%,
+      rgba(255,255,255,0.08) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Card terminal — blocos de código, badges técnicas */
+  .terminal-card {
+    background: hsl(220 14% 6%);
+    border: 1px solid hsl(160 100% 48% / 0.15);
+    box-shadow: 0 0 0 1px hsl(160 100% 48% / 0.05), 0 0 24px hsl(160 100% 48% / 0.04);
+    font-family: var(--font-mono);
+  }
+
+  /* Inline code pill */
+  .code-pill {
+    background: hsl(160 100% 48% / 0.08);
+    color: hsl(160 100% 48%);
+    border: 1px solid hsl(160 100% 48% / 0.2);
+    font-family: var(--font-mono);
+    font-size: 0.78em;
+    padding: 0.1em 0.5em;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  /* Glow borders */
+  .copper-glow {
+    box-shadow: 0 0 0 1px hsl(28 72% 58% / 0.25), 0 0 32px hsl(28 72% 58% / 0.08);
+  }
+  .acid-glow {
+    box-shadow: 0 0 0 1px hsl(160 100% 48% / 0.25), 0 0 32px hsl(160 100% 48% / 0.08);
+  }
+
+  /* Cursor blink */
+  .cursor-blink::after {
+    content: "█";
+    color: hsl(160 100% 48%);
+    animation: blink 1.1s step-end infinite;
+  }
+
+  /* Fade masks for marquees */
+  .mask-fade-x {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%);
   }
 }

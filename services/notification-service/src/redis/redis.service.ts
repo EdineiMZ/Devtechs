@@ -59,4 +59,28 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async del(key: string): Promise<void> {
     await this.client.del(key);
   }
+
+  async hgetall(key: string): Promise<Record<string, string>> {
+    try {
+      return (await this.client.hgetall(key)) ?? {};
+    } catch {
+      return {};
+    }
+  }
+
+  async hset(key: string, field: string, value: string): Promise<void> {
+    await this.client.hset(key, field, value);
+  }
+
+  async hdel(key: string, ...fields: string[]): Promise<void> {
+    await this.client.hdel(key, ...fields);
+  }
+
+  async publish(channel: string, message: string): Promise<number> {
+    try {
+      return await this.client.publish(channel, message);
+    } catch {
+      return 0;
+    }
+  }
 }

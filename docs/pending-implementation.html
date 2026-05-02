@@ -1,0 +1,813 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DevTechs — Itens Pendentes &amp; Prompts de Implementação</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: #131a30;
+        --panel-2: #1a2240;
+        --border: #2a3358;
+        --text: #e6ecff;
+        --muted: #98a2c4;
+        --accent: #6ee7b7;
+        --accent-2: #93c5fd;
+        --warn: #fbbf24;
+        --crit: #f87171;
+        --code-bg: #0a0e1d;
+        --code-border: #1f2a4a;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        background: linear-gradient(180deg, #070b1a 0%, #0b1020 60%);
+        color: var(--text);
+        font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        line-height: 1.55;
+      }
+      header {
+        padding: 56px 32px 24px;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      header h1 {
+        font-size: 32px;
+        margin: 0 0 8px;
+        letter-spacing: -0.02em;
+      }
+      header .sub {
+        color: var(--muted);
+        font-size: 15px;
+      }
+      header .meta {
+        margin-top: 16px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--text);
+      }
+      .pill.crit { color: #fecaca; border-color: rgba(248, 113, 113, 0.4); background: rgba(248, 113, 113, 0.08); }
+      .pill.warn { color: #fde68a; border-color: rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.08); }
+      .pill.ok { color: #bbf7d0; border-color: rgba(110, 231, 183, 0.4); background: rgba(110, 231, 183, 0.08); }
+      .pill.info { color: #bfdbfe; border-color: rgba(147, 197, 253, 0.4); background: rgba(147, 197, 253, 0.08); }
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 0 32px 80px;
+      }
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+        margin: 24px 0 40px;
+      }
+      .summary .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+      }
+      .summary .num {
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .summary .label {
+        font-size: 12px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 4px;
+      }
+      .toc {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin: 0 0 40px;
+      }
+      .toc h2 {
+        margin: 0 0 12px;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      .toc ol {
+        margin: 0;
+        padding-left: 20px;
+      }
+      .toc li {
+        margin: 6px 0;
+      }
+      .toc a {
+        color: var(--accent-2);
+        text-decoration: none;
+      }
+      .toc a:hover {
+        text-decoration: underline;
+      }
+      section.item {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 28px 28px 24px;
+        margin: 0 0 28px;
+      }
+      section.item h2 {
+        margin: 0 0 8px;
+        font-size: 22px;
+        letter-spacing: -0.01em;
+      }
+      section.item .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 12px 0 16px;
+      }
+      section.item h3 {
+        margin: 24px 0 8px;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      section.item p { margin: 0 0 12px; }
+      section.item ul { padding-left: 20px; margin: 0 0 12px; }
+      section.item li { margin: 4px 0; }
+      code, pre {
+        font-family: "JetBrains Mono", "Fira Code", ui-monospace, "Consolas", monospace;
+      }
+      code {
+        background: var(--code-bg);
+        border: 1px solid var(--code-border);
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 13px;
+      }
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--code-border);
+        border-radius: 10px;
+        padding: 18px 20px;
+        margin: 8px 0 0;
+        font-size: 12.5px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: #e6ecff;
+        overflow-x: auto;
+      }
+      .prompt-wrap { position: relative; }
+      .copy-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: var(--panel-2);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .copy-btn:hover { background: var(--border); }
+      .copy-btn.copied { color: var(--accent); border-color: var(--accent); }
+      footer {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 32px;
+        color: var(--muted);
+        font-size: 13px;
+        border-top: 1px solid var(--border);
+      }
+      .hint {
+        background: rgba(147, 197, 253, 0.06);
+        border-left: 3px solid var(--accent-2);
+        padding: 10px 14px;
+        border-radius: 0 8px 8px 0;
+        font-size: 13.5px;
+        margin: 8px 0 16px;
+      }
+      .files {
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-size: 12.5px;
+        color: var(--muted);
+      }
+      .files li { color: var(--muted); }
+      .files li code { color: var(--text); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>DevTechs — Pendências &amp; Prompts de Implementação</h1>
+      <div class="sub">
+        Itens identificados pela auditoria E2E em <strong>2026-04-26</strong>. Cada bloco traz escopo,
+        arquivos envolvidos e um prompt profissional pronto para colar em uma sessão de
+        Claude Code (ou outro agente) e produzir a implementação.
+      </div>
+      <div class="meta">
+        <span class="pill ok">Auth + sessão funcionando</span>
+        <span class="pill ok">9/9 serviços NestJS no ar</span>
+        <span class="pill ok">8/8 apps Next.js no ar</span>
+        <span class="pill ok">Socket.IO chat backend OK</span>
+        <span class="pill warn">UI de chamados + admin pendente</span>
+        <span class="pill crit">Apps módulo são stubs</span>
+      </div>
+    </header>
+
+    <main>
+      <div class="summary">
+        <div class="card"><div class="num">8</div><div class="label">Itens pendentes</div></div>
+        <div class="card"><div class="num" style="color: var(--crit)">2</div><div class="label">Prioridade P0</div></div>
+        <div class="card"><div class="num" style="color: var(--warn)">5</div><div class="label">Prioridade P1</div></div>
+        <div class="card"><div class="num" style="color: var(--accent-2)">1</div><div class="label">Prioridade P2</div></div>
+      </div>
+
+      <nav class="toc">
+        <h2>Índice</h2>
+        <ol>
+          <li><a href="#p0-tickets">P0 — Módulo de Chamados (lista, criação, detalhe + chat real-time)</a></li>
+          <li><a href="#p0-module-gate">P0 — Auth gate nos apps de módulo (rh, financeiro, etc.)</a></li>
+          <li><a href="#p1-faturas">P1 — Página <code>/perfil/faturas</code></a></li>
+          <li><a href="#p1-notificacoes">P1 — Página <code>/perfil/notificacoes</code></a></li>
+          <li><a href="#p1-configuracoes">P1 — Página <code>/perfil/configuracoes</code> (perfil + senha + 2FA)</a></li>
+          <li><a href="#p1-admin-modulos">P1 — Sub-rotas <code>/admin/&lt;modulo&gt;</code> (RH, Financeiro, Projetos, Suporte, DevOps, Developer, Configurações)</a></li>
+          <li><a href="#p1-module-apps">P1 — Implementação real dos apps módulo (atualmente stubs)</a></li>
+          <li><a href="#p2-oauth">P2 — Configuração OAuth Google/GitHub e renderização condicional dos botões</a></li>
+        </ol>
+      </nav>
+
+      <!-- ============================================================== -->
+      <section class="item" id="p0-tickets">
+        <h2>1. Módulo de Chamados (chamados + chat real-time)</h2>
+        <div class="row">
+          <span class="pill crit">P0 — Crítico</span>
+          <span class="pill info">Frontend Next.js (apps/web)</span>
+          <span class="pill info">Backend já existe</span>
+        </div>
+
+        <h3>Contexto</h3>
+        <p>
+          O <code>support-service</code> em <code>:4008</code> já expõe REST (CRUD de tickets, mensagens,
+          atribuição, SLA) e um gateway Socket.IO no namespace <code>/support</code> com eventos
+          <code>ticket:join</code>, <code>message:send</code>, <code>message:new</code>,
+          <code>typing:start</code>/<code>stop</code>, <code>user:typing</code>, <code>user:joined</code>,
+          <code>ticket:status</code>. Isso foi verificado em sessão E2E — o cliente conecta com JWT,
+          recebe <code>connected</code> com <code>isAgent</code> resolvido a partir de
+          <code>support:tickets:close</code>.
+        </p>
+        <p>
+          Já existem no front: o cliente Socket.IO tipado em
+          <code>apps/web/src/lib/support-socket.ts</code> e o hook <code>useTicketChat</code> em
+          <code>apps/web/src/hooks/use-ticket-chat.ts</code>. O que falta é a UI que consome tudo.
+        </p>
+
+        <h3>Escopo</h3>
+        <ul>
+          <li><strong>Lista de chamados</strong> em <code>/perfil/tickets</code>: filtros por status, busca, paginação, badge de SLA.</li>
+          <li><strong>Criação</strong> em <code>/perfil/tickets/novo</code>: formulário com título, categoria, prioridade, descrição, anexos.</li>
+          <li><strong>Detalhe + chat</strong> em <code>/perfil/tickets/[id]</code>: timeline de mensagens, indicador de digitando, envio em tempo real, botão "marcar como resolvido", histórico de status, atribuição (admin), notas internas (somente agentes).</li>
+          <li><strong>Visão admin/agente</strong> em <code>/admin/suporte</code>: queue de tickets atribuídos/não atribuídos, ações em massa, base de conhecimento (KB), métricas de SLA.</li>
+        </ul>
+
+        <h3>Arquivos a criar</h3>
+        <ul class="files">
+          <li><code>apps/web/src/app/perfil/tickets/page.tsx</code> — server component, lista</li>
+          <li><code>apps/web/src/app/perfil/tickets/novo/page.tsx</code> — formulário criação</li>
+          <li><code>apps/web/src/app/perfil/tickets/[id]/page.tsx</code> — detalhe (server) + chat (client)</li>
+          <li><code>apps/web/src/app/perfil/tickets/[id]/ticket-chat.tsx</code> — client component com <code>useTicketChat</code></li>
+          <li><code>apps/web/src/app/admin/suporte/page.tsx</code> — queue de agente</li>
+          <li><code>apps/web/src/app/admin/suporte/[id]/page.tsx</code> — detalhe agente (com notas internas)</li>
+          <li><code>apps/web/src/lib/support-api.ts</code> — wrapper REST tipado para o support-service</li>
+          <li><code>apps/web/src/components/tickets/*</code> — TicketCard, TicketStatusBadge, MessageBubble, TypingIndicator, NewMessageComposer, TicketFilters</li>
+        </ul>
+
+        <h3>Prompt</h3>
+        <div class="prompt-wrap">
+          <button class="copy-btn" data-target="prompt-tickets">Copiar</button>
+          <pre id="prompt-tickets">Você está no monorepo DevTechs (Turborepo + pnpm) na branch atual. Implemente o módulo de Chamados (tickets) na app `apps/web` consumindo o `services/support-service` que já existe e está rodando em `http://127.0.0.1:4008`.
+
+CONTEXTO TÉCNICO QUE JÁ EXISTE (NÃO REIMPLEMENTAR):
+- `apps/web/src/lib/support-socket.ts` — fábrica `createSupportSocket(accessToken)` tipada com eventos cliente/servidor.
+- `apps/web/src/hooks/use-ticket-chat.ts` — hook que monta o socket, faz `ticket:join`, expõe `messages`, `typers`, `sendMessage(body, isInternal?)`, `notifyTyping()`, status de conexão.
+- `services/support-service/src/modules/chat/support.gateway.ts` — gateway Socket.IO no namespace `/support` autenticado por JWT no handshake (`auth.token`).
+- `services/support-service/src/modules/tickets/*` — controller REST com CRUD de tickets e mensagens. Inspecione os DTOs e endpoints reais antes de codar a camada de fetch.
+- Sessão NextAuth em `apps/web/src/auth.ts` — `session.accessToken` é o JWT que deve ir para o socket e para o header `Authorization: Bearer ...` nos fetches REST.
+- Permissões: `support:tickets:view` (leitura), `support:tickets:close` (resolver/agente), `support:tickets:manage`, `support:tickets:assign`, `support:kb:edit`. A presença de `support:tickets:close` no `session.user.permissions` define se a UI deve mostrar recursos de agente.
+
+ENTREGÁVEIS:
+
+1. `apps/web/src/lib/support-api.ts` — wrapper REST tipado, server-side e client-side, lendo a base URL de `process.env.NEXT_PUBLIC_SUPPORT_URL ?? 'http://127.0.0.1:4008'`. Funções: `listTickets(filters)`, `getTicket(id)`, `createTicket(input)`, `listMessages(ticketId)`, `assignTicket(id, agentId)`, `updateStatus(id, status)`, `listKb()`. Cada função aceita `accessToken` opcional; quando ausente em server component, ler via `auth()` do NextAuth.
+
+2. Componentes em `apps/web/src/components/tickets/`:
+   - `TicketStatusBadge` — variantes para `OPEN`, `IN_PROGRESS`, `WAITING_CUSTOMER`, `RESOLVED`, `CLOSED`.
+   - `TicketCard` — card de lista com título, número, badge, SLA restante (relógio que conta regressivo se `dueAt` definido), última mensagem.
+   - `TicketFilters` — combobox de status + busca + filtro por categoria, sincroniza com searchParams.
+   - `MessageBubble` — bolha de mensagem com avatar, nome, timestamp relativo (use `Intl.RelativeTimeFormat` em `pt-BR`), indicador de "nota interna" só visível se `isAgent` for `true`.
+   - `TypingIndicator` — três pontos animados, lista quem está digitando.
+   - `NewMessageComposer` — textarea com `Enter` envia, `Shift+Enter` quebra linha; botão "anexar nota interna" só renderiza se `isAgent`.
+   - `TicketTimeline` — orquestra a lista de `MessageBubble` + eventos de status (mostra "Maria Cliente abriu o chamado", "Suporte mudou para EM ANDAMENTO").
+
+3. Páginas cliente em `apps/web/src/app/perfil/tickets/`:
+   - `page.tsx` (server component, `dynamic = 'force-dynamic'`): valida sessão com `auth()`; redireciona para `/login?callbackUrl=/perfil/tickets` se anônimo. Carrega tickets do usuário via `listTickets({ requesterId: session.user.id })`. Renderiza dentro de `AppShell` com `CLIENT_NAV_ITEMS`. Layout: header com título + CTA "Novo chamado" → `/perfil/tickets/novo`; abaixo, `TicketFilters` + grid responsivo de `TicketCard`. Estado vazio com ilustração e botão.
+   - `novo/page.tsx` (client component dentro de wrapper server que valida sessão): formulário react-hook-form + Zod (`titulo` 5–120 chars, `descricao` 20–2000, `categoria` enum, `prioridade` enum LOW|MEDIUM|HIGH|CRITICAL). On submit: `createTicket` → redirect `/perfil/tickets/<id>`. Erros de campo inline.
+   - `[id]/page.tsx` (server component): valida sessão + propriedade do ticket (cliente só vê seus próprios; agente vê todos). Carrega ticket + mensagens iniciais via REST e passa para `<TicketChat ticketId={id} initialMessages={...} accessToken={session.accessToken} isAgent={...} />`.
+   - `[id]/ticket-chat.tsx` (client component): usa `useTicketChat({ ticketId, accessToken, isAgent })`. Renderiza `TicketTimeline`, `TypingIndicator`, `NewMessageComposer`. Faz scroll automático para o fim quando chega `message:new`. Reconecta automaticamente em queda (o hook já cuida).
+
+4. Páginas admin/agente em `apps/web/src/app/admin/suporte/`:
+   - `page.tsx`: queue com 3 colunas (Não atribuídos / Atribuídos a mim / Em andamento). Exige `support:tickets:view` ou redireciona para `/perfil`. Filtros + busca + ordenação por SLA.
+   - `[id]/page.tsx`: igual ao do cliente, mas com `isAgent={true}` no chat (para habilitar notas internas), e painel lateral com ações de agente: alterar status, atribuir/reatribuir, editar prioridade, adicionar tags, ver auditoria do ticket.
+
+5. Atualizar `apps/web/src/components/app/nav-config.tsx` — confirmar que os hrefs `/perfil/tickets` e `/admin/suporte` já apontam para os novos arquivos (eles já estão no nav, basta deixar os arquivos no lugar certo).
+
+REGRAS GERAIS:
+- Use Tailwind + componentes de `@devtechs/ui` (Button, Input, Badge, Card etc.) — siga o padrão das páginas existentes `/perfil/page.tsx` e `/admin/page.tsx`.
+- Não exponha `accessToken` ao DOM — passe apenas para componentes client que realmente conectam ao socket; nunca inline em `data-*` ou `JSON.stringify` no HTML.
+- Toda chamada server-side ao `support-service` deve usar `cache: 'no-store'` para não cachear dados sensíveis em build.
+- Trate fail-soft: se o socket cair (Redis offline, support-service reiniciando), a UI mostra um banner discreto "Conexão perdida — tentando reconectar…" sem quebrar a página.
+- Cobertura: criar `apps/web/__tests__/tickets.test.tsx` validando que `TicketCard` renderiza, que o composer chama o handler, e que `MessageBubble` esconde nota interna quando `isAgent=false`.
+- Antes de finalizar, suba a app (`pnpm dev:web`) e valide manualmente: criar ticket → enviar mensagem → ver chegando em tempo real numa segunda aba do mesmo browser.</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <section class="item" id="p0-module-gate">
+        <h2>2. Auth gate nos apps de módulo (rh, financeiro, projetos, devops, suporte, store, developer)</h2>
+        <div class="row">
+          <span class="pill crit">P0 — Crítico (segurança)</span>
+          <span class="pill info">7 apps Next.js</span>
+          <span class="pill warn">Decisão arquitetural</span>
+        </div>
+
+        <h3>Contexto</h3>
+        <p>
+          O requisito é "somente a página inicial pública; o restante exige login". Hoje os apps
+          <code>:3001</code> a <code>:3007</code> servem suas raízes anonimamente (são stubs
+          <code>&lt;main&gt;DevTechs - X app&lt;/main&gt;</code>). Eles não compartilham o cookie
+          de sessão do app <code>web</code> (origens diferentes), então cada um precisa validar a
+          sessão via <code>auth-service</code> ou ser substituído por sub-rotas dentro do <code>web</code>.
+        </p>
+        <div class="hint">
+          <strong>Decisão arquitetural recomendada:</strong> consolide tudo em <code>apps/web</code>
+          com sub-rotas (<code>/admin/&lt;modulo&gt;</code>) e descarte os apps módulo separados —
+          a ergonomia de uma única origem é muito melhor para autenticação, navegação e SEO. Os
+          apps módulo só fazem sentido se forem deploys independentes em domínios distintos
+          (ex.: <code>rh.devtechs.com</code>), o que não é o caso hoje.
+        </p>
+
+        <h3>Prompt</h3>
+        <div class="prompt-wrap">
+          <button class="copy-btn" data-target="prompt-gate">Copiar</button>
+          <pre id="prompt-gate">No monorepo DevTechs, hoje os apps Next.js em `apps/{rh,financeiro,projetos,devops,suporte,store,developer}` rodam em portas separadas (3001-3007) e estão acessíveis sem nenhum gate de autenticação. Eles também são stubs (`<main>DevTechs - X app</main>`).
+
+OBJETIVO: garantir que apenas a página inicial pública do app `web` (`:3000` rota `/`) seja anônima. Toda outra rota exige sessão NextAuth válida com email verificado.
+
+Há duas abordagens. Avalie e, ao final, IMPLEMENTE A ABORDAGEM A (consolidação) — é a mais aderente ao restante do código:
+
+ABORDAGEM A (recomendada — consolidar em apps/web):
+1. Mover todas as funcionalidades dos apps módulo para sub-rotas dentro de `apps/web/src/app/admin/<modulo>/`. As implementações concretas estão em outros prompts deste documento.
+2. Atualizar `apps/web/src/middleware.ts` matcher para incluir os novos prefixos: `/admin/:path*` já está no matcher; basta confirmar que `/perfil/:path*` também cobre todas as sub-rotas do cliente.
+3. Remover do `pnpm-workspace.yaml` os pacotes `@devtechs/{rh,financeiro,projetos,devops,suporte,developer}` (manter `store` se ele for um SaaS público de planos — confirmar com o time).
+4. Remover os diretórios `apps/{rh,financeiro,...}` e os scripts `dev:*` do `package.json` raiz que apontavam para eles.
+5. Atualizar `infra/nginx.conf` removendo os `location /rh/`, `/financeiro/` etc.; tudo passa a vir de `apps/web` que serve `/admin/<modulo>` e `/perfil/<modulo>`.
+6. Atualizar README.md descrevendo a nova estrutura.
+7. Validar com `pnpm --filter @devtechs/web build` e rodar Playwright E2E confirmando que `http://localhost:3001/` etc. param de responder.
+
+ABORDAGEM B (manter apps separados — só faça se houver requisito explícito de deploy independente):
+1. Em CADA app módulo, criar `src/middleware.ts` que valida a sessão chamando `GET /auth/me` no `auth-service` (lendo o cookie `authjs.session-token` ou um header `Authorization` repassado pelo nginx). Como o cookie é por-origem, a app principal precisa setar um cookie de domínio mais amplo (`.devtechs.local`) para compartilhar — isso muda a configuração do NextAuth (`cookies.sessionToken.options.domain`).
+2. Cada app passa a fazer redirect para `http://localhost:3000/login?callbackUrl=<original>` quando não autenticado.
+3. Adicionar testes que confirmam o redirect em cada app.
+
+ENTREGÁVEIS COMUNS:
+- `scripts/e2e-tests/04-modules.mjs` atualizado para refletir a nova estrutura (rotas dentro de `:3000` em vez de portas separadas).
+- Documentação no README explicando a decisão.
+- Auditoria de segurança: rodar `scripts/e2e-tests/07-security-audit.mjs` e confirmar que nenhuma rota antes acessível anonimamente continua acessível.</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <section class="item" id="p1-faturas">
+        <h2>3. Página <code>/perfil/faturas</code></h2>
+        <div class="row">
+          <span class="pill warn">P1 — Essencial</span>
+          <span class="pill info">apps/web + finance-service</span>
+        </div>
+
+        <h3>Contexto</h3>
+        <p>
+          O nav cliente já referencia <code>/perfil/faturas</code> (label "Minhas faturas"), mas a
+          rota não existe. O <code>finance-service</code> em <code>:4004</code> tem invoices no schema
+          Prisma (<code>Invoice</code> com <code>userId</code>, <code>status</code>, <code>amount</code>,
+          <code>dueAt</code>, <code>paidAt</code>, <code>pdfUrl</code>). Falta a UI cliente.
+        </p>
+
+        <h3>Prompt</h3>
+        <div class="prompt-wrap">
+          <button class="copy-btn" data-target="prompt-faturas">Copiar</button>
+          <pre id="prompt-faturas">Implemente em `apps/web` a página `/perfil/faturas` que lista as faturas do usuário autenticado consumindo `services/finance-service` (porta 4004).
+
+CONTEXTO:
+- Modelo Prisma `Invoice` em `packages/database/prisma/schema.prisma` — campos: `id`, `number`, `clientId` (FK User), `amount` (Decimal), `currency`, `status` (PENDING|PAID|OVERDUE|CANCELED), `issuedAt`, `dueAt`, `paidAt?`, `pdfUrl?`.
+- Endpoints REST do finance-service (confirmar olhando `services/finance-service/src/modules/invoices/invoices.controller.ts`): `GET /invoices?clientId=&status=&page=&pageSize=`, `GET /invoices/:id`, `POST /invoices/:id/pay` (gera link Mercado Pago), `GET /invoices/:id/pdf` (stream binário).
+- Permissões: cliente vê apenas as próprias (filtro por `session.user.id`); admin com `finance:invoices:manage` pode listar todas em `/admin/financeiro/faturas` (escopo do prompt 6).
+- Sessão NextAuth provê `accessToken` para `Authorization: Bearer`.
+
+ENTREGÁVEIS:
+
+1. `apps/web/src/lib/finance-api.ts` — wrapper tipado: `listInvoices(filter, accessToken)`, `getInvoice(id, accessToken)`, `requestPayment(id, accessToken)` retornando `{ checkoutUrl }`. Lê base URL de `process.env.NEXT_PUBLIC_FINANCE_URL ?? 'http://127.0.0.1:4004'`. Em server components use `cache: 'no-store'`.
+
+2. `apps/web/src/components/finance/InvoiceStatusBadge.tsx` — badge colorido por status (verde PAID, amarelo PENDING, vermelho OVERDUE, cinza CANCELED).
+
+3. `apps/web/src/components/finance/InvoiceRow.tsx` — linha de tabela com número, descrição, vencimento, valor formatado (`Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })`), badge, ações ("Pagar" se PENDING/OVERDUE, "Baixar PDF" se `pdfUrl` definido, "Ver detalhes").
+
+4. `apps/web/src/app/perfil/faturas/page.tsx` (server component, `dynamic = 'force-dynamic'`):
+   - `auth()` → redirect `/login?callbackUrl=/perfil/faturas` se anônimo.
+   - `listInvoices({ clientId: session.user.id })` → divide em três grupos: "Em aberto" (PENDING + OVERDUE), "Pagas" (PAID), "Canceladas" (CANCELED).
+   - Renderiza dentro de `AppShell` com `CLIENT_NAV_ITEMS`. Header com resumo: "Você tem X faturas em aberto totalizando R$ Y" + alerta vermelho se houver `OVERDUE`.
+   - Tabela responsiva por grupo. Em mobile (<640px) vira cards.
+   - Ação "Pagar" → POST `/invoices/:id/pay` → window.location = checkoutUrl.
+   - Ação "Baixar PDF" → `<a href={pdfUrl} target="_blank" rel="noopener noreferrer" download>`.
+   - Estado vazio: ilustração + "Você ainda não tem faturas. Quando contratarmos um plano, elas aparecem aqui."
+   - Tratar erro de fetch (finance-service offline): banner "Não conseguimos carregar suas faturas no momento. Tente novamente em instantes."
+
+5. `apps/web/src/app/perfil/faturas/[id]/page.tsx` (server component): detalhe da fatura — resumo, items (se houver), histórico de tentativas de pagamento, botão "Pagar agora" se aplicável, "Baixar PDF". Bloquear acesso se `invoice.clientId !== session.user.id` (404).
+
+6. Adicionar testes mínimos em `apps/web/__tests__/faturas.test.tsx`: rendering com lista vazia, com lista populada, formatação de moeda BRL.
+
+7. Antes de finalizar, validar manualmente com `admin@devtechs.com`: criar uma invoice de teste via Prisma Studio (`pnpm db:studio`) e confirmar que aparece na lista.</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <section class="item" id="p1-notificacoes">
+        <h2>4. Página <code>/perfil/notificacoes</code></h2>
+        <div class="row">
+          <span class="pill warn">P1 — Essencial</span>
+          <span class="pill info">apps/web + notification-service</span>
+        </div>
+
+        <h3>Contexto</h3>
+        <p>
+          O <code>notification-service</code> em <code>:4005</code> escuta eventos via Redis pub/sub
+          e grava notificações por usuário no Prisma (<code>Notification</code> com
+          <code>type</code>, <code>title</code>, <code>body</code>, <code>readAt</code>,
+          <code>actionUrl</code>). A UI ainda não existe.
+        </p>
+
+        <h3>Prompt</h3>
+        <div class="prompt-wrap">
+          <button class="copy-btn" data-target="prompt-notif">Copiar</button>
+          <pre id="prompt-notif">Implemente em `apps/web` a página `/perfil/notificacoes` consumindo `services/notification-service` (porta 4005), com feed em tempo real e marcação como lida.
+
+CONTEXTO:
+- Modelo Prisma `Notification` (verificar em `packages/database/prisma/schema.prisma`): `id`, `userId`, `type` (enum SYSTEM|TICKET|INVOICE|RH|...), `title`, `body`, `actionUrl?`, `readAt?`, `createdAt`.
+- Endpoints (verificar em `services/notification-service/src/`): `GET /notifications?userId=&unreadOnly=&page=`, `POST /notifications/:id/read`, `POST /notifications/read-all`, `DELETE /notifications/:id`.
+- Push real-time: o serviço expõe um endpoint Server-Sent Events (SSE) em `GET /notifications/stream` autenticado por JWT. Se não existir, ADICIONE — é mais simples que WebSocket para fluxo unidirecional. (Alternativa: reutilizar o socket existente do support-service para broadcast genérico).
+
+ENTREGÁVEIS:
+
+1. `apps/web/src/lib/notifications-api.ts`: `listNotifications(filter, accessToken)`, `markRead(id, accessToken)`, `markAllRead(accessToken)`, `dismissNotification(id, accessToken)`. Base URL: `process.env.NEXT_PUBLIC_NOTIFICATION_URL ?? 'http://127.0.0.1:4005'`.
+
+2. `apps/web/src/hooks/use-notifications-stream.ts` — client hook que abre EventSource em `/notifications/stream` com `Authorization` (o navegador não suporta header em EventSource padrão; use `eventsource-polyfill` ou querystring `?token=` que o backend valida e descarta dos logs). Recebe eventos `{ type: 'new', notification }` e `{ type: 'read', id }`. Expõe `notifications`, `unreadCount`, `markRead`, `markAllRead`.
+
+3. Componentes:
+   - `NotificationItem` — card com ícone por tipo, título em bold se não lida, body, "há X minutos", ação "Marcar como lida" e "Ver detalhes" (link para `actionUrl`).
+   - `NotificationsBell` em `apps/web/src/components/app/notifications-bell.tsx` — sininho no `AppShell` topo com contador `unreadCount`. Click abre dropdown com últimas 5; "Ver todas" → `/perfil/notificacoes`. Conectar no `AppShell` existente.
+
+4. `apps/web/src/app/perfil/notificacoes/page.tsx`:
+   - Server component faz fetch inicial; client component `<NotificationsFeed initial={...} accessToken={...}/>` toma controle e abre o stream.
+   - Filtros: "Todas", "Não lidas", "Por tipo".
+   - Botão "Marcar todas como lidas".
+   - Lista virtualizada se > 50 itens (use `react-virtuoso` que já está no node_modules ou cair em paginação tradicional).
+   - Estado vazio amistoso.
+
+5. Migração do schema se for necessário adicionar `Notification` (se já existir, pular).
+
+6. Smoke test em `scripts/e2e-tests/`: criar notificação via Prisma + verificar que aparece sem refresh.</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <section class="item" id="p1-configuracoes">
+        <h2>5. Página <code>/perfil/configuracoes</code> (perfil + senha + 2FA)</h2>
+        <div class="row">
+          <span class="pill warn">P1 — Essencial</span>
+          <span class="pill info">apps/web + auth-service</span>
+        </div>
+
+        <h3>Contexto</h3>
+        <p>
+          O <code>auth-service</code> já tem todos os endpoints: <code>GET /auth/me</code>,
+          <code>POST /auth/2fa/setup</code>, <code>POST /auth/2fa/enable</code>,
+          <code>POST /auth/2fa/disable</code>, <code>POST /auth/2fa/verify</code>. Falta um endpoint
+          <code>PATCH /auth/me</code> (nome/avatar) e <code>POST /auth/me/password</code> (troca de
+          senha) — precisam ser adicionados se ainda não existem.
+        </p>
+
+        <h3>Prompt</h3>
+        <div class="prompt-wrap">
+          <button class="copy-btn" data-target="prompt-config">Copiar</button>
+          <pre id="prompt-config">Implemente em `apps/web` a página `/perfil/configuracoes` com 3 abas: Perfil, Segurança (senha + sessões), e Autenticação em duas etapas (2FA).
+
+BACKEND (auth-service em :4001):
+- Endpoints já existentes: `GET /auth/me`, `POST /auth/2fa/setup` (retorna QR code + secret), `POST /auth/2fa/enable` (recebe TOTP code, ativa), `POST /auth/2fa/disable`, `POST /auth/logout`.
+- Adicione SE NÃO EXISTIREM em `services/auth-service/src/modules/auth/auth.controller.ts`:
+  - `PATCH /auth/me` body `{ name?, avatarUrl? }`, valida com class-validator, atualiza Prisma `User`, audita.
+  - `POST /auth/me/password` body `{ currentPassword, newPassword }`, verifica `bcrypt.compare`, valida força (regex em `auth-schemas.ts`), grava hash novo, revoga todas as sessões exceto a atual, audita.
+  - `GET /auth/me/sessions` lista sessões ativas (`Session` table) com `id`, `device`, `ip`, `lastSeenAt`.
+  - `DELETE /auth/me/sessions/:id` revoga sessão específica.
+
+FRONTEND (apps/web):
+
+1. `apps/web/src/app/perfil/configuracoes/layout.tsx` — server component que valida sessão e renderiza `AppShell` + tabs com `<Link>` para `/perfil/configuracoes`, `/perfil/configuracoes/seguranca`, `/perfil/configuracoes/2fa`.
+
+2. `apps/web/src/app/perfil/configuracoes/page.tsx` (Perfil):
+   - Form react-hook-form + Zod: `nome` (2-120), `email` (read-only), `avatarUrl` (URL opcional).
+   - Submit chama `PATCH /auth/me` via `authServiceFetch`.
+   - Banner de sucesso/erro inline.
+   - Após salvar, chama `useSession().update()` do NextAuth para atualizar a sessão na UI.
+
+3. `apps/web/src/app/perfil/configuracoes/seguranca/page.tsx`:
+   - Form de troca de senha (currentPassword, newPassword, confirmPassword) com mesmas regras de força do `registerSchema`. Submit → `POST /auth/me/password`. Em caso de sucesso: deslogar usuário e redirecionar para `/login?reason=password_changed`.
+   - Lista de sessões ativas — `GET /auth/me/sessions`. Cada linha: dispositivo, IP, "última atividade há X". Botão "Encerrar sessão" → `DELETE /auth/me/sessions/:id` (não pode revogar a própria sessão sem aviso).
+
+4. `apps/web/src/app/perfil/configuracoes/2fa/page.tsx`:
+   - Estado A (2FA desabilitado): botão "Ativar 2FA". Click → `POST /auth/2fa/setup` → renderiza QR code (use `qrcode.react` ou string SVG retornada pelo backend) + secret em texto + input para TOTP de 6 dígitos. Submit → `POST /auth/2fa/enable`. Sucesso: banner verde + lista de "códigos de recuperação" (8 códigos one-time gerados pelo backend; persistir até o usuário confirmar download).
+   - Estado B (2FA habilitado): banner verde "2FA está ativo desde X". Botão "Desativar" pede senha + TOTP atual → `POST /auth/2fa/disable`. Botão "Regenerar códigos de recuperação".
+
+5. Validar manualmente o fluxo completo com `admin@devtechs.com`:
+   - Mudar nome → ver na sessão.
+   - Trocar senha → fazer login com nova senha.
+   - Ativar 2FA com app autenticador (Google Authenticator/1Password) → fazer logout → login pede TOTP → entrar com código.
+   - Desativar 2FA.
+
+6. Cobertura: testes unitários em `apps/web/__tests__/configuracoes.test.tsx` para os schemas e o componente de QR code.</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <section class="item" id="p1-admin-modulos">
+        <h2>6. Sub-rotas <code>/admin/&lt;modulo&gt;</code></h2>
+        <div class="row">
+          <span class="pill warn">P1 — Essencial</span>
+          <span class="pill info">apps/web + 7 backends</span>
+        </div>
+
+        <h3>Contexto</h3>
+        <p>
+          O <code>nav-config.tsx</code> referencia <code>/admin/rh</code>,
+          <code>/admin/financeiro</code>, <code>/admin/projetos</code>, <code>/admin/suporte</code>,
+          <code>/admin/devops</code>, <code>/admin/developer</code>,
+          <code>/admin/configuracoes</code> — todas <strong>404</strong> hoje. Cada uma corresponde
+          a um <code>*-service</code> backend já implementado.
+        </p>
+
+        <h3>Prompt</h3>
+        <div class="prompt-wrap">
+          <button class="copy-btn" data-target="prompt-admin">Copiar</button>
+          <pre id="prompt-admin">Implemente as sub-rotas `/admin/<modulo>` em `apps/web/src/app/admin/` consumindo os respectivos services. Cada módulo tem seu próprio prompt detalhado abaixo. Use os mesmos padrões: server components que validam sessão+permissão, AppShell + ADMIN_NAV_ITEMS, componentes shadcn-style do `@devtechs/ui`, react-hook-form + Zod, react-query opcional para listagens com filtros, formatação `Intl` em `pt-BR`.
+
+REGRA TRANSVERSAL DE PERMISSÕES:
+Cada sub-rota tem uma permissão obrigatória. No topo de cada `page.tsx`:
+```ts
+const session = await auth();
+if (!session?.user) redirect('/login?callbackUrl=' + encodeURIComponent(pathname));
+const has = (perm: string) => session.user.permissions.includes(perm);
+if (!has(REQUIRED_PERM)) redirect('/perfil');
+```
+
+MÓDULOS:
+
+A) `/admin/rh` — RH (rh-service :4002)
+   Permissão: `rh:employees:view`.
+   Páginas:
+   - `page.tsx`: dashboard com KPIs (total funcionários, ativos, em férias, aniversariantes do mês, vagas abertas).
+   - `funcionarios/page.tsx`: tabela com filtros (departamento, cargo, status), busca, paginação. CTA "Adicionar".
+   - `funcionarios/novo/page.tsx` e `funcionarios/[id]/page.tsx`: formulário/edição. Campos: nome, CPF, data nascimento, departamento, cargo, salário, data admissão, status, documentos (upload).
+   - `ferias/page.tsx`: lista de pedidos de férias com aprovação inline (`rh:vacations:approve`).
+   - `escalas/page.tsx`: gestão de escalas (`rh:schedules:manage`).
+   Backend: `services/rh-service/src/modules/employees|vacations|schedules`. Endpoints REST CRUD.
+
+B) `/admin/financeiro` — Financeiro (finance-service :4004)
+   Permissão: `finance:transactions:view`.
+   Páginas:
+   - `page.tsx`: DRE simplificado, fluxo de caixa, receitas/despesas do mês, gráfico de tendência (use `recharts`).
+   - `transacoes/page.tsx`: lista com filtros (categoria, data, conta), CTA "Lançar". Permissão `finance:transactions:create` para criar.
+   - `transacoes/nova/page.tsx`: form (descrição, valor, tipo, categoria, conta, data).
+   - `faturas/page.tsx`: faturas de TODOS os clientes (admin), com ações de marcar paga/cancelar/reemitir. Permissão `finance:invoices:manage`.
+   - `dre/page.tsx`: DRE detalhada por mês com drill-down. Permissão `finance:dre:view`.
+
+C) `/admin/projetos` — Projetos (projects-service :4003)
+   Permissão: `projects:view`.
+   Páginas:
+   - `page.tsx`: lista de projetos com cards (cliente, status, % concluído, deadline).
+   - `[id]/page.tsx`: detalhe — kanban de tarefas (TODO|IN_PROGRESS|REVIEW|DONE), arrastar entre colunas (use `@dnd-kit/core`), atribuir membro, comentários.
+   - `[id]/sprints/page.tsx`: gestão de sprints (`projects:sprints:manage`).
+   - `[id]/relatorios/page.tsx`: burndown, velocity, time tracking (`projects:reports:view`).
+
+D) `/admin/suporte` — JÁ COBERTO no prompt 1 (módulo de chamados).
+
+E) `/admin/devops` — DevOps (devops-service :4009)
+   Permissão: `devops:pipelines:view`.
+   Páginas:
+   - `page.tsx`: status dos serviços (health-check), últimos deploys, alertas ativos.
+   - `pipelines/page.tsx`: lista pipelines + status. Botão "Disparar" exige `devops:pipelines:trigger`.
+   - `deploys/page.tsx`: histórico, com botão "Rollback" (`devops:rollback:execute`).
+   - `logs/page.tsx`: stream de logs por serviço (similar a Grafana Loki — pode ser polling do endpoint `/logs?service=&since=`).
+
+F) `/admin/developer` — Developer Portal (developer-service :4010 ou similar)
+   Permissão: `dev:config:edit`.
+   Páginas:
+   - `page.tsx`: configurações do sistema (feature flags, integrações ativas, secrets mascarados).
+   - `config/page.tsx`: edição de configurações (audita cada mudança).
+   - `logs/page.tsx`: logs centralizados (`dev:logs:view`).
+   - `services/page.tsx`: status + restart/stop de serviços (`dev:services:restart`, `dev:services:stop`).
+
+G) `/admin/configuracoes` — Configurações administrativas
+   Permissão: `auth:roles:manage` OU `auth:permissions:manage`.
+   Páginas:
+   - `page.tsx`: índice (organização, papéis, permissões, integrações).
+   - `papeis/page.tsx`: lista de papéis, criar/editar (`auth:roles:manage`).
+   - `permissoes/page.tsx`: matriz de permissões (`auth:permissions:manage`).
+   - `auditoria/page.tsx`: visualizador do audit log (`auth:audit:view`).
+   - `usuarios/page.tsx`: gestão de usuários (`auth:users:manage`).
+
+REGRAS:
+- Cada módulo deve ser entregue como um PR separado para facilitar revisão.
+- Use os endpoints já existentes; SE faltar algum endpoint óbvio, abra-o no service correspondente seguindo o padrão dos controllers vizinhos (controller → service → DTOs com class-validator → guard de permissão).
+- Sem mocks: tudo conversa com o backend real. Seed mais dados em `packages/database/prisma/seed.ts` se necessário para que as listas não fiquem vazias.
+- Cada módulo deve ter um teste E2E em `scripts/e2e-tests/` que faz login como admin e valida que a página principal carrega sem erro.</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <section class="item" id="p1-module-apps">
+        <h2>7. Apps módulo (rh, financeiro, projetos, devops, suporte, developer) — atualmente stubs</h2>
+        <div class="row">
+          <span class="pill warn">P1 — Essencial OU descartar</span>
+          <span class="pill info">6 apps Next.js</span>
+        </div>
+
+        <h3>Contexto</h3>
+        <p>
+          As pastas <code>apps/{rh,financeiro,projetos,devops,suporte,developer}</code> contêm
+          apenas um <code>layout.tsx</code> e um <code>page.tsx</code> retornando
+          <code>&lt;main&gt;DevTechs - X app&lt;/main&gt;</code>. Não há rotas, não há gates de
+          autenticação, não há UI real.
+        </p>
+        <div class="hint">
+          Se você adotar a <strong>Abordagem A</strong> do prompt 2 (consolidar em
+          <code>apps/web</code>), <strong>delete estes apps</strong> em vez de implementá-los.
+          Este prompt só é necessário se a decisão arquitetural for manter os apps separados.
+        </div>
+
+        <h3>Prompt</h3>
+        <div class="prompt-wrap">
+          <button class="copy-btn" data-target="prompt-modapps">Copiar</button>
+          <pre id="prompt-modapps">CONDICIONAL — só execute este prompt se a decisão for manter `apps/{rh,financeiro,projetos,devops,suporte,developer}` como apps Next.js separadas. Caso contrário, delete os diretórios conforme prompt 2.
+
+OBJETIVO: transformar cada app stub em uma aplicação real consumindo seu serviço backend correspondente, com auth gate compartilhado via NextAuth no domínio do `apps/web`.
+
+PRÉ-REQUISITO ARQUITETURAL: configurar cookie de sessão NextAuth com domínio `.devtechs.local` (ou um domínio compartilhado) em `apps/web/src/auth.ts`:
+```ts
+cookies: {
+  sessionToken: {
+    name: 'authjs.session-token',
+    options: {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      domain: process.env.AUTH_COOKIE_DOMAIN, // .devtechs.local
+    },
+  },
+},
+```
+E mapear nginx para servir os apps com `Host: <subdomain>.devtechs.local` (ajustes em `infra/nginx.conf`).
+
+PARA CADA APP:
+
+1. Criar `apps/<modulo>/src/middleware.ts` que decodifica o JWT do cookie usando `@auth/core/jwt` (`getToken({ req, secret: process.env.AUTH_SECRET })`) e redireciona para `<webOrigin>/login?callbackUrl=<original>` se ausente.
+
+2. Replicar de `apps/web` os componentes compartilhados via `@devtechs/ui` (já é workspace dependency). Adicionar `@devtechs/ui` ao `dependencies` de cada app se faltar.
+
+3. Implementar páginas:
+   - `apps/rh/`: dashboard RH, funcionários, férias, escalas (mesmo escopo do prompt 6 letra A, só que em app separado).
+   - `apps/financeiro/`: idem letra B.
+   - `apps/projetos/`: idem letra C.
+   - `apps/devops/`: idem letra E.
+   - `apps/suporte/`: queue de agente (idem letra D / prompt 1 admin).
+   - `apps/developer/`: idem letra F.
+
+4. Cada app ler seu service via env vars (`NEXT_PUBLIC_<MODULE>_URL`), usar `accessToken` da sessão NextAuth no header `Authorization`.
+
+5. Atualizar `infra/nginx.conf` mapeando `rh.devtechs.local` → `:3001` etc.
+
+6. Atualizar `infra/docker-compose.yml` adicionando `AUTH_COOKIE_DOMAIN=.devtechs.local` no env do `apps/web` e dos services.
+
+7. Atualizar `scripts/e2e-tests/04-modules.mjs` para testar autenticação cross-domain.
+
+NOTA: este caminho TEM SIGNIFICATIVAMENTE MAIS COMPLEXIDADE que a consolidação. Considere o trade-off antes de seguir.</pre>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <section class="item" id="p2-oauth">
+        <h2>8. OAuth Google/GitHub — credenciais e renderização condicional</h2>
+        <div class="row">
+          <span class="pill info">P2 — Configuração + UX</span>
+          <span class="pill info">apps/web</span>
+        </div>
+
+        <h3>Contexto</h3>
+        <p>
+          Os providers Google/GitHub <strong>são registrados condicionalmente</strong> (corrigido
+          nesta auditoria). Mas os botões na UI <code>OAuthButtons</code> renderizam sempre. Quando
+          as credenciais estão ausentes, clicar leva ao <code>/login</code> sem feedback útil.
+        </p>
+
+        <h3>Prompt</h3>
+        <div class="prompt-wrap">
+          <button class="copy-btn" data-target="prompt-oauth">Copiar</button>
+          <pre id="prompt-oauth">Em `apps/web/src/components/auth/oauth-buttons.tsx`, transforme a renderização dos botões Google/GitHub em condicional baseada nos providers efetivamente registrados pelo NextAuth.
+
+PASSO A PASSO:
+
+1. Criar uma server action ou route handler em `apps/web/src/app/api/auth/available-providers/route.ts` que retorna `{ google: boolean, github: boolean }` lendo `process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET` etc. (NÃO retornar valores das chaves).
+
+2. Em `OAuthButtons`, transformar em async server component que recebe via prop a flag de cada provider; OU manter client component que faz fetch de `/api/auth/available-providers` no mount e esconde botões cujos providers não estão configurados.
+
+3. Se NENHUM OAuth provider estiver configurado, esconder o `<div>` separador "ou" e o grid inteiro.
+
+4. Adicionar nota a `apps/web/.env.local` (linhas 23-26) explicando como obter cada credencial:
+   - Google: console.cloud.google.com → APIs & Services → Credentials → OAuth 2.0 Client ID. Authorized redirect URI: `http://localhost:3000/api/auth/callback/google` (dev) e `https://<seu-dominio>/api/auth/callback/google` (prod).
+   - GitHub: github.com → Settings → Developer settings → OAuth Apps → New OAuth App. Authorization callback URL: `http://localhost:3000/api/auth/callback/github`.
+
+5. Atualizar `docs/DESENVOLVIMENTO.md` com a seção "Configurando OAuth" detalhando os passos acima.
+
+6. Após configurar credenciais REAIS de teste:
+   - Reiniciar o `apps/web`.
+   - Validar fluxo completo: clicar Google → consentimento Google → callback → backend `auth-service /auth/oauth/login` cria/linka conta → sessão NextAuth ativa → redireciona para `/perfil` ou `/admin`.
+   - Mesmo para GitHub.
+   - Confirmar que a tabela `OAuthAccount` no Postgres tem o registro novo.
+
+7. Adicionar um teste E2E `scripts/e2e-tests/03-oauth.mjs` que:
+   - Confirma que botões aparecem se env tem creds.
+   - Confirma que botões somem se env está vazio.
+   - (Não testa o fluxo completo, que exige browser real autenticado em Google/GitHub.)</pre>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div>
+        Gerado em <strong>2026-04-26</strong> a partir da auditoria E2E DevTechs.
+        Fonte das pendências: rotas testadas com Playwright em <code>scripts/e2e-tests/05-deep-routes.mjs</code> +
+        análise de <code>apps/web/src/components/app/nav-config.tsx</code> +
+        inspeção dos diretórios <code>apps/{rh,financeiro,projetos,devops,suporte,developer}/src/app/</code>.
+      </div>
+      <div style="margin-top: 8px;">
+        Para validar correções aplicadas, rode: <code>node scripts/e2e-tests/01-public-protected.mjs</code> ·
+        <code>02-login.mjs</code> · <code>04-modules.mjs</code> · <code>06-socket.mjs</code> ·
+        <code>07-security-audit.mjs</code>.
+      </div>
+    </footer>
+
+    <script>
+      // Copy-to-clipboard for each prompt block.
+      document.querySelectorAll('.copy-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const target = document.getElementById(btn.dataset.target);
+          if (!target) return;
+          try {
+            await navigator.clipboard.writeText(target.textContent);
+            btn.textContent = 'Copiado ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = 'Copiar';
+              btn.classList.remove('copied');
+            }, 1600);
+          } catch {
+            btn.textContent = 'Falhou';
+            setTimeout(() => (btn.textContent = 'Copiar'), 1600);
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -13,6 +13,7 @@ import {
   type StorageAdapter,
 } from '@devtechs/storage';
 
+import { AuditClientService } from '../../common/audit/audit-client.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
 import type { CreateEmployeeDto } from './dto/create-employee.dto';
@@ -61,6 +62,7 @@ export class EmployeesService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly audit: AuditClientService,
     @Inject(STORAGE) private readonly storage: StorageAdapter,
   ) {}
 
@@ -151,11 +153,13 @@ export class EmployeesService {
         managerId: dto.managerId ?? null,
         userId: dto.userId ?? null,
         status: 'ACTIVE',
+        ...(dto.salary !== undefined ? { salary: dto.salary } : {}),
       },
       include: EMPLOYEE_DETAIL_INCLUDE,
     });
 
     this.logger.log(`Created employee ${row.email} (${row.id})`);
+    void this.audit.log({ action: 'EMPLOYEE_CREATED', module: 'RH', resourceId: row.id, meta: { name: row.name, email: row.email } });
     return this.toDetail(row, row.documents.map((d) => this.toDocumentDto(d)));
   }
 
@@ -214,6 +218,9 @@ export class EmployeesService {
         ? { connect: { id: dto.managerId } }
         : { disconnect: true };
     }
+    if ((dto as any).salary !== undefined) {
+      (data as any).salary = (dto as any).salary;
+    }
 
     const row = await this.prisma.employee.update({
       where: { id },
@@ -222,6 +229,7 @@ export class EmployeesService {
     });
 
     this.logger.log(`Updated employee ${row.email} (${row.id})`);
+    void this.audit.log({ action: 'EMPLOYEE_UPDATED', module: 'RH', resourceId: row.id, meta: { name: row.name } });
     return this.toDetail(row, row.documents.map((d) => this.toDocumentDto(d)));
   }
 
@@ -250,6 +258,7 @@ export class EmployeesService {
     });
 
     this.logger.log(`Dismissed employee ${id}`);
+    void this.audit.log({ action: 'EMPLOYEE_DISMISSED', module: 'RH', resourceId: id });
     return { message: 'Employee dismissed (soft delete)', id };
   }
 
@@ -447,6 +456,7 @@ export class EmployeesService {
         id: row.position.id,
         name: row.position.name,
         level: row.position.level,
+        salary: (row.position as any).salary ? String((row.position as any).salary) : null,
       },
       department: {
         id: row.department.id,
@@ -455,6 +465,7 @@ export class EmployeesService {
       manager: row.manager
         ? { id: row.manager.id, name: row.manager.name, email: row.manager.email }
         : null,
+      salary: (row as any).salary ? String((row as any).salary) : null,
     };
   }
 

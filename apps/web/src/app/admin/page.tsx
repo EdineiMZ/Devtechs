@@ -151,26 +151,31 @@ export default async function AdminPage(): Promise<JSX.Element> {
       breadcrumbs={[{ label: 'Admin' }, { label: 'Visão geral' }]}
     >
       {/* Hero */}
-      <section className="relative mb-8 overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 p-8 shadow-[inset_0_1px_0_0_hsl(0,0%,100%,0.05)]">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(217,91%,60%,0.15),transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,hsl(258,90%,66%,0.1),transparent_50%)]" />
+      <section className="relative mb-8 overflow-hidden rounded-2xl border border-white/8 bg-white/[0.02] p-8">
+        {/* Copper glow */}
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 60% 70% at 80% 20%, hsl(28 72% 58% / 0.10) 0%, transparent 70%)' }} />
+        {/* Acid glow */}
+        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 40% 50% at 10% 80%, hsl(160 100% 48% / 0.06) 0%, transparent 70%)' }} />
+        {/* Top border accent */}
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-copper/40 to-transparent" />
+
         <div className="relative flex flex-wrap items-start justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-sky-300">
+            <div className="inline-flex items-center gap-2 rounded border border-acid/25 bg-acid/10 px-2.5 py-1 font-mono text-[11px] uppercase tracking-widest text-acid">
               <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-sky-400" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-acid opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-acid" />
               </span>
-              Console administrativo
+              // console administrativo
             </div>
-            <h1 className="mt-4 text-4xl font-bold leading-tight tracking-tight text-white">
+            <h1 className="mt-4 font-display text-4xl font-semibold leading-tight tracking-tight text-foreground">
               Bem-vindo,{' '}
-              <span className="bg-gradient-to-r from-sky-300 to-violet-300 bg-clip-text text-transparent">
+              <span className="text-copper">
                 {user.name?.split(' ')[0] ?? 'administrador'}
               </span>
             </h1>
-            <p className="mt-3 max-w-2xl text-sm text-slate-400">
-              Painel unificado de todos os módulos da plataforma DevTechs. Você
+            <p className="mt-3 max-w-2xl font-body text-sm text-ash">
+              Painel unificado de todos os módulos da plataforma DevsTech. Você
               tem {user.permissions.length} permissões ativas e acesso completo
               aos microserviços NestJS.
             </p>
@@ -188,8 +193,8 @@ export default async function AdminPage(): Promise<JSX.Element> {
 
       {/* KPIs */}
       <section className="mb-10">
-        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Indicadores
+        <h2 className="mb-4 font-mono text-[10px] font-semibold uppercase tracking-widest text-ash/60">
+          // indicadores
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {STATS.map((stat) => (
@@ -202,10 +207,10 @@ export default async function AdminPage(): Promise<JSX.Element> {
       <section className="mb-10">
         <div className="mb-4 flex items-end justify-between">
           <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Módulos da plataforma
+            <h2 className="font-mono text-[10px] font-semibold uppercase tracking-widest text-ash/60">
+              // módulos da plataforma
             </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 font-body text-sm text-ash/60">
               Cada módulo é servido por um microserviço NestJS dedicado, com
               permissões isoladas e seu próprio banco de eventos.
             </p>
@@ -228,47 +233,31 @@ export default async function AdminPage(): Promise<JSX.Element> {
       </section>
 
       {/* Session */}
-      <section className="rounded-xl border border-border/60 bg-card p-6">
+      <section className="rounded-xl border border-white/8 bg-white/[0.02] p-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Sessão atual
+          <h2 className="font-mono text-[10px] font-semibold uppercase tracking-widest text-ash/60">
+            // sessão atual
           </h2>
-          <span className="text-[10px] text-muted-foreground">
-            dados resolvidos pelo auth-service
+          <span className="font-mono text-[10px] text-ash/40">
+            resolvida pelo auth-service
           </span>
         </div>
         <dl className="grid gap-4 sm:grid-cols-4">
           <div>
-            <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Usuário
-            </dt>
-            <dd className="mt-1 text-sm font-medium text-foreground">
-              {user.name ?? user.email}
-            </dd>
+            <dt className="font-mono text-[10px] uppercase tracking-widest text-ash/50">Usuário</dt>
+            <dd className="mt-1 font-body text-sm font-medium text-foreground">{user.name ?? user.email}</dd>
           </div>
           <div>
-            <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Email
-            </dt>
-            <dd className="mt-1 text-sm font-medium text-foreground">
-              {user.email}
-            </dd>
+            <dt className="font-mono text-[10px] uppercase tracking-widest text-ash/50">Email</dt>
+            <dd className="mt-1 font-body text-sm font-medium text-foreground">{user.email}</dd>
           </div>
           <div>
-            <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Role principal
-            </dt>
-            <dd className="mt-1 text-sm font-medium text-foreground">
-              {user.mainRole ?? '—'}
-            </dd>
+            <dt className="font-mono text-[10px] uppercase tracking-widest text-ash/50">Role principal</dt>
+            <dd className="mt-1 font-body text-sm font-medium text-copper">{user.mainRole ?? '—'}</dd>
           </div>
           <div>
-            <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Permissões ativas
-            </dt>
-            <dd className="mt-1 text-sm font-semibold tabular-nums text-foreground">
-              {user.permissions.length}
-            </dd>
+            <dt className="font-mono text-[10px] uppercase tracking-widest text-ash/50">Permissões ativas</dt>
+            <dd className="mt-1 font-display text-sm font-semibold tabular-nums text-acid">{user.permissions.length}</dd>
           </div>
         </dl>
       </section>

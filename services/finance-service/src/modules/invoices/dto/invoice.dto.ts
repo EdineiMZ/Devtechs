@@ -42,6 +42,10 @@ export class CreateInvoiceDto {
   @IsString()
   clientId!: string;
 
+  @IsOptional()
+  @IsString()
+  projectId?: string;
+
   @IsArray()
   @ArrayMinSize(1, { message: 'An invoice must have at least one item' })
   @ValidateNested({ each: true })

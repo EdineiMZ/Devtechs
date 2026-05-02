@@ -34,13 +34,21 @@ export const THROTTLERS = {
  * dev auth-service. A follow-up turn should upgrade throttler to v6+
  * and restore the Redis storage.
  */
+/**
+ * In development we relax every limit by ~100x so end-to-end tests
+ * (which hammer `/auth/login` and friends) don't trip the in-memory
+ * counter. Production keeps the original tight values.
+ */
+const isDev = (process.env.NODE_ENV ?? 'development') !== 'production';
+const devMultiplier = isDev ? 100 : 1;
+
 @Module({
   imports: [
     ThrottlerModule.forRoot([
-      { name: THROTTLERS.DEFAULT, limit: 100, ttl: 60_000 },
-      { name: THROTTLERS.REGISTER, limit: 10, ttl: 60 * 60_000 },
-      { name: THROTTLERS.EMAIL_VERIFICATION, limit: 3, ttl: 60 * 60_000 },
-      { name: THROTTLERS.TWO_FA_VERIFY, limit: 10, ttl: 5 * 60_000 },
+      { name: THROTTLERS.DEFAULT, limit: 100 * devMultiplier, ttl: 60_000 },
+      { name: THROTTLERS.REGISTER, limit: 10 * devMultiplier, ttl: 60 * 60_000 },
+      { name: THROTTLERS.EMAIL_VERIFICATION, limit: 3 * devMultiplier, ttl: 60 * 60_000 },
+      { name: THROTTLERS.TWO_FA_VERIFY, limit: 10 * devMultiplier, ttl: 5 * 60_000 },
     ]),
   ],
   exports: [ThrottlerModule],

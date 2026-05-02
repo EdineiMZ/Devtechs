@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+﻿import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
 import { auth } from '@/auth';
@@ -75,20 +75,20 @@ export default async function VerificarEmailPage(): Promise<JSX.Element> {
         </div>
 
         <div className="space-y-2 text-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-ash">
             Enviamos um link de verificação para
           </p>
           <p className="text-base font-semibold text-foreground">{email}</p>
         </div>
 
-        <div className="rounded-md border border-border/60 bg-card/40 p-4 text-xs text-muted-foreground">
+        <div className="rounded-md border border-white/8 bg-white/[0.02] p-4 text-xs text-ash">
           Clique no link dentro do email para ativar sua conta. Enquanto isso,
           o acesso aos recursos protegidos permanece bloqueado.
         </div>
 
         <ResendVerificationButton accessToken={session.accessToken} />
 
-        <div className="text-center text-xs text-muted-foreground">
+        <div className="text-center text-xs text-ash">
           Registrou o email errado? <SignOutLink />
         </div>
       </div>

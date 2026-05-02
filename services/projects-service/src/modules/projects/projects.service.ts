@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -45,7 +46,7 @@ const PROJECT_LIST_INCLUDE = {
 } satisfies Prisma.ProjectInclude;
 
 /**
- * Prisma include for the detail endpoint — adds the member roster.
+ * Prisma include for the detail endpoint — adds the member roster and milestones.
  */
 const PROJECT_DETAIL_INCLUDE = {
   ...PROJECT_LIST_INCLUDE,
@@ -54,6 +55,9 @@ const PROJECT_DETAIL_INCLUDE = {
       user: { select: { id: true, name: true, email: true } },
     },
     orderBy: { joinedAt: 'asc' as const },
+  },
+  milestones: {
+    orderBy: { order: 'asc' as const },
   },
 } satisfies Prisma.ProjectInclude;
 
@@ -118,6 +122,16 @@ export class ProjectsService {
     return this.toDetail(row);
   }
 
+  async getForClient(id: string, clientId: string): Promise<ProjectDetail> {
+    const row = await this.prisma.project.findUnique({
+      where: { id },
+      include: PROJECT_DETAIL_INCLUDE,
+    });
+    if (!row) throw new NotFoundException('Project not found');
+    if (row.clientId !== clientId) throw new ForbiddenException('Access denied');
+    return this.toDetail(row);
+  }
+
   async create(dto: CreateProjectDto): Promise<ProjectDetail> {
     // Bootstrap a default Board + 3 default Columns alongside the
     // project so the kanban view is immediately usable. All four
@@ -142,6 +156,8 @@ export class ProjectsService {
           endDate,
           ownerId: dto.ownerId,
           clientId: dto.clientId ?? null,
+          githubRepo: dto.githubRepo ?? null,
+          progressPercent: dto.progressPercent ?? 0,
           // The owner is automatically a member with the OWNER role.
           members: {
             create: { userId: dto.ownerId, role: 'OWNER' },
@@ -196,6 +212,8 @@ export class ProjectsService {
         ? { connect: { id: dto.clientId } }
         : { disconnect: true };
     }
+    if (dto.githubRepo !== undefined) data.githubRepo = dto.githubRepo ?? null;
+    if (dto.progressPercent !== undefined) data.progressPercent = dto.progressPercent;
 
     await this.prisma.project.update({ where: { id }, data });
     return this.get(id);
@@ -211,6 +229,193 @@ export class ProjectsService {
     await this.prisma.project.delete({ where: { id } });
     this.logger.log(`Deleted project ${id} (${existing.name})`);
     return { message: 'Project deleted', id };
+  }
+
+  // ===================================================================
+  // Members
+  // ===================================================================
+
+  async addMember(
+    projectId: string,
+    userId: string,
+    role: string,
+  ): Promise<{ user: { id: string; name: string | null; email: string }; role: string; joinedAt: string }> {
+    await this.assertProjectExists(projectId);
+    await this.assertUserExists('userId', userId);
+
+    const existing = await this.prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId } },
+    });
+    if (existing) {
+      throw new BadRequestException('User is already a member of this project');
+    }
+
+    const member = await this.prisma.projectMember.create({
+      data: { projectId, userId, role: role as any },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+
+    this.logger.log(`Added member ${userId} (${role}) to project ${projectId}`);
+    return {
+      user: member.user,
+      role: member.role,
+      joinedAt: member.joinedAt.toISOString(),
+    };
+  }
+
+  async updateMember(
+    projectId: string,
+    userId: string,
+    role: string,
+  ): Promise<{ user: { id: string; name: string | null; email: string }; role: string; joinedAt: string }> {
+    const existing = await this.prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId } },
+    });
+    if (!existing) throw new NotFoundException('Member not found in this project');
+    if (existing.role === 'OWNER') {
+      throw new BadRequestException('Cannot change the role of the project owner');
+    }
+
+    const member = await this.prisma.projectMember.update({
+      where: { projectId_userId: { projectId, userId } },
+      data: { role: role as any },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+
+    return {
+      user: member.user,
+      role: member.role,
+      joinedAt: member.joinedAt.toISOString(),
+    };
+  }
+
+  async removeMember(projectId: string, userId: string): Promise<{ message: string }> {
+    const existing = await this.prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId } },
+    });
+    if (!existing) throw new NotFoundException('Member not found in this project');
+    if (existing.role === 'OWNER') {
+      throw new BadRequestException('Cannot remove the project owner');
+    }
+
+    await this.prisma.projectMember.delete({
+      where: { projectId_userId: { projectId, userId } },
+    });
+
+    this.logger.log(`Removed member ${userId} from project ${projectId}`);
+    return { message: 'Member removed' };
+  }
+
+  // ===================================================================
+  // Milestones
+  // ===================================================================
+
+  async listMilestones(projectId: string): Promise<any[]> {
+    await this.assertProjectExists(projectId);
+    const rows = await (this.prisma as any).projectMilestone.findMany({
+      where: { projectId },
+      orderBy: { order: 'asc' },
+    });
+    return rows.map((m: any) => this.toMilestoneDto(m));
+  }
+
+  async createMilestone(projectId: string, dto: any): Promise<any> {
+    await this.assertProjectExists(projectId);
+    const maxOrder = await (this.prisma as any).projectMilestone.aggregate({
+      where: { projectId },
+      _max: { order: true },
+    });
+    const order = dto.order ?? ((maxOrder._max.order ?? -1) + 1);
+    const row = await (this.prisma as any).projectMilestone.create({
+      data: {
+        projectId,
+        title: dto.title,
+        description: dto.description ?? null,
+        order,
+        dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+      },
+    });
+    return this.toMilestoneDto(row);
+  }
+
+  async updateMilestone(projectId: string, milestoneId: string, dto: any): Promise<any> {
+    const existing = await (this.prisma as any).projectMilestone.findFirst({
+      where: { id: milestoneId, projectId },
+    });
+    if (!existing) throw new NotFoundException('Milestone not found');
+
+    const data: any = {};
+    if (dto.title !== undefined) data.title = dto.title;
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.order !== undefined) data.order = dto.order;
+    if (dto.dueDate !== undefined) data.dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
+    if ('completedAt' in dto) {
+      data.completedAt = dto.completedAt ? new Date(dto.completedAt) : null;
+    }
+
+    const row = await (this.prisma as any).projectMilestone.update({
+      where: { id: milestoneId },
+      data,
+    });
+
+    // Auto-sync progressPercent from completed milestones
+    await this.syncProgress(projectId);
+
+    return this.toMilestoneDto(row);
+  }
+
+  async deleteMilestone(projectId: string, milestoneId: string): Promise<{ message: string }> {
+    const existing = await (this.prisma as any).projectMilestone.findFirst({
+      where: { id: milestoneId, projectId },
+    });
+    if (!existing) throw new NotFoundException('Milestone not found');
+    await (this.prisma as any).projectMilestone.delete({ where: { id: milestoneId } });
+    await this.syncProgress(projectId);
+    return { message: 'Milestone deleted' };
+  }
+
+  async getProgress(projectId: string): Promise<{ progressPercent: number; milestones: any[] }> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { id: true, progressPercent: true },
+    });
+    if (!project) throw new NotFoundException('Project not found');
+    const milestones = await this.listMilestones(projectId);
+    return { progressPercent: (project as any).progressPercent ?? 0, milestones };
+  }
+
+  private async syncProgress(projectId: string): Promise<void> {
+    const all = await (this.prisma as any).projectMilestone.findMany({
+      where: { projectId },
+      select: { completedAt: true },
+    });
+    if (all.length === 0) return;
+    const done = all.filter((m: any) => m.completedAt !== null).length;
+    const pct = Math.round((done / all.length) * 100);
+    await this.prisma.project.update({
+      where: { id: projectId },
+      data: { progressPercent: pct },
+    });
+  }
+
+  private async assertProjectExists(id: string): Promise<void> {
+    const exists = await this.prisma.project.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!exists) throw new NotFoundException('Project not found');
+  }
+
+  private toMilestoneDto(m: any): any {
+    return {
+      id: m.id,
+      title: m.title,
+      description: m.description ?? null,
+      order: m.order,
+      completedAt: m.completedAt ? m.completedAt.toISOString() : null,
+      dueDate: m.dueDate ? m.dueDate.toISOString().slice(0, 10) : null,
+      createdAt: m.createdAt.toISOString(),
+    };
   }
 
   // ===================================================================
@@ -436,6 +641,8 @@ export class ProjectsService {
       status: row.status,
       startDate: row.startDate.toISOString().slice(0, 10),
       endDate: row.endDate ? row.endDate.toISOString().slice(0, 10) : null,
+      githubRepo: (row as any).githubRepo ?? null,
+      progressPercent: (row as any).progressPercent ?? 0,
       owner: { id: row.owner.id, name: row.owner.name, email: row.owner.email },
       client: row.client
         ? { id: row.client.id, name: row.client.name, email: row.client.email }
@@ -449,6 +656,15 @@ export class ProjectsService {
 
   private toDetail(row: ProjectDetailRow): ProjectDetail {
     const base = this.toListItem(row);
+    const milestones = ((row as any).milestones ?? []).map((m: any) => ({
+      id: m.id,
+      title: m.title,
+      description: m.description ?? null,
+      order: m.order,
+      completedAt: m.completedAt ? m.completedAt.toISOString() : null,
+      dueDate: m.dueDate ? m.dueDate.toISOString().slice(0, 10) : null,
+      createdAt: m.createdAt.toISOString(),
+    }));
     return {
       ...base,
       members: row.members.map((m) => ({
@@ -456,6 +672,7 @@ export class ProjectsService {
         role: m.role,
         joinedAt: m.joinedAt.toISOString(),
       })),
+      milestones,
     };
   }
 

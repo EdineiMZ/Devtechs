@@ -1,3 +1,7 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as crypto from 'node:crypto';
+
 import {
   BadRequestException,
   ConflictException,
@@ -10,6 +14,13 @@ import type { Prisma } from '@devtechs/database';
 
 import { PermissionResolverService } from '../../common/permissions/permission-resolver.service';
 import { PrismaService } from '../../prisma/prisma.service';
+
+/** Directory where ticket attachments are stored on disk. */
+const UPLOAD_DIR =
+  process.env.UPLOAD_DIR ?? path.join(process.cwd(), 'uploads', 'support');
+
+/** Ensure the upload directory exists on startup. */
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 import { addBusinessHours, businessHoursBetween } from './business-hours.util';
 import type {
@@ -40,6 +51,20 @@ type TicketWithRelations = Prisma.TicketGetPayload<{
     attachments: true;
   };
 }>;
+
+const SUBJECT_TO_CATEGORY: Record<string, string> = {
+  orcamento: 'BILLING',
+  suporte:   'BUG',
+  parceria:  'FEATURE',
+  duvida:    'QUESTION',
+};
+
+const SUBJECT_LABELS: Record<string, string> = {
+  orcamento: 'Orçamento',
+  suporte:   'Suporte',
+  parceria:  'Parceria',
+  duvida:    'Dúvida',
+};
 
 const TICKET_INCLUDE = {
   client: { select: { id: true, name: true, email: true } },
@@ -202,8 +227,19 @@ export class TicketsService {
     const ticket = await this.loadOrThrow(input.ticketId);
     const { authorId, body, isInternal, isAgent } = input;
 
-    // Only agents can post internal notes; non-agents trying to
-    // flip the flag silently get a normal reply.
+    // Block messages on finalized tickets.
+    if (ticket.status === 'CLOSED') {
+      throw new BadRequestException(
+        'Não é possível enviar mensagens em chamados finalizados.',
+      );
+    }
+
+    // Only agents can post internal notes — reject explicitly.
+    if (isInternal && !isAgent) {
+      throw new ForbiddenException(
+        'Apenas agentes de suporte podem enviar notas internas.',
+      );
+    }
     const effectiveInternal = Boolean(isInternal) && isAgent;
 
     // Access gate: non-agents can only post on their own tickets.
@@ -341,6 +377,64 @@ export class TicketsService {
     return this.serializeDetail(ticket, { hideInternal: true });
   }
 
+  /**
+   * Creates a ticket from the public contact form (no authenticated user).
+   * The ticket has no clientId — only guest contact info stored alongside it.
+   * Only support agents can view/reply to these tickets.
+   */
+  async createPublic(input: {
+    name: string;
+    email: string;
+    phone?: string | null;
+    subject: string;
+    message: string;
+  }): Promise<unknown> {
+    const category = (SUBJECT_TO_CATEGORY[input.subject] ?? 'QUESTION') as
+      | 'BILLING'
+      | 'BUG'
+      | 'FEATURE'
+      | 'QUESTION'
+      | 'OTHER';
+    const subjectLabel = SUBJECT_LABELS[input.subject] ?? input.subject;
+    const priority = 'MEDIUM';
+
+    const policy = await this.prisma.sLAPolicy.findUnique({ where: { priority } });
+    const createdAt = new Date();
+    const slaDeadline = policy ? addBusinessHours(createdAt, policy.resolutionHours) : null;
+
+    const phone = input.phone?.trim() || null;
+    const descriptionLines = [
+      `**Nome:** ${input.name}`,
+      `**E-mail:** ${input.email}`,
+      ...(phone ? [`**Telefone:** ${phone}`] : []),
+      `**Assunto:** ${subjectLabel}`,
+      '',
+      input.message,
+    ];
+
+    const ticket = await this.prisma.ticket.create({
+      data: {
+        title: `[Contato] ${subjectLabel} — ${input.name}`,
+        description: descriptionLines.join('\n'),
+        priority,
+        category,
+        clientId: null,
+        guestName: input.name,
+        guestEmail: input.email,
+        guestPhone: phone,
+        slaDeadline,
+        tags: ['contato-publico', input.subject],
+      },
+      include: TICKET_INCLUDE,
+    });
+
+    this.logger.log(
+      `Created public contact ticket #${ticket.number} from ${input.email}`,
+    );
+
+    return this.serializeDetail(ticket, { hideInternal: false });
+  }
+
   async assign(
     id: string,
     dto: AssignTicketDto,
@@ -411,9 +505,20 @@ export class TicketsService {
       SUPPORT_AGENT_PERMISSION,
     );
 
-    // Only agents can post internal notes. A non-agent trying to
-    // flip isInternal silently gets their message promoted to a
-    // normal reply — BadRequestException felt harsh for a typo.
+    // Block messages on finalized tickets.
+    if (ticket.status === 'CLOSED') {
+      throw new BadRequestException(
+        'Não é possível enviar mensagens em chamados finalizados.',
+      );
+    }
+
+    // Only agents can post internal notes — reject explicitly so the
+    // caller knows the flag was recognised and denied.
+    if (dto.isInternal && !isAgent) {
+      throw new ForbiddenException(
+        'Apenas agentes de suporte podem enviar notas internas.',
+      );
+    }
     const isInternal = Boolean(dto.isInternal) && isAgent;
 
     // Access gate: non-agents can only post on their own tickets.
@@ -554,7 +659,7 @@ export class TicketsService {
     status: string;
     priority: string;
     category: string;
-    clientId: string;
+    clientId: string | null;
     assigneeId: string | null;
     slaDeadline: Date | null;
     firstResponseAt: Date | null;
@@ -564,7 +669,10 @@ export class TicketsService {
     tags: string[];
     createdAt: Date;
     updatedAt: Date;
-    client: { id: string; name: string; email: string };
+    guestName: string | null;
+    guestEmail: string | null;
+    guestPhone: string | null;
+    client: { id: string; name: string; email: string } | null;
     assignee: { id: string; name: string; email: string } | null;
     _count: { messages: number; attachments: number };
   }): unknown {
@@ -576,6 +684,9 @@ export class TicketsService {
       priority: row.priority,
       category: row.category,
       client: row.client,
+      guestName: row.guestName,
+      guestEmail: row.guestEmail,
+      guestPhone: row.guestPhone,
       assignee: row.assignee,
       slaDeadline: row.slaDeadline?.toISOString() ?? null,
       firstResponseAt: row.firstResponseAt?.toISOString() ?? null,
@@ -587,6 +698,96 @@ export class TicketsService {
       attachmentCount: row._count.attachments,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
+    };
+  }
+
+  // ===================================================================
+  // Attachments
+  // ===================================================================
+
+  async uploadAttachment(
+    ticketId: string,
+    uploaderId: string,
+    file: Express.Multer.File,
+    messageId?: string,
+  ): Promise<unknown> {
+    const ticket = await this.prisma.ticket.findUnique({
+      where: { id: ticketId },
+      select: { id: true, clientId: true },
+    });
+    if (!ticket) throw new NotFoundException('Ticket not found');
+
+    const isAgent = await this.permissions.has(uploaderId, SUPPORT_AGENT_PERMISSION);
+    if (!isAgent && ticket.clientId !== uploaderId) {
+      throw new ForbiddenException('You do not have access to this ticket');
+    }
+
+    // Generate a unique storage key and copy the temp file there.
+    const ext = path.extname(file.originalname);
+    const fileKey = `${ticketId}/${crypto.randomUUID()}${ext}`;
+    const destDir = path.join(UPLOAD_DIR, ticketId);
+    fs.mkdirSync(destDir, { recursive: true });
+    const destPath = path.join(UPLOAD_DIR, fileKey);
+    fs.renameSync(file.path, destPath);
+
+    const attachment = await this.prisma.ticketAttachment.create({
+      data: {
+        ticketId,
+        messageId: messageId ?? null,
+        fileKey,
+        filename: file.originalname,
+        size: file.size,
+        mimeType: file.mimetype,
+      },
+    });
+
+    return {
+      id: attachment.id,
+      ticketId: attachment.ticketId,
+      messageId: attachment.messageId,
+      filename: attachment.filename,
+      size: attachment.size,
+      mimeType: attachment.mimeType,
+      uploadedAt: attachment.uploadedAt.toISOString(),
+    };
+  }
+
+  getAttachmentFilePath(
+    fileKey: string,
+  ): { filePath: string; exists: boolean } {
+    const filePath = path.join(UPLOAD_DIR, fileKey);
+    const exists = fs.existsSync(filePath);
+    return { filePath, exists };
+  }
+
+  async getAttachment(
+    ticketId: string,
+    attachmentId: string,
+    requesterId: string,
+  ): Promise<{ attachment: { filename: string; mimeType: string; fileKey: string }; filePath: string }> {
+    const attachment = await this.prisma.ticketAttachment.findUnique({
+      where: { id: attachmentId },
+      include: { ticket: { select: { clientId: true } } },
+    });
+    if (!attachment || attachment.ticketId !== ticketId) {
+      throw new NotFoundException('Attachment not found');
+    }
+
+    const isAgent = await this.permissions.has(requesterId, SUPPORT_AGENT_PERMISSION);
+    if (!isAgent && attachment.ticket.clientId !== requesterId) {
+      throw new ForbiddenException('You do not have access to this attachment');
+    }
+
+    const { filePath, exists } = this.getAttachmentFilePath(attachment.fileKey);
+    if (!exists) throw new NotFoundException('File not found on storage');
+
+    return {
+      attachment: {
+        filename: attachment.filename,
+        mimeType: attachment.mimeType,
+        fileKey: attachment.fileKey,
+      },
+      filePath,
     };
   }
 
@@ -603,6 +804,9 @@ export class TicketsService {
       priority: row.priority,
       category: row.category,
       client: row.client,
+      guestName: row.guestName ?? null,
+      guestEmail: row.guestEmail ?? null,
+      guestPhone: row.guestPhone ?? null,
       assignee: row.assignee,
       slaDeadline: row.slaDeadline?.toISOString() ?? null,
       firstResponseAt: row.firstResponseAt?.toISOString() ?? null,
@@ -623,7 +827,6 @@ export class TicketsService {
             filename: a.filename,
             size: a.size,
             mimeType: a.mimeType,
-            fileKey: a.fileKey,
           })),
           createdAt: m.createdAt.toISOString(),
         })),
@@ -632,7 +835,6 @@ export class TicketsService {
         filename: a.filename,
         size: a.size,
         mimeType: a.mimeType,
-        fileKey: a.fileKey,
       })),
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),

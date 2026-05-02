@@ -8,6 +8,25 @@ export interface EmployeePositionDto {
   id: string;
   name: string;
   level: string;
+  salary: string | null;
+}
+
+export interface PositionListItem {
+  id: string;
+  name: string;
+  level: string;
+  description: string | null;
+  salary: string | null;
+  employeeCount: number;
+}
+
+export interface DepartmentListItem {
+  id: string;
+  name: string;
+  description: string | null;
+  managerId: string | null;
+  managerName: string | null;
+  employeeCount: number;
 }
 
 export interface EmployeeDepartmentDto {
@@ -43,6 +62,7 @@ export interface EmployeeListItem {
   position: EmployeePositionDto;
   department: EmployeeDepartmentDto;
   manager: EmployeeManagerDto | null;
+  salary: string | null;
 }
 
 export interface EmployeeDetail extends EmployeeListItem {

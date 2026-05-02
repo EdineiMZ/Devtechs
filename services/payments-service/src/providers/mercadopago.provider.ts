@@ -30,8 +30,14 @@ export class MercadoPagoProvider implements PaymentProvider {
   private readonly preApproval: PreApproval;
 
   constructor(config: ConfigService) {
-    this.accessToken = config.get<string>('MERCADOPAGO_ACCESS_TOKEN') ?? '';
-    this.webhookSecret = config.get<string>('MERCADOPAGO_WEBHOOK_SECRET') ?? '';
+    // Accepts both MP_ACCESS_TOKEN (config-panel managed key) and the legacy
+    // MERCADOPAGO_ACCESS_TOKEN so existing .env files keep working.
+    this.accessToken =
+      config.get<string>('MP_ACCESS_TOKEN') ??
+      config.get<string>('MERCADOPAGO_ACCESS_TOKEN') ?? '';
+    this.webhookSecret =
+      config.get<string>('MP_WEBHOOK_SECRET') ??
+      config.get<string>('MERCADOPAGO_WEBHOOK_SECRET') ?? '';
     this.devMode = !this.accessToken;
 
     if (this.devMode) {

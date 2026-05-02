@@ -1,24 +1,48 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local", ".env"],
-  "globalEnv": ["NODE_ENV"],
+  "globalEnv": ["NODE_ENV", "DATABASE_URL", "REDIS_URL", "AUTH_SECRET"],
+  "globalPassThroughEnv": ["VERCEL_URL", "CI"],
+  "ui": "stream",
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "outputs": [
         ".next/**",
         "!.next/cache/**",
+        ".next/standalone/**",
+        ".next/static/**",
         "dist/**",
         "build/**"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env",
+        ".env.production",
+        ".env.local"
+      ],
+      "env": [
+        "NODE_ENV",
+        "ANALYZE",
+        "NEXT_PUBLIC_*",
+        "DATABASE_URL",
+        "AUTH_SECRET"
       ]
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "dependsOn": ["^build"]
     },
     "lint": {
       "dependsOn": ["^build"],
-      "outputs": []
+      "outputs": [],
+      "inputs": [
+        "src/**/*.{ts,tsx,js,jsx}",
+        "test/**/*.{ts,tsx}",
+        ".eslintrc*",
+        "eslint.config.*"
+      ]
     },
     "test": {
       "dependsOn": ["^build"],
@@ -27,12 +51,36 @@
         "src/**/*.ts",
         "src/**/*.tsx",
         "test/**/*.ts",
-        "test/**/*.tsx"
+        "test/**/*.tsx",
+        "jest.config.*",
+        "jest.int.config.*"
+      ]
+    },
+    "test:int": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "outputs": [],
+      "env": [
+        "DATABASE_URL",
+        "REDIS_URL",
+        "JWT_SECRET",
+        "LOGIN_RATE_LIMIT_TIGHTEN"
       ]
     },
     "typecheck": {
       "dependsOn": ["^build"],
-      "outputs": []
+      "outputs": [".tsbuildinfo", "tsconfig.tsbuildinfo"],
+      "inputs": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "tsconfig.json",
+        "tsconfig.*.json"
+      ]
+    },
+    "@devtechs/web#build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**", ".next/standalone/**"],
+      "env": ["NEXT_PUBLIC_*", "ANALYZE", "AUTH_SECRET", "NODE_ENV"]
     }
   }
 }

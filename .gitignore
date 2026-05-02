@@ -67,3 +67,10 @@ services/auth-service/create-client.cjs
 
 # E2E test scripts (local only)
 test-license-e2e.*
+
+# Local session state / credentials (never commit)
+.auth/
+dump.rdb
+
+# Upload scratch directory (runtime artifacts)
+services/support-service/uploads/

@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 
 import {
   ConflictException,
@@ -31,8 +31,8 @@ import type { RefreshTokenPayload } from './strategies/jwt-refresh.strategy';
 
 const BCRYPT_ROUNDS = 12;
 
-/** Channel consumed by notification-service to send verification emails. */
-const EVENT_CHANNEL_USER_REGISTERED = 'auth.user.registered';
+/** Channel consumed by notification-service to send all email notifications. */
+const EVENT_CHANNEL_EMAIL = 'notifications:email';
 
 /** Duration of the short-lived token used to hold the login state between
  *  password verification and TOTP verification. */
@@ -87,18 +87,28 @@ export class AuthService {
     const verification = await this.prisma.emailVerification.create({
       data: {
         userId: user.id,
-        token: randomUUID(),
+        token: randomBytes(32).toString('hex'),
         expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24), // 24h
       },
       select: { token: true, expiresAt: true },
     });
 
-    await this.redis.publish(EVENT_CHANNEL_USER_REGISTERED, {
-      userId: user.id,
-      email: user.email,
-      name: user.name,
-      verificationToken: verification.token,
-      verificationExpiresAt: verification.expiresAt.toISOString(),
+    // Build a click-through URL pointing at the Next.js verification page.
+    const verificationBaseUrl =
+      this.config.get<string>('EMAIL_VERIFICATION_URL') ??
+      `${this.config.get<string>('NEXT_PUBLIC_WEB_URL') ?? 'http://localhost:3000'}/verificar-email`;
+    const verificationUrl = `${verificationBaseUrl}?token=${encodeURIComponent(verification.token)}`;
+
+    // Publish directly to the notifications:email channel so notification-service
+    // picks it up immediately (no need for a separate auth.user.registered subscriber).
+    await this.redis.publish(EVENT_CHANNEL_EMAIL, {
+      to: user.email,
+      subject: 'Confirme seu email - DevTechs',
+      template: 'email-verification',
+      data: {
+        name: user.name,
+        verificationUrl,
+      },
     });
 
     this.logger.log(`User registered: ${user.email} (${user.id})`);
@@ -251,6 +261,7 @@ export class AuthService {
       roles: user.roles.map((r) => r.role.name),
       primaryRole: user.roles[0]?.role.name ?? null,
       emailVerified: user.emailVerified,
+      twoFactorEnabled: user.twoFactorEnabled,
       permissions: Array.from(permissionSet).sort(),
     };
 

@@ -9,10 +9,12 @@ import { AuthClientModule } from './auth-client/auth-client.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionResolverModule } from './common/permissions/permission-resolver.module';
 import { JwtStrategy } from './common/strategies/jwt.strategy';
+import { CheckoutModule } from './modules/checkout/checkout.module';
 import { CostCentersModule } from './modules/cost-centers/cost-centers.module';
 import { HealthModule } from './modules/health/health.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
 import { OverdueSweepModule } from './modules/jobs/overdue-sweep.module';
+import { PaymentConditionsModule } from './modules/payment-conditions/payment-conditions.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
@@ -79,6 +81,8 @@ import { RedisModule } from './redis/redis.module';
     TransactionsModule,
     CostCentersModule,
     InvoicesModule,
+    CheckoutModule,
+    PaymentConditionsModule,
     OverdueSweepModule,
     HealthModule,
   ],

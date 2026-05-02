@@ -3,11 +3,15 @@ import { join } from 'node:path';
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import nodemailer, { type Transporter } from 'nodemailer';
 import { Resend } from 'resend';
+
+import { RedisService } from '../../redis/redis.service';
 
 /** Name of every template shipped in `./templates/*.html`. */
 export const EMAIL_TEMPLATES = [
   'email-verification',
+  'login-otp',
   'contact-form',
   'contact-confirmation',
   'vacation-approved',
@@ -22,77 +26,147 @@ export interface SendEmailInput {
   subject: string;
   template: EmailTemplate | string;
   data: Record<string, unknown>;
-  /** Optional Reply-To header. Used by the contact-form relay so
-   *  hitting Reply in the ops inbox goes back to the customer. */
+  /** Optional Reply-To header. */
   replyTo?: string;
 }
 
+export type EmailProviderName = 'resend' | 'gmail';
+
+const REDIS_PROVIDER_KEY    = 'devtechs:config:email_provider';
+const REDIS_GMAIL_CREDS_KEY = 'devtechs:config:gmail_creds';
+
 /**
- * EmailService — templated email delivery via Resend.
+ * EmailService — templated email delivery.
  *
- * Templates live in `./templates/*.html` and are cached in memory
- * on first use. The cache keeps a ~200KB footprint across all
- * templates and eliminates the per-send disk hit.
+ * Supports two providers, switchable at runtime via Redis:
+ *   - `resend`  (default) — Resend HTTP API
+ *   - `gmail`   — Gmail via Nodemailer + OAuth2
  *
- * Placeholder syntax: `{{name}}`. HTML-escapes every value by
- * default so a malicious payload never bleeds into the rendered
- * markup. The `{{{raw}}}` triple-brace form is intentionally NOT
- * supported — every send goes through escaping.
+ * Templates live in `./templates/*.html` and are cached in memory.
+ * Placeholder syntax: `{{name}}` — always HTML-escaped.
  */
 @Injectable()
 export class EmailService implements OnModuleInit {
   private readonly logger = new Logger(EmailService.name);
+
+  // --- Resend ---
   private resend: Resend | null = null;
+
+  // --- Gmail ---
+  private gmailTransporter: Transporter | null = null;
+  private gmailUser: string | null = null;
+
   private readonly fromAddress: string;
   private readonly templatesDir: string;
   private readonly cache = new Map<string, string>();
   private readonly devMode: boolean;
 
-  constructor(private readonly config: ConfigService) {
-    this.devMode = (process.env.NODE_ENV ?? 'development') !== 'production';
-    this.fromAddress =
-      this.config.get<string>('RESEND_FROM') ??
-      'DevTechs <no-reply@devtechs.com.br>';
+  constructor(
+    private readonly config: ConfigService,
+    private readonly redis: RedisService,
+  ) {
+    this.devMode     = (process.env.NODE_ENV ?? 'development') !== 'production';
+    this.fromAddress = this.config.get<string>('RESEND_FROM') ?? 'DevTechs <no-reply@devtechs.com.br>';
     this.templatesDir = join(__dirname, 'templates');
   }
 
   async onModuleInit(): Promise<void> {
-    const apiKey = this.config.get<string>('RESEND_API_KEY');
-    if (!apiKey) {
-      if (this.devMode) {
-        this.logger.warn(
-          'RESEND_API_KEY not configured — email sends will be logged instead of delivered (dev mode)',
-        );
-        return;
-      }
+    // --- Boot Resend (always try, even if Gmail is active) ---
+    const resendKey = this.config.get<string>('RESEND_API_KEY');
+    if (resendKey) {
+      this.resend = new Resend(resendKey);
+    } else if (!this.devMode) {
       throw new Error('RESEND_API_KEY is required in production');
+    } else {
+      this.logger.warn('RESEND_API_KEY not set — Resend disabled (dev mode)');
     }
-    this.resend = new Resend(apiKey);
-    // Warm the template cache so the first real send doesn't pay
-    // the disk-read cost. Silent fallback if a template file is
-    // missing — we'll re-check on actual use.
+
+    // --- Boot Gmail if credentials exist in Redis ---
+    await this.refreshGmailTransporter();
+
+    // --- Warm template cache ---
     await Promise.all(
-      EMAIL_TEMPLATES.map((name) => this.loadTemplate(name).catch(() => undefined)),
+      EMAIL_TEMPLATES.map((n) => this.loadTemplate(n).catch(() => undefined)),
     );
-    this.logger.log(`Resend client ready; ${this.cache.size} templates cached`);
+    this.logger.log(
+      `EmailService ready; ${this.cache.size} templates cached. Active provider: ${await this.activeProvider()}`,
+    );
   }
 
-  // -------------------------------------------------------------------
+  // ─────────────────────────────────────────────────────────────────────────
   // Public API
-  // -------------------------------------------------------------------
+  // ─────────────────────────────────────────────────────────────────────────
 
   async send(input: SendEmailInput): Promise<{ id: string | null }> {
-    const html = await this.renderTemplate(input.template, input.data);
+    const html     = await this.renderTemplate(input.template, input.data);
+    const provider = await this.activeProvider();
 
+    if (provider === 'gmail') {
+      return this.sendViaGmail(input, html);
+    }
+    return this.sendViaResend(input, html);
+  }
+
+  /** Returns which provider is currently active. */
+  async activeProvider(): Promise<EmailProviderName> {
+    const stored = await this.redis.get(REDIS_PROVIDER_KEY);
+    if (stored === 'gmail') return 'gmail';
+    return 'resend';
+  }
+
+  /**
+   * Rebuild the Gmail transporter from Redis credentials.
+   * Called by the config endpoint after credentials are saved.
+   */
+  async refreshGmailTransporter(): Promise<void> {
+    const creds = await this.redis.hgetall(REDIS_GMAIL_CREDS_KEY);
+    if (!creds.clientId || !creds.clientSecret || !creds.refreshToken || !creds.user) {
+      this.gmailTransporter = null;
+      this.gmailUser        = null;
+      return;
+    }
+    this.gmailUser = creds.user;
+    this.gmailTransporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        type: 'OAuth2',
+        user: creds.user,
+        clientId: creds.clientId,
+        clientSecret: creds.clientSecret,
+        refreshToken: creds.refreshToken,
+      },
+    });
+    this.logger.log(`Gmail transporter initialized for ${creds.user}`);
+  }
+
+  /** Current Gmail credentials (masked) for the config snapshot. */
+  async gmailCredentialsSummary(): Promise<{
+    user: string | null;
+    hasRefreshToken: boolean;
+    clientIdHint: string | null;
+  }> {
+    const creds = await this.redis.hgetall(REDIS_GMAIL_CREDS_KEY);
+    return {
+      user:           creds.user  ?? null,
+      hasRefreshToken: Boolean(creds.refreshToken),
+      clientIdHint:  creds.clientId ? `${creds.clientId.slice(0, 12)}…` : null,
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Private helpers
+  // ─────────────────────────────────────────────────────────────────────────
+
+  private async sendViaResend(
+    input: SendEmailInput,
+    html: string,
+  ): Promise<{ id: string | null }> {
     if (!this.resend) {
-      // Dev fallback — log and pretend-send. Avoids accidental
-      // traffic to Resend from local development.
       this.logger.log(
-        `[dev] would send "${input.subject}" to ${Array.isArray(input.to) ? input.to.join(', ') : input.to} using ${input.template}`,
+        `[dev] would send "${input.subject}" to ${recipients(input.to)} via Resend (${input.template})`,
       );
       return { id: null };
     }
-
     const result = await this.resend.emails.send({
       from: this.fromAddress,
       to: input.to,
@@ -100,23 +174,32 @@ export class EmailService implements OnModuleInit {
       html,
       reply_to: input.replyTo,
     });
-
     if (result.error) {
-      this.logger.error(
-        `Resend error sending ${input.template} to ${Array.isArray(input.to) ? input.to.join(', ') : input.to}: ${result.error.message}`,
-      );
+      this.logger.error(`Resend error: ${result.error.message}`);
       throw new Error(`Resend send failed: ${result.error.message}`);
     }
-
-    this.logger.log(
-      `Sent ${input.template} to ${Array.isArray(input.to) ? input.to.join(', ') : input.to} (id: ${result.data?.id ?? 'unknown'})`,
-    );
+    this.logger.log(`[resend] Sent ${input.template} to ${recipients(input.to)} (id: ${result.data?.id})`);
     return { id: result.data?.id ?? null };
   }
 
-  // -------------------------------------------------------------------
-  // Template rendering
-  // -------------------------------------------------------------------
+  private async sendViaGmail(
+    input: SendEmailInput,
+    html: string,
+  ): Promise<{ id: string | null }> {
+    if (!this.gmailTransporter || !this.gmailUser) {
+      this.logger.warn('Gmail provider selected but transporter not ready — falling back to Resend');
+      return this.sendViaResend(input, html);
+    }
+    const info = await this.gmailTransporter.sendMail({
+      from: this.gmailUser,
+      to: Array.isArray(input.to) ? input.to.join(', ') : input.to,
+      subject: input.subject,
+      html,
+      replyTo: input.replyTo,
+    }) as { messageId?: string };
+    this.logger.log(`[gmail] Sent ${input.template} to ${recipients(input.to)} (messageId: ${info.messageId ?? 'n/a'})`);
+    return { id: info.messageId ?? null };
+  }
 
   private async renderTemplate(
     template: string,
@@ -134,13 +217,18 @@ export class EmailService implements OnModuleInit {
     const cached = this.cache.get(name);
     if (cached) return cached;
     const file = join(this.templatesDir, `${name}.html`);
-    const raw = await readFile(file, 'utf-8');
+    const raw  = await readFile(file, 'utf-8');
     this.cache.set(name, raw);
     return raw;
   }
 }
 
-/** Resolve `"a.b.c"` against `{ a: { b: { c: 1 } } }`. */
+// ─── Utilities ───────────────────────────────────────────────────────────────
+
+function recipients(to: string | string[]): string {
+  return Array.isArray(to) ? to.join(', ') : to;
+}
+
 function resolvePath(obj: Record<string, unknown>, path: string): unknown {
   const parts = path.split('.');
   let cursor: unknown = obj;

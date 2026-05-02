@@ -18,6 +18,10 @@ export interface AuthenticatedUser {
   /** Whether the user has verified their email. The frontend bounces
    *  to /verificar-email when false so it needs to be in the payload. */
   emailVerified: boolean;
+  /** Whether the user has TOTP two-factor authentication enabled.
+   *  The frontend uses this to enforce 2FA on admin/developer routes
+   *  for OAuth users who bypassed the credential 2FA check. */
+  twoFactorEnabled: boolean;
   /** All permission keys granted to the user via roles + direct grants.
    *  Frontend middleware uses this for per-route authorization checks. */
   permissions: string[];
@@ -92,9 +96,17 @@ export interface Setup2FAResponse {
 export interface Enable2FAResponse {
   message: string;
   enabledAt: string;
+  /** One-time plaintext recovery codes — shown ONCE; only hashes
+   *  remain in the DB. The user is expected to download/print them. */
+  recoveryCodes: string[];
 }
 
 export interface Disable2FAResponse {
   message: string;
   disabledAt: string;
+}
+
+export interface RecoveryCodesResponse {
+  /** Fresh batch of plaintext codes — see `Enable2FAResponse.recoveryCodes`. */
+  recoveryCodes: string[];
 }

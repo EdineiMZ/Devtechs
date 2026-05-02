@@ -30,8 +30,13 @@ export class OverdueSweepScheduler implements OnModuleInit {
     @InjectQueue(FINANCE_JOBS_QUEUE) private readonly queue: Queue,
   ) {}
 
-  async onModuleInit(): Promise<void> {
-    await this.enqueue('startup');
+  onModuleInit(): void {
+    // Fire-and-forget: don't block the NestJS bootstrap waiting for
+    // BullMQ to establish its lazy Redis connection. If the enqueue
+    // fails at startup the daily @Cron will pick it up at midnight.
+    this.enqueue('startup').catch((err: Error) => {
+      this.logger.warn(`Startup sweep enqueue skipped: ${err.message}`);
+    });
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, {

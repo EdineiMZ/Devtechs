@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -7,6 +8,7 @@ import {
 import type { Prisma } from '@devtechs/database';
 
 import { PrismaService } from '../../prisma/prisma.service';
+import { RedisService } from '../../redis/redis.service';
 
 import type {
   CreateInvoiceDto,
@@ -18,17 +20,26 @@ import type {
 export class InvoicesService {
   private readonly logger = new Logger(InvoicesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
+  ) {}
 
   // ===================================================================
   // CRUD
   // ===================================================================
 
-  async list(): Promise<unknown[]> {
+  async list(filters?: { projectId?: string; clientId?: string }): Promise<unknown[]> {
+    const where: Prisma.InvoiceWhereInput = {};
+    if (filters?.projectId) where.projectId = filters.projectId;
+    if (filters?.clientId) where.clientId = filters.clientId;
+
     const rows = await this.prisma.invoice.findMany({
+      where,
       orderBy: [{ issuedAt: 'desc' }],
       include: {
         client: { select: { id: true, name: true, email: true } },
+        project: { select: { id: true, name: true } },
         items: { orderBy: { id: 'asc' } },
         _count: { select: { items: true } },
       },
@@ -38,6 +49,11 @@ export class InvoicesService {
 
   async get(id: string): Promise<unknown> {
     const row = await this.findWithItems(id);
+    return this.serialize(row);
+  }
+
+  async getForClient(id: string, clientId: string): Promise<unknown> {
+    const row = await this.findWithItemsForClient(id, clientId);
     return this.serialize(row);
   }
 
@@ -51,6 +67,7 @@ export class InvoicesService {
         data: {
           number,
           clientId: dto.clientId,
+          projectId: dto.projectId ?? null,
           subtotal: totals.subtotal,
           tax: totals.tax,
           total: totals.total,
@@ -72,6 +89,8 @@ export class InvoicesService {
     });
 
     this.logger.log(`Created invoice ${created.id} (${created.number})`);
+    // Fire-and-forget: notify the client via Redis pub/sub
+    void this.notifyInvoiceCreated(created.id, dto.clientId, totals.total, number);
     return this.get(created.id);
   }
 
@@ -132,6 +151,89 @@ export class InvoicesService {
     return this.get(id);
   }
 
+  async cancel(
+    id: string,
+    reason: string | undefined,
+    staffId: string,
+  ): Promise<unknown> {
+    const existing = await this.prisma.invoice.findUnique({
+      where: { id },
+      include: { client: { select: { id: true, name: true, email: true } } },
+    });
+    if (!existing) throw new NotFoundException('Invoice not found');
+    if (existing.status === 'PAID') {
+      throw new BadRequestException(
+        'Cannot cancel a PAID invoice. Use refund instead.',
+      );
+    }
+    if (existing.status === 'CANCELLED') {
+      throw new BadRequestException('Invoice is already cancelled');
+    }
+    if (existing.status === 'REFUNDED') {
+      throw new BadRequestException('Invoice is already refunded');
+    }
+
+    await this.prisma.invoice.update({
+      where: { id },
+      data: {
+        status: 'CANCELLED',
+        cancelledAt: new Date(),
+        cancelReason: reason ?? null,
+      },
+    });
+
+    this.logger.log(
+      `Invoice ${id} cancelled by ${staffId}. Reason: ${reason ?? 'none'}`,
+    );
+    void this.notifyInvoiceCancelled(existing.clientId, existing.number, reason);
+    return this.get(id);
+  }
+
+  async refund(
+    id: string,
+    reason: string | undefined,
+    staffId: string,
+  ): Promise<unknown> {
+    const existing = await this.prisma.invoice.findUnique({
+      where: { id },
+      include: {
+        client: { select: { id: true, name: true, email: true } },
+        payments: {
+          where: { status: 'PAID' },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+    if (!existing) throw new NotFoundException('Invoice not found');
+    if (existing.status === 'REFUNDED') {
+      throw new BadRequestException('Invoice is already refunded');
+    }
+    if (existing.status === 'CANCELLED') {
+      throw new BadRequestException('Invoice is already cancelled');
+    }
+
+    await this.prisma.invoice.update({
+      where: { id },
+      data: {
+        status: 'REFUNDED',
+        refundedAt: new Date(),
+        cancelReason: reason ?? null,
+      },
+    });
+
+    this.logger.log(
+      `Invoice ${id} refunded by ${staffId}. Reason: ${reason ?? 'none'}`,
+    );
+    void this.notifyInvoiceRefunded(
+      existing.clientId,
+      existing.number,
+      Number(existing.total),
+      reason,
+    );
+    return this.get(id);
+  }
+
   async remove(id: string): Promise<{ message: string; id: string }> {
     const existing = await this.prisma.invoice.findUnique({
       where: { id },
@@ -147,10 +249,11 @@ export class InvoicesService {
     return { message: 'Invoice deleted', id };
   }
 
-  async findWithItems(id: string): Promise<Prisma.InvoiceGetPayload<{
+  async findWithItemsForClient(id: string, clientId: string): Promise<Prisma.InvoiceGetPayload<{
     include: {
       client: { select: { id: true; name: true; email: true } };
       creator: { select: { id: true; name: true; email: true } };
+      project: { select: { id: true; name: true } };
       items: true;
     };
   }>> {
@@ -159,6 +262,31 @@ export class InvoicesService {
       include: {
         client: { select: { id: true, name: true, email: true } },
         creator: { select: { id: true, name: true, email: true } },
+        project: { select: { id: true, name: true } },
+        items: { orderBy: { id: 'asc' } },
+      },
+    });
+    if (!row) throw new NotFoundException('Invoice not found');
+    if (row.clientId !== clientId) {
+      throw new ForbiddenException('Access denied');
+    }
+    return row;
+  }
+
+  async findWithItems(id: string): Promise<Prisma.InvoiceGetPayload<{
+    include: {
+      client: { select: { id: true; name: true; email: true } };
+      creator: { select: { id: true; name: true; email: true } };
+      project: { select: { id: true; name: true } };
+      items: true;
+    };
+  }>> {
+    const row = await this.prisma.invoice.findUnique({
+      where: { id },
+      include: {
+        client: { select: { id: true, name: true, email: true } },
+        creator: { select: { id: true, name: true, email: true } },
+        project: { select: { id: true, name: true } },
         items: { orderBy: { id: 'asc' } },
       },
     });
@@ -223,6 +351,7 @@ export class InvoicesService {
   private serialize(row: {
     id: string;
     number: string;
+    projectId?: string | null;
     subtotal: Prisma.Decimal;
     tax: Prisma.Decimal;
     total: Prisma.Decimal;
@@ -230,10 +359,14 @@ export class InvoicesService {
     issuedAt: Date;
     dueDate: Date;
     paidAt: Date | null;
+    cancelledAt?: Date | null;
+    refundedAt?: Date | null;
+    cancelReason?: string | null;
     notes: string | null;
     createdAt: Date;
     updatedAt: Date;
     client?: { id: string; name: string; email: string } | null;
+    project?: { id: string; name: string } | null;
     creator?: { id: string; name: string; email: string } | null;
     items?: Array<{
       id: string;
@@ -248,6 +381,8 @@ export class InvoicesService {
       id: row.id,
       number: row.number,
       client: row.client ?? null,
+      project: row.project ?? null,
+      projectId: row.projectId ?? null,
       subtotal: Number(row.subtotal),
       tax: Number(row.tax),
       total: Number(row.total),
@@ -255,6 +390,9 @@ export class InvoicesService {
       issuedAt: row.issuedAt.toISOString(),
       dueDate: row.dueDate.toISOString().slice(0, 10),
       paidAt: row.paidAt ? row.paidAt.toISOString() : null,
+      cancelledAt: row.cancelledAt ? row.cancelledAt.toISOString() : null,
+      refundedAt: row.refundedAt ? row.refundedAt.toISOString() : null,
+      cancelReason: row.cancelReason ?? null,
       notes: row.notes,
       items:
         row.items?.map((item) => ({
@@ -269,6 +407,76 @@ export class InvoicesService {
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
+  }
+
+  private async notifyInvoiceCancelled(
+    clientId: string,
+    number: string,
+    reason?: string,
+  ): Promise<void> {
+    const envelope = (payload: unknown) =>
+      JSON.stringify({ publishedAt: new Date().toISOString(), payload });
+    await this.redis.publish(
+      'notifications:inapp',
+      envelope({
+        userId: clientId,
+        title: 'Cobrança cancelada',
+        body: `A fatura ${number} foi cancelada.${reason ? ` Motivo: ${reason}` : ''}`,
+        type: 'invoice.cancelled',
+        link: `/financeiro/faturas`,
+      }),
+    );
+  }
+
+  private async notifyInvoiceRefunded(
+    clientId: string,
+    number: string,
+    amount: number,
+    reason?: string,
+  ): Promise<void> {
+    const brl = new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(amount);
+    const envelope = (payload: unknown) =>
+      JSON.stringify({ publishedAt: new Date().toISOString(), payload });
+    await this.redis.publish(
+      'notifications:inapp',
+      envelope({
+        userId: clientId,
+        title: 'Reembolso processado',
+        body: `O valor de ${brl} referente à fatura ${number} foi estornado.${reason ? ` Motivo: ${reason}` : ''}`,
+        type: 'invoice.refunded',
+        link: `/financeiro/faturas`,
+      }),
+    );
+  }
+
+  private async notifyInvoiceCreated(
+    invoiceId: string,
+    clientId: string,
+    total: number,
+    number: string,
+  ): Promise<void> {
+    const brl = new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(total);
+
+    const envelope = (payload: unknown) =>
+      JSON.stringify({ publishedAt: new Date().toISOString(), payload });
+
+    // In-app notification for the client
+    await this.redis.publish(
+      'notifications:inapp',
+      envelope({
+        userId: clientId,
+        title: 'Nova cobrança gerada',
+        body: `A fatura ${number} no valor de ${brl} foi emitida e aguarda pagamento.`,
+        type: 'invoice.created',
+        link: `/financeiro/faturas/${invoiceId}`,
+      }),
+    );
   }
 }
 

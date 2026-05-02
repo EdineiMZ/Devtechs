@@ -1,20 +1,18 @@
+import Link from 'next/link';
+
 import { Avatar, AvatarFallback, Button } from '@devtechs/ui';
 
 import { auth, signOut } from '@/auth';
+import { NotificationsBell } from '@/components/app/notifications-bell';
+import { listNotifications } from '@/lib/notifications-api';
+import type { Notification } from '@/lib/notifications-api';
 
 /**
- * Sticky topbar rendered above the content area inside the app
- * shell. Shows the current section title on the left and the
- * user avatar + sign-out button on the right.
- *
- * Kept as a server component so the session read happens once
- * per request and the buttons can use server actions for
- * sign-out.
+ * Sticky topbar for the authenticated app shell.
+ * Follows the copper/acid terminal aesthetic.
  */
 export interface AppTopbarProps {
-  /** Breadcrumb segments, rendered as "Section / Subsection". */
   breadcrumbs?: Array<{ label: string; href?: string }>;
-  /** Optional right-hand slot — actions, status pill, etc. */
   actions?: JSX.Element;
 }
 
@@ -25,31 +23,36 @@ export async function AppTopbar({
   const session = await auth();
   const user = session?.user;
 
+  let initialNotifications: Notification[] = [];
+  let initialUnreadCount = 0;
+  if (session?.accessToken) {
+    const res = await listNotifications({ pageSize: 10 }, session.accessToken).catch(() => null);
+    if (res?.ok && res.data && 'items' in res.data) {
+      initialNotifications = res.data.items;
+      initialUnreadCount   = res.data.unreadCount;
+    }
+  }
+
   return (
-    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-border/60 bg-background/80 px-6 backdrop-blur-md">
-      <nav aria-label="Você está em" className="flex items-center gap-2 text-sm">
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-white/5 bg-ink/90 px-6 backdrop-blur-md">
+      {/* Breadcrumbs */}
+      <nav aria-label="Você está em" className="flex items-center gap-2 text-sm font-body">
         {breadcrumbs?.map((crumb, idx) => {
           const last = idx === (breadcrumbs?.length ?? 0) - 1;
           return (
             <span key={`${crumb.label}-${idx}`} className="flex items-center gap-2">
               {idx > 0 ? (
-                <span aria-hidden="true" className="text-muted-foreground/50">
-                  /
-                </span>
+                <span aria-hidden="true" className="font-mono text-ash/30">/</span>
               ) : null}
               {crumb.href && !last ? (
                 <a
                   href={crumb.href}
-                  className="text-muted-foreground transition-colors hover:text-foreground"
+                  className="text-ash transition-colors hover:text-foreground"
                 >
                   {crumb.label}
                 </a>
               ) : (
-                <span
-                  className={
-                    last ? 'font-medium text-foreground' : 'text-muted-foreground'
-                  }
-                >
+                <span className={last ? 'font-medium text-foreground' : 'text-ash'}>
                   {crumb.label}
                 </span>
               )}
@@ -58,32 +61,54 @@ export async function AppTopbar({
         })}
       </nav>
 
+      {/* Right side */}
       <div className="flex items-center gap-4">
         {actions}
+
+        {user && session?.accessToken ? (
+          <NotificationsBell
+            initialNotifications={initialNotifications}
+            initialUnreadCount={initialUnreadCount}
+            accessToken={session.accessToken}
+          />
+        ) : null}
+
         {user ? (
           <>
-            <div className="hidden items-center gap-3 md:flex">
-              <Avatar size="sm" className="ring-2 ring-sky-500/30">
-                <AvatarFallback className="bg-gradient-to-br from-sky-500 to-indigo-500 text-white">
+            <Link
+              href="/perfil"
+              className="hidden items-center gap-3 rounded-lg px-2 py-1 transition-colors hover:bg-white/5 md:flex"
+            >
+              <Avatar size="sm" className="ring-2 ring-copper/25">
+                <AvatarFallback
+                  className="font-display font-semibold text-xs text-ink"
+                  style={{ background: 'linear-gradient(135deg, hsl(28 72% 58%), hsl(16 68% 40%))' }}
+                >
                   {user.name?.slice(0, 2).toUpperCase() ?? 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="leading-tight">
-                <div className="text-sm font-medium text-foreground">
+                <div className="font-body text-sm font-medium text-foreground">
                   {user.name ?? user.email}
                 </div>
-                <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                <div className="font-mono text-[10px] uppercase tracking-wider text-copper/70">
                   {user.mainRole ?? 'member'}
                 </div>
               </div>
-            </div>
+            </Link>
+
             <form
               action={async () => {
                 'use server';
                 await signOut({ redirectTo: '/' });
               }}
             >
-              <Button type="submit" size="sm" variant="outline">
+              <Button
+                type="submit"
+                size="sm"
+                variant="outline"
+                className="border-white/10 text-ash hover:text-foreground hover:border-white/20 font-body text-xs"
+              >
                 Sair
               </Button>
             </form>

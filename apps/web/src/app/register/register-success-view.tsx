@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 
@@ -48,14 +48,14 @@ export function RegisterSuccessView({ email }: RegisterSuccessViewProps): JSX.El
         <h2 className="text-xl font-semibold tracking-tight">
           Verifique seu email
         </h2>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-ash">
           Enviamos um link de verificação para{' '}
           <span className="font-medium text-foreground">{email}</span>. Clique
           no link para ativar sua conta e entrar na plataforma.
         </p>
       </div>
 
-      <div className="rounded-md border border-border/60 bg-card/40 p-4 text-xs text-muted-foreground">
+      <div className="rounded-md border border-white/8 bg-white/[0.02] p-4 text-xs text-ash">
         <p className="font-medium text-foreground">Não recebeu o email?</p>
         <p className="mt-1">
           Verifique a pasta de spam ou lixo eletrônico. Se ainda não encontrar,

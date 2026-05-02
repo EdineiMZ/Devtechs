@@ -4,13 +4,15 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
 
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { PermissionGuard } from '../../common/guards/permission.guard';
-import { CreateProductDto } from './dto/product.dto';
+import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 import { ProductsService } from './products.service';
 
 @Controller('products')
@@ -29,5 +31,14 @@ export class ProductsController {
   @RequirePermission('dev:config:edit')
   create(@Body() dto: CreateProductDto): Promise<unknown> {
     return this.products.create(dto);
+  }
+
+  @Patch(':id')
+  @RequirePermission('dev:config:edit')
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateProductDto,
+  ): Promise<unknown> {
+    return this.products.update(id, dto);
   }
 }

@@ -9,6 +9,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { AuditInterceptor } from './modules/audit/audit.interceptor';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/auth.guard';
+import { CompanyModule } from './modules/company/company.module';
 import { HealthModule } from './modules/health/health.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { RolesModule } from './modules/roles/roles.module';
@@ -50,6 +51,7 @@ import { RedisModule } from './redis/redis.module';
     RateLimitModule,
     AuditModule,
     AuthModule,
+    CompanyModule,
     RolesModule,
     PermissionsModule,
     HealthModule,

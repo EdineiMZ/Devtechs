@@ -79,9 +79,14 @@ export type SupportSocket = Socket<
 
 /** Where the support-service Socket.io endpoint lives. */
 function getSupportSocketUrl(): string {
+  // Accept both env var names — `NEXT_PUBLIC_SUPPORT_URL` is the one set
+  // in the repo `.env`, while older code referenced
+  // `NEXT_PUBLIC_SUPPORT_SERVICE_URL`. Default port aligns with
+  // `SUPPORT_SERVICE_PORT=4008` in `.env`.
   return (
     process.env.NEXT_PUBLIC_SUPPORT_SERVICE_URL ??
-    'http://127.0.0.1:3006'
+    process.env.NEXT_PUBLIC_SUPPORT_URL ??
+    'http://127.0.0.1:4008'
   );
 }
 

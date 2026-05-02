@@ -1,15 +1,11 @@
+import { Code2 } from 'lucide-react';
 import Link from 'next/link';
 
 import { cn } from '@devtechs/ui';
 
 /**
- * Server-rendered sidebar with per-role navigation. A client-side
- * version sits on top for interactive collapse, but the baseline
- * HTML is rendered on the Node layer so the nav is visible before
- * JavaScript hydrates.
- *
- * The consumer passes the current pathname so the active item
- * can be highlighted without a useEffect round trip.
+ * Server-rendered sidebar with per-role navigation.
+ * Follows the copper/acid terminal aesthetic of the landing page.
  */
 
 export interface AppSidebarItem {
@@ -36,38 +32,25 @@ export function AppSidebar({
   return (
     <aside
       aria-label="Menu principal"
-      className="hidden w-64 shrink-0 border-r border-border/60 bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 md:flex md:flex-col"
+      className="hidden w-64 shrink-0 border-r border-white/5 bg-ink md:flex md:flex-col"
     >
-      <div className="flex h-16 items-center gap-2 border-b border-white/5 px-5">
-        <span
-          aria-hidden="true"
-          className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-to-br from-sky-400 to-indigo-500 text-white shadow-[0_0_20px_hsl(217,91%,60%,0.45)]"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-4 w-4"
-          >
-            <polyline points="16 18 22 12 16 6" />
-            <polyline points="8 6 2 12 8 18" />
-          </svg>
-        </span>
+      {/* Brand */}
+      <div className="flex h-16 items-center gap-2.5 border-b border-white/5 px-5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-md border border-acid/30 bg-acid/8">
+          <Code2 className="h-4 w-4 text-acid" />
+        </div>
         <div className="leading-tight">
-          <div className="text-sm font-semibold text-white">
-            Dev<span className="text-sky-400">Techs</span>
+          <div className="font-display text-sm font-semibold text-foreground tracking-tight">
+            DevsTech
           </div>
-          <div className="text-[10px] uppercase tracking-widest text-slate-500">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-ash/60">
             Platform
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3 text-sm">
+      {/* Nav */}
+      <nav className="flex-1 space-y-0.5 overflow-y-auto p-3 text-sm">
         {items.map((item) => {
           const isActive =
             pathname === item.href ||
@@ -75,38 +58,37 @@ export function AppSidebar({
           const granted =
             !item.permission || permissions.includes(item.permission);
 
-          const base =
-            'group flex items-start gap-3 rounded-lg px-3 py-2.5 transition-all';
-          const active = isActive
-            ? 'bg-gradient-to-r from-sky-500/15 via-indigo-500/10 to-transparent text-white ring-1 ring-sky-500/30 shadow-[inset_0_1px_0_0_hsl(217,91%,60%,0.2)]'
-            : 'text-slate-300 hover:bg-white/5 hover:text-white';
-          const disabled = !granted
-            ? 'cursor-not-allowed text-slate-600 hover:bg-transparent hover:text-slate-600'
-            : '';
-
           return (
             <Link
               key={item.href}
               href={granted ? item.href : '#'}
-              className={cn(base, active, disabled)}
               aria-current={isActive ? 'page' : undefined}
               aria-disabled={granted ? undefined : true}
+              className={cn(
+                'group flex items-start gap-3 rounded-lg px-3 py-2.5 transition-all duration-150',
+                isActive
+                  ? 'bg-copper/10 text-foreground ring-1 ring-copper/20 shadow-[inset_0_1px_0_0_hsl(28_72%_58%_/_0.15)]'
+                  : 'text-ash hover:bg-white/5 hover:text-foreground',
+                !granted && 'cursor-not-allowed opacity-35 hover:bg-transparent hover:text-ash',
+              )}
             >
               <span
                 className={cn(
-                  'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center text-slate-400 group-hover:text-sky-400',
-                  isActive && 'text-sky-400',
-                  !granted && 'text-slate-700 group-hover:text-slate-700',
+                  'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center transition-colors',
+                  isActive
+                    ? 'text-copper'
+                    : 'text-ash/70 group-hover:text-acid',
+                  !granted && 'group-hover:text-ash/70',
                 )}
               >
                 {item.icon}
               </span>
               <span className="flex-1">
-                <span className="block font-medium leading-tight">
+                <span className="block font-body font-medium leading-tight">
                   {item.label}
                 </span>
                 {item.description ? (
-                  <span className="mt-0.5 block text-[11px] leading-tight text-slate-500">
+                  <span className="mt-0.5 block font-mono text-[10px] leading-tight text-ash/50">
                     {item.description}
                   </span>
                 ) : null}
@@ -116,8 +98,9 @@ export function AppSidebar({
         })}
       </nav>
 
-      <div className="border-t border-white/5 p-3 text-[10px] uppercase tracking-widest text-slate-600">
-        v0.1.0 &middot; DevTechs Platform
+      {/* Footer */}
+      <div className="border-t border-white/5 p-3 font-mono text-[10px] uppercase tracking-widest text-ash/40">
+        v0.1.0 · DevsTech
       </div>
     </aside>
   );

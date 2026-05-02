@@ -1,21 +1,21 @@
-'use client';
+﻿'use client';
 
 import { signIn } from 'next-auth/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@devtechs/ui';
 
 /**
- * Google + GitHub sign-in buttons.
+ * Renders Google and/or GitHub sign-in buttons depending on which OAuth
+ * providers are actually configured in the current environment.
  *
- * Calls `signIn('google' | 'github')` with the current page's
- * `callbackUrl` so a user mid-flow (e.g. trying to reach /perfil)
- * still lands on their intended destination after the OAuth round
- * trip. The `redirect: true` default takes over from there — the
- * NextAuth callback chain handles the rest.
+ * On mount the component fetches `/api/auth/available-providers` (returns
+ * `{ google: boolean, github: boolean }`) and shows only the buttons whose
+ * provider credentials are present. If neither provider is configured the
+ * entire section — buttons and the "ou" separator — is suppressed so the
+ * login form doesn't show a dead UI element.
  *
- * Loading state locks both buttons at once so a user can't kick off
- * two parallel OAuth handshakes by double-clicking.
+ * During the initial fetch a skeleton is displayed to prevent layout shift.
  */
 interface OAuthButtonsProps {
   callbackUrl?: string;
@@ -24,46 +24,96 @@ interface OAuthButtonsProps {
 
 type Provider = 'google' | 'github' | null;
 
+interface AvailableProviders {
+  google: boolean;
+  github: boolean;
+}
+
 export function OAuthButtons({
   callbackUrl,
   disabled,
-}: OAuthButtonsProps): JSX.Element {
+}: OAuthButtonsProps): JSX.Element | null {
+  const [providers, setProviders] = useState<AvailableProviders | null>(null);
   const [pending, setPending] = useState<Provider>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/available-providers')
+      .then((r) => r.json() as Promise<AvailableProviders>)
+      .then(setProviders)
+      .catch(() => setProviders({ google: false, github: false }));
+  }, []);
+
+  // Still loading — show a subtle skeleton to avoid layout shift.
+  if (providers === null) {
+    return (
+      <>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="h-10 animate-pulse rounded-md bg-muted/40" />
+          <div className="h-10 animate-pulse rounded-md bg-muted/40" />
+        </div>
+        <OrDivider />
+      </>
+    );
+  }
+
+  // No providers configured — hide everything (buttons + divider).
+  if (!providers.google && !providers.github) return null;
+
+  const anyBusy = pending !== null || Boolean(disabled);
 
   const handleClick = (provider: Exclude<Provider, null>): void => {
     setPending(provider);
     void signIn(provider, { callbackUrl: callbackUrl ?? '/perfil' });
   };
 
-  const anyBusy = pending !== null || Boolean(disabled);
-
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <Button
-        type="button"
-        variant="outline"
-        size="md"
-        className="w-full gap-2 border-border/80"
-        onClick={() => handleClick('google')}
-        loading={pending === 'google'}
-        disabled={anyBusy}
-      >
-        <GoogleIcon />
-        Google
-      </Button>
+    <>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {providers.google && (
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            className="w-full gap-2 border-white/10"
+            onClick={() => handleClick('google')}
+            loading={pending === 'google'}
+            disabled={anyBusy}
+          >
+            <GoogleIcon />
+            Google
+          </Button>
+        )}
 
-      <Button
-        type="button"
-        variant="outline"
-        size="md"
-        className="w-full gap-2 border-border/80"
-        onClick={() => handleClick('github')}
-        loading={pending === 'github'}
-        disabled={anyBusy}
-      >
-        <GitHubGlyph />
-        GitHub
-      </Button>
+        {providers.github && (
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            className="w-full gap-2 border-white/10"
+            onClick={() => handleClick('github')}
+            loading={pending === 'github'}
+            disabled={anyBusy}
+          >
+            <GitHubGlyph />
+            GitHub
+          </Button>
+        )}
+      </div>
+
+      <OrDivider />
+    </>
+  );
+}
+
+function OrDivider(): JSX.Element {
+  return (
+    <div className="relative">
+      <div className="absolute inset-0 flex items-center">
+        <span className="w-full border-t border-white/8" />
+      </div>
+      <div className="relative flex justify-center text-xs uppercase">
+        <span className="bg-white/[0.02] px-2 text-ash">ou</span>
+      </div>
     </div>
   );
 }

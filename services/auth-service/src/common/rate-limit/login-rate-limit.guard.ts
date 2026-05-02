@@ -14,10 +14,11 @@ import { RedisService } from '../../redis/redis.service';
 
 /** Count-window: how many attempts we track and over what period. */
 const COUNT_WINDOW_SECONDS = 15 * 60; // 15 minutes
-const COUNT_THRESHOLD = 5;
+const isDev = (process.env.NODE_ENV ?? 'development') !== 'production';
+const COUNT_THRESHOLD = isDev ? 5000 : 5;
 
 /** Block-window: how long an IP is locked out once the threshold is hit. */
-const BLOCK_DURATION_SECONDS = 60 * 60; // 1 hour
+const BLOCK_DURATION_SECONDS = isDev ? 60 : 60 * 60; // 1 minute in dev, 1 hour in prod
 
 const COUNT_KEY = (ip: string) => `rl:login:count:${ip}`;
 const BLOCK_KEY = (ip: string) => `rl:login:block:${ip}`;

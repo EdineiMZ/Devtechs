@@ -1,20 +1,10 @@
+import { Code2 } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
-import { Card } from '@devtechs/ui';
-
 /**
- * Shared shell for the /login, /register, and /verificar-email
- * pages. Provides a centered card with the brand mark above it and
- * the same grid/glow backdrop used on the landing hero so the auth
- * screens feel like part of the same surface.
- *
- * The sibling auth pages compose their own content inside `children`
- * while this component owns:
- *   - the outer section + backdrop
- *   - the brand link (takes the user back to "/")
- *   - the card chrome
- *   - the bottom helper slot for cross-links (sign-up ↔ sign-in, etc.)
+ * Shared shell for the /login, /register, and /verificar-email pages.
+ * Follows the same copper/acid terminal aesthetic as the landing page.
  */
 export interface AuthLayoutProps {
   title: string;
@@ -30,62 +20,70 @@ export function AuthLayout({
   children,
 }: AuthLayoutProps): JSX.Element {
   return (
-    <main className="relative isolate flex min-h-screen items-center justify-center overflow-hidden px-4 py-16 sm:py-20">
+    <main className="relative isolate flex min-h-screen items-center justify-center overflow-hidden px-4 py-16 sm:py-20 bg-ink">
+      {/* Background layers */}
       <div aria-hidden="true" className="absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-grid" />
-        <div className="absolute inset-0 bg-hero-glow" />
+        {/* Subtle grid */}
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{
+            backgroundImage:
+              'linear-gradient(to right, hsl(160 100% 48% / 0.07) 1px, transparent 1px), linear-gradient(to bottom, hsl(160 100% 48% / 0.07) 1px, transparent 1px)',
+            backgroundSize: '52px 52px',
+            maskImage: 'radial-gradient(ellipse 70% 60% at 50% 40%, black 30%, transparent 80%)',
+          }}
+        />
+        {/* Copper glow */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'radial-gradient(ellipse 60% 50% at 50% 65%, hsl(28 72% 58% / 0.08) 0%, transparent 70%)',
+          }}
+        />
+        {/* Acid glow top */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'radial-gradient(ellipse 40% 30% at 50% 15%, hsl(160 100% 48% / 0.06) 0%, transparent 70%)',
+          }}
+        />
       </div>
 
       <div className="animate-fade-up w-full max-w-md">
         {/* Brand mark */}
         <Link
           href="/"
-          className="mx-auto mb-8 flex w-fit items-center gap-2 text-lg font-semibold tracking-tight"
-          aria-label="DevTechs — voltar à página inicial"
+          className="mx-auto mb-8 flex w-fit items-center gap-2.5 group"
+          aria-label="DevsTech — voltar à página inicial"
         >
-          <span
-            aria-hidden="true"
-            className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-[0_0_20px_hsl(var(--primary)/0.5)]"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-4 w-4"
-            >
-              <polyline points="16 18 22 12 16 6" />
-              <polyline points="8 6 2 12 8 18" />
-            </svg>
-          </span>
-          <span>
-            Dev<span className="text-primary">Techs</span>
+          <div className="flex h-8 w-8 items-center justify-center rounded-md border border-acid/30 bg-acid/8 group-hover:border-acid/60 transition-colors">
+            <Code2 className="h-4 w-4 text-acid" />
+          </div>
+          <span className="font-display text-base font-semibold text-foreground tracking-tight">
+            DevsTech
           </span>
         </Link>
 
+        {/* Heading */}
         <div className="mb-6 text-center">
-          <h1 className="text-balance text-2xl font-bold tracking-tight sm:text-3xl">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             {title}
           </h1>
           {description ? (
-            <p className="mt-2 text-pretty text-sm text-muted-foreground">
+            <p className="mt-2 text-sm text-ash font-body leading-relaxed">
               {description}
             </p>
           ) : null}
         </div>
 
-        <Card
-          className="border-border/80 bg-card/80 backdrop-blur-sm"
-          padding="lg"
-        >
+        {/* Card */}
+        <div className="liquid-glass rounded-2xl p-8">
           {children}
-        </Card>
+        </div>
 
+        {/* Footer slot */}
         {footer ? (
-          <p className="mt-6 text-center text-sm text-muted-foreground">
+          <p className="mt-6 text-center text-sm text-ash font-body">
             {footer}
           </p>
         ) : null}
