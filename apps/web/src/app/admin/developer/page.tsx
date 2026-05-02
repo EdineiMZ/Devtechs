@@ -91,7 +91,7 @@ export default async function DeveloperServicesPage(): Promise<JSX.Element> {
       {/* Header */}
       <header className="mb-6">
         <p className="font-mono text-[11px] font-semibold uppercase tracking-widest text-copper">
-          // developer console
+          {'// developer console'}
         </p>
         <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-foreground">
           Developer

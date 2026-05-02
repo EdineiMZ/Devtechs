@@ -47,6 +47,8 @@ async function bootstrap(): Promise<void> {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+  app.disable('x-powered-by');
+
   app.enableCors({
     origin: corsOrigins,
     credentials: true,
@@ -72,7 +74,7 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   const port = Number(
-    process.env.DEVOPS_SERVICE_PORT ?? process.env.PORT ?? 3005,
+    process.env.DEVOPS_SERVICE_PORT ?? process.env.PORT ?? 4009,
   );
   await app.listen(port, '0.0.0.0');
   // eslint-disable-next-line no-console

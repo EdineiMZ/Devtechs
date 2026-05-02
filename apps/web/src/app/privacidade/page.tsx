@@ -54,7 +54,7 @@ export default async function PrivacidadePage(): Promise<JSX.Element> {
         {/* Título */}
         <div className="mb-12 border-b border-white/8 pb-8">
           <p className="mb-2 font-mono text-xs font-semibold uppercase tracking-widest text-copper">
-            // legal / privacidade
+            {'// legal / privacidade'}
           </p>
           <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
             Política de Privacidade

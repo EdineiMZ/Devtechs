@@ -281,7 +281,7 @@ export const {
         // routes until they verify via /2fa-verificar.
         const isOAuth =
           account?.provider === 'google' || account?.provider === 'github';
-        token.twoFactorCompleted = isOAuth ? !Boolean(u.twoFactorEnabled) : true;
+        token.twoFactorCompleted = isOAuth ? !u.twoFactorEnabled : true;
       }
 
       // ---- Mid-session 2FA completion (unstable_update call) ----

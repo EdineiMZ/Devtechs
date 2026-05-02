@@ -40,7 +40,7 @@ export function CtaFinal(): JSX.Element {
 
         <div className="relative mx-auto max-w-3xl px-6 lg:px-8 text-center flex flex-col items-center gap-8">
           <div className="flex flex-col items-center gap-4">
-            <TerminalBadge variant="copper">// próximo passo</TerminalBadge>
+            <TerminalBadge variant="copper">{'// próximo passo'}</TerminalBadge>
             <BlurText
               as="h2"
               text="Pronto para construir algo real?"
@@ -69,7 +69,7 @@ export function CtaFinal(): JSX.Element {
             </a>
           </div>
 
-          <p className="font-mono text-xs text-ash">// resposta em até 24h úteis</p>
+          <p className="font-mono text-xs text-ash">{'// resposta em até 24h úteis'}</p>
         </div>
       </section>
 

@@ -74,7 +74,7 @@ export function ChangePasswordForm(): JSX.Element {
 
     // Tiny delay so the user can read the banner before the redirect.
     setTimeout(() => {
-      void signOut({ callbackUrl: '/login?reason=password_changed' });
+      void signOut({ redirectTo: '/login?reason=password_changed' });
     }, 1500);
   }
 

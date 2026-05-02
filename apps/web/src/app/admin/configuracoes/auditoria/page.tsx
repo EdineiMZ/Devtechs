@@ -141,7 +141,7 @@ export default async function AuditoriaPage({
       {/* ── Header ── */}
       <header className="mb-8">
         <p className="font-mono text-[11px] font-semibold uppercase tracking-widest text-copper">
-          // auditoria
+          {'// auditoria'}
         </p>
         <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-foreground">
           Auditoria global

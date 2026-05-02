@@ -49,7 +49,7 @@ export function DeveloperAuthGate(): JSX.Element {
             </svg>
           </div>
           <p className="font-mono text-[11px] font-semibold uppercase tracking-widest text-copper">
-            // acesso restrito
+            {'// acesso restrito'}
           </p>
           <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight text-foreground">
             Developer Console

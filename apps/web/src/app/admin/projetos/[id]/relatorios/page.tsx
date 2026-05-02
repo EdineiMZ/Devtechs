@@ -102,7 +102,7 @@ export default async function RelatoriosPage({
                 <tbody className="divide-y divide-border/60">
                   {project.members.map((m) => (
                     <tr key={m.user.id}>
-                      <td className="py-2 pr-4 font-medium text-foreground">{m.user.name}</td>
+                      <td className="py-2 pr-4 font-medium text-foreground">{m.user.name ?? m.user.email}</td>
                       <td className="py-2 pr-4 text-ash">{m.user.email}</td>
                       <td className="py-2 pr-4">
                         <span className="rounded-full bg-violet-500/15 px-2 py-0.5 text-[11px] text-violet-400">

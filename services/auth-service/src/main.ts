@@ -46,6 +46,7 @@ async function bootstrap(): Promise<void> {
   // -----------------------------------------------------------------------
   // Global filter & interceptor
   // -----------------------------------------------------------------------
+  app.getHttpAdapter().getInstance().disable('x-powered-by');
   app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalInterceptors(new LoggingInterceptor());
 

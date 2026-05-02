@@ -71,7 +71,9 @@ export default async function AgentTicketDetail({
           <p className="text-[11px] font-mono uppercase tracking-wider text-ash">
             #{ticket.number} · {ticket.category} · cliente{' '}
             <span className="text-foreground">
-              {ticket.client.name ?? ticket.client.email}
+              {ticket.client
+                ? (ticket.client.name ?? ticket.client.email)
+                : (ticket.guestName ?? ticket.guestEmail ?? 'Externo')}
             </span>
           </p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">

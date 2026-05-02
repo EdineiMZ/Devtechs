@@ -767,7 +767,7 @@ function SnapshotsPane({
         </div>
         <div className="space-y-2">
           {snapshots.length === 0 ? (
-            <p className="text-sm text-ash">Nenhum snapshot. Clique em "Criar snapshot" para começar.</p>
+            <p className="text-sm text-ash">Nenhum snapshot. Clique em &quot;Criar snapshot&quot; para começar.</p>
           ) : (
             snapshots.map((s) => (
               <div

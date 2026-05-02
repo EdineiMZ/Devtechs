@@ -48,6 +48,7 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
+  app.getHttpAdapter().getInstance().disable('x-powered-by');
   app.useGlobalFilters(new AllExceptionsFilter());
 
   const port = Number(process.env.RH_SERVICE_PORT ?? process.env.PORT ?? 3002);

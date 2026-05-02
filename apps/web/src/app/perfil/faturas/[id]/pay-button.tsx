@@ -430,7 +430,7 @@ export function PayButton({
             {invoiceNumber ? `Fatura ${invoiceNumber} em aberto` : 'Fatura em aberto'}
           </p>
           <p className="mt-0.5 text-xs text-ash">
-            {invoiceAmount != null
+            {invoiceAmount !== undefined
               ? `${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(invoiceAmount)} · `
               : ''}
             Escolha PIX ou cartão de crédito para pagar com segurança.

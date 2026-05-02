@@ -368,13 +368,13 @@ export class HostingerApiService {
       : null;
 
     // --- Data center name ---
-    const dataCenter = raw.data_center_id != null
+    const dataCenter = raw.data_center_id !== undefined
       ? (dcMap.get(raw.data_center_id) ?? `DC-${raw.data_center_id}`)
       : 'Unknown';
 
     // --- Resource counters ---
     // disk from API is in MB; divide by 1024 for GB (round up).
-    const diskGb = raw.diskGb ?? (raw.disk != null ? Math.ceil(raw.disk / 1024) : 0);
+    const diskGb = raw.diskGb ?? (raw.disk !== undefined ? Math.ceil(raw.disk / 1024) : 0);
     const memoryMb = raw.memoryMb ?? raw.memory ?? 0;
     const cpuCores = raw.cpuCores ?? raw.cpus ?? 0;
 

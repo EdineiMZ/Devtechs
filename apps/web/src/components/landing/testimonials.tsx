@@ -71,7 +71,7 @@ export function Testimonials(): JSX.Element {
     <section id="cases" className="py-24 lg:py-32 bg-ink border-t border-white/5 overflow-hidden">
       <div className="mx-auto max-w-7xl px-6 lg:px-8 mb-14">
         <div className="flex flex-col gap-4">
-          <TerminalBadge variant="acid">// o que dizem</TerminalBadge>
+          <TerminalBadge variant="acid">{'// o que dizem'}</TerminalBadge>
           <BlurText
             text="Clientes que constroem com a gente."
             className="font-display font-semibold text-foreground"

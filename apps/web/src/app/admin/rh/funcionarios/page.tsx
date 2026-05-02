@@ -186,7 +186,7 @@ export default async function EmployeesPage({
             <div className="flex gap-2">
               {page > 1 && (
                 <Link
-                  href={`/admin/rh/funcionarios?page=${page - 1}${searchParams.q ? `&q=${searchParams.q}` : ''}${searchParams.status ? `&status=${searchParams.status}` : ''}`}
+                  href={`/admin/rh/funcionarios?page=${page - 1}${searchParams.q ? `&q=${encodeURIComponent(searchParams.q)}` : ''}${searchParams.status ? `&status=${encodeURIComponent(searchParams.status)}` : ''}`}
                   className="rounded-md border border-white/8 px-3 py-1 text-xs hover:bg-white/[0.04]"
                 >
                   Anterior
@@ -194,7 +194,7 @@ export default async function EmployeesPage({
               )}
               {page < totalPages && (
                 <Link
-                  href={`/admin/rh/funcionarios?page=${page + 1}${searchParams.q ? `&q=${searchParams.q}` : ''}${searchParams.status ? `&status=${searchParams.status}` : ''}`}
+                  href={`/admin/rh/funcionarios?page=${page + 1}${searchParams.q ? `&q=${encodeURIComponent(searchParams.q)}` : ''}${searchParams.status ? `&status=${encodeURIComponent(searchParams.status)}` : ''}`}
                   className="rounded-md border border-white/8 px-3 py-1 text-xs hover:bg-white/[0.04]"
                 >
                   Próxima

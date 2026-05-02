@@ -53,7 +53,7 @@ export default async function SupportQueuePage({
         (t) =>
           t.title.toLowerCase().includes(q) ||
           String(t.number).includes(q) ||
-          (t.client.name ?? '').toLowerCase().includes(q),
+          (t.client?.name ?? t.guestName ?? '').toLowerCase().includes(q),
       )
     : all;
 
@@ -190,11 +190,16 @@ function Column({
                       {ticket.title}
                     </p>
                     <p className="truncate text-xs text-ash">
-                      {ticket.client.name ?? ticket.client.email}
+                      {ticket.client
+                        ? (ticket.client.name ?? ticket.client.email)
+                        : (ticket.guestName ?? ticket.guestEmail ?? 'Externo')}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <TicketStatusBadge status={ticket.status} />
+                    {ticket.client === null && (
+                      <Badge variant="secondary">EXTERNO</Badge>
+                    )}
                     <Badge variant="default">{ticket.priority}</Badge>
                   </div>
                 </div>

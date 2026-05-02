@@ -55,7 +55,9 @@ async function fetchCashflow(token: string): Promise<CashflowPoint[]> {
     );
     if (!res.ok) return [];
     const data = (await res.json()) as unknown;
-    return Array.isArray(data) ? (data as CashflowPoint[]) : [];
+    if (Array.isArray(data)) return data as CashflowPoint[];
+    const obj = data as { months?: CashflowPoint[] };
+    return Array.isArray(obj.months) ? obj.months : [];
   } catch {
     return [];
   }

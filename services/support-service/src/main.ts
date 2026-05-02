@@ -47,6 +47,7 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
+  app.getHttpAdapter().getInstance().disable('x-powered-by');
   app.useGlobalFilters(new AllExceptionsFilter());
 
   // Install the Socket.io Redis adapter BEFORE .listen() so the

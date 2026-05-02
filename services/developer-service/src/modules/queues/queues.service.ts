@@ -78,11 +78,11 @@ export class QueuesService implements OnModuleDestroy {
     for (const queue of this.queues.values()) {
       try {
         await queue.close();
-      } catch {}
+      } catch { /* teardown — ignore close errors */ }
     }
     try {
       await this.connection.quit();
-    } catch {}
+    } catch { /* teardown — ignore quit errors */ }
   }
 
   private getQueue(name: string): Queue {

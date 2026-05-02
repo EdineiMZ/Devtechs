@@ -48,7 +48,7 @@ export default async function PerfilPage(): Promise<JSX.Element> {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-copper opacity-75" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-copper" />
               </span>
-              // portal do cliente
+              {'// portal do cliente'}
             </div>
             <h1 className="mt-4 font-display text-4xl font-semibold leading-tight tracking-tight text-foreground">
               Olá,{' '}
@@ -75,7 +75,7 @@ export default async function PerfilPage(): Promise<JSX.Element> {
       {/* KPIs */}
       <section className="mb-10">
         <h2 className="mb-4 font-mono text-[10px] font-semibold uppercase tracking-widest text-ash/60">
-          // indicadores
+          {'// indicadores'}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard

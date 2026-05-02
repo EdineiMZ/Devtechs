@@ -38,7 +38,7 @@ export function Differentiators(): JSX.Element {
     <section id="diferenciais" className="py-24 lg:py-32 bg-ink">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="flex flex-col gap-4 mb-14">
-          <TerminalBadge variant="copper">// por que a DevsTech</TerminalBadge>
+          <TerminalBadge variant="copper">{'// por que a DevsTech'}</TerminalBadge>
           <BlurText
             text="Engenharia sem verniz."
             className="font-display font-semibold text-foreground"

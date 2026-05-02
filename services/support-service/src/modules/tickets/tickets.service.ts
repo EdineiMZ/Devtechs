@@ -176,7 +176,7 @@ export class TicketsService {
     userId: string,
   ): Promise<
     | { allowed: false; reason: 'not_found' | 'forbidden' }
-    | { allowed: true; isAgent: boolean; ticket: { id: string; number: number; status: string; clientId: string } }
+    | { allowed: true; isAgent: boolean; ticket: { id: string; number: number; status: string; clientId: string | null } }
   > {
     const ticket = await this.prisma.ticket.findUnique({
       where: { id: ticketId },

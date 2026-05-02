@@ -65,7 +65,7 @@ export function About(): JSX.Element {
     <section id="processo" className="py-24 lg:py-32 bg-ink border-t border-white/5">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="flex flex-col gap-4 mb-16">
-          <TerminalBadge variant="acid">// como trabalhamos</TerminalBadge>
+          <TerminalBadge variant="acid">{'// como trabalhamos'}</TerminalBadge>
           <BlurText
             text="Do briefing ao deploy."
             className="font-display font-semibold text-foreground"

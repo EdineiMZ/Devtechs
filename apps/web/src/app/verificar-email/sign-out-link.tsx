@@ -12,7 +12,7 @@ export function SignOutLink(): JSX.Element {
     <button
       type="button"
       className="font-medium text-primary underline-offset-4 hover:underline"
-      onClick={() => signOut({ callbackUrl: '/login' })}
+      onClick={() => signOut({ redirectTo: '/login' })}
     >
       Sair e registrar novamente
     </button>

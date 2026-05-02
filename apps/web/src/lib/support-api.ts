@@ -66,7 +66,8 @@ export interface TicketListItemDto {
   status: TicketStatus;
   priority: TicketPriority;
   category: TicketCategory;
-  client: TicketUserDto;
+  /** null for guest/external tickets submitted via the public contact form */
+  client: TicketUserDto | null;
   assignee: TicketUserDto | null;
   slaDeadline: string | null;
   firstResponseAt: string | null;
@@ -74,6 +75,8 @@ export interface TicketListItemDto {
   closedAt: string | null;
   rating: number | null;
   tags: string[];
+  guestName: string | null;
+  guestEmail: string | null;
   messageCount: number;
   attachmentCount: number;
   createdAt: string;

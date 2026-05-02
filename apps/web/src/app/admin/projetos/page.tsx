@@ -162,7 +162,7 @@ export default async function ProjetosPage({
         <div className="mt-6 flex items-center justify-center gap-2">
           {page > 1 && (
             <Link
-              href={`/admin/projetos?page=${page - 1}${searchParams.status ? `&status=${searchParams.status}` : ''}`}
+              href={`/admin/projetos?page=${page - 1}${searchParams.status ? `&status=${encodeURIComponent(searchParams.status)}` : ''}`}
               className="rounded-md border border-white/8 px-3 py-1 text-sm hover:bg-white/[0.04]"
             >
               Anterior
@@ -173,7 +173,7 @@ export default async function ProjetosPage({
           </span>
           {page < totalPages && (
             <Link
-              href={`/admin/projetos?page=${page + 1}${searchParams.status ? `&status=${searchParams.status}` : ''}`}
+              href={`/admin/projetos?page=${page + 1}${searchParams.status ? `&status=${encodeURIComponent(searchParams.status)}` : ''}`}
               className="rounded-md border border-white/8 px-3 py-1 text-sm hover:bg-white/[0.04]"
             >
               Próxima

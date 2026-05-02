@@ -11,6 +11,7 @@ export interface CurrentUserPayload {
   name: string;
   roles: string[];
   sessionId: string;
+  emailVerified: boolean;
 }
 
 interface RequestWithUser extends Request {

@@ -51,6 +51,8 @@ async function bootstrap(): Promise<void> {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+  app.getHttpAdapter().getInstance().disable('x-powered-by');
+
   app.enableCors({
     origin: corsOrigins,
     credentials: true,

@@ -35,7 +35,7 @@ export default async function RhDashboardPage(): Promise<JSX.Element> {
 
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
-  const birthdays = employees.filter((e) => {
+  const admissionsThisMonth = employees.filter((e) => {
     try {
       return new Date(e.hireDate).getMonth() + 1 === currentMonth;
     } catch {
@@ -48,7 +48,7 @@ export default async function RhDashboardPage(): Promise<JSX.Element> {
     { label: 'Ativos', value: active, color: 'emerald', href: '/admin/rh/funcionarios?status=ACTIVE' },
     { label: 'Em férias', value: onVacation, color: 'amber', href: '/admin/rh/ferias?status=APPROVED' },
     { label: 'Pedidos pendentes', value: pendingVacations, color: 'violet', href: '/admin/rh/ferias?status=PENDING' },
-    { label: 'Aniversariantes do mês', value: birthdays, color: 'rose', href: '/admin/rh/funcionarios' },
+    { label: 'Admissões no mês', value: admissionsThisMonth, color: 'rose', href: '/admin/rh/funcionarios' },
   ];
 
   const recentEmployees = employees.slice(0, 5);

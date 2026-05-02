@@ -21,6 +21,7 @@ export default async function DevOpsDashboardPage(): Promise<JSX.Element> {
   const session = await auth();
   if (!session?.user) redirect('/login?callbackUrl=/admin/devops');
   const user = session.user;
+  if (!session.accessToken) redirect('/login?callbackUrl=/admin/devops');
   if (!user.permissions.includes('devops:pipelines:view')) redirect('/perfil');
 
   const [pipelinesRes, deploymentsRes] = await Promise.all([
@@ -50,7 +51,7 @@ export default async function DevOpsDashboardPage(): Promise<JSX.Element> {
       {/* Page header */}
       <header className="mb-8">
         <p className="font-mono text-[11px] font-semibold uppercase tracking-widest text-copper">
-          // devops
+          {'// devops'}
         </p>
         <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-foreground">
           Painel DevOps

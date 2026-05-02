@@ -8,14 +8,68 @@ import { Icon } from '@/components/app/icons';
 import { ModuleCard } from '@/components/app/module-card';
 import { ADMIN_NAV_ITEMS } from '@/components/app/nav-config';
 import { StatCard } from '@/components/app/stat-card';
+import { getSupportServiceUrl } from '@/lib/support-api';
+import { getProjectsServiceUrl } from '@/lib/projects-api';
+import { getFinanceServiceUrl } from '@/lib/finance-api';
+import { getRhServiceUrl } from '@/lib/rh-api';
 
-/**
- * Admin dashboard — the main landing for users holding the
- * `admin` role. Server component: the session is read once and
- * threaded into the shell so the sidebar already knows which
- * items the current user has access to before any JS loads.
- */
 export const dynamic = 'force-dynamic';
+
+async function fetchDashboardData(token: string) {
+  const now = new Date();
+  const fromMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+  const toMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+
+  const [ticketsRes, projectsRes, financeRes, employeesRes, vacationsRes] =
+    await Promise.allSettled([
+      fetch(`${getSupportServiceUrl()}/tickets?page=1&pageSize=1&status=OPEN`, {
+        headers: { Authorization: `Bearer ${token}` }, cache: 'no-store',
+      }),
+      fetch(`${getProjectsServiceUrl()}/projects?page=1&pageSize=1&status=ACTIVE`, {
+        headers: { Authorization: `Bearer ${token}` }, cache: 'no-store',
+      }),
+      fetch(`${getFinanceServiceUrl()}/transactions/summary?from=${fromMonth}&to=${toMonth}`, {
+        headers: { Authorization: `Bearer ${token}` }, cache: 'no-store',
+      }),
+      fetch(`${getRhServiceUrl()}/employees?page=1&pageSize=1&status=ACTIVE`, {
+        headers: { Authorization: `Bearer ${token}` }, cache: 'no-store',
+      }),
+      fetch(`${getRhServiceUrl()}/vacations?page=1&pageSize=1&status=APPROVED`, {
+        headers: { Authorization: `Bearer ${token}` }, cache: 'no-store',
+      }),
+    ]);
+
+  const safeJson = async (r: PromiseSettledResult<Response>) => {
+    if (r.status !== 'fulfilled' || !r.value.ok) return null;
+    try { return await r.value.json(); } catch { return null; }
+  };
+
+  const [tickets, projects, finance, employees, vacations] = await Promise.all([
+    safeJson(ticketsRes),
+    safeJson(projectsRes),
+    safeJson(financeRes),
+    safeJson(employeesRes),
+    safeJson(vacationsRes),
+  ]);
+
+  const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+
+  const incomeTotal = finance
+    ? typeof finance.income === 'number' ? finance.income : (finance.income?.total ?? 0)
+    : null;
+  const expenseTotal = finance
+    ? typeof finance.expense === 'number' ? finance.expense : (finance.expense?.total ?? 0)
+    : null;
+
+  return {
+    openTickets: tickets?.total ?? '—',
+    activeProjects: projects?.total ?? '—',
+    monthlyRevenue: incomeTotal !== null ? fmt.format(incomeTotal) : '—',
+    activeEmployees: employees?.total ?? '—',
+    onVacation: vacations?.total ?? '—',
+    monthlyExpenses: expenseTotal !== null ? fmt.format(expenseTotal) : '—',
+  };
+}
 
 export default async function AdminPage(): Promise<JSX.Element> {
   const session = await auth();
@@ -23,42 +77,42 @@ export default async function AdminPage(): Promise<JSX.Element> {
   const user = session.user;
   if (!user.roles.includes('admin')) redirect('/perfil');
 
-  // In a real deployment these numbers come from a fan-out to
-  // each module service. For now we stub them with zeros so the
-  // layout renders in full — the `hint` field carries the
-  // "aguardando dados" message.
+  const data = session.accessToken
+    ? await fetchDashboardData(session.accessToken)
+    : null;
+
   const STATS = [
     {
       label: 'Tickets abertos',
-      value: 0,
+      value: data?.openTickets ?? '—',
       delta: { value: '—', positive: true },
       accent: 'sky' as const,
       icon: Icon.ticket,
-      hint: 'aguardando support-service',
+      hint: 'status: OPEN',
     },
     {
       label: 'Projetos ativos',
-      value: 1,
-      delta: { value: '+1', positive: true },
+      value: data?.activeProjects ?? '—',
+      delta: { value: '—', positive: true },
       accent: 'violet' as const,
       icon: Icon.briefcase,
       hint: 'projetos em andamento',
     },
     {
       label: 'Receita mensal',
-      value: 'R$ 0',
+      value: data?.monthlyRevenue ?? '—',
       delta: { value: '—', positive: true },
       accent: 'emerald' as const,
       icon: Icon.dollar,
       hint: 'mês corrente',
     },
     {
-      label: 'Pipelines hoje',
-      value: 1,
-      delta: { value: '+1', positive: true },
+      label: 'Funcionários ativos',
+      value: data?.activeEmployees ?? '—',
+      delta: { value: '—', positive: true },
       accent: 'amber' as const,
-      icon: Icon.zap,
-      hint: 'últimas 24h',
+      icon: Icon.users,
+      hint: 'status: ACTIVE',
     },
   ];
 
@@ -72,8 +126,8 @@ export default async function AdminPage(): Promise<JSX.Element> {
       accent: 'emerald' as const,
       icon: Icon.users,
       stats: [
-        { label: 'Ativos', value: '—' },
-        { label: 'Férias', value: '—' },
+        { label: 'Ativos', value: String(data?.activeEmployees ?? '—') },
+        { label: 'Em férias', value: String(data?.onVacation ?? '—') },
       ],
     },
     {
@@ -85,8 +139,8 @@ export default async function AdminPage(): Promise<JSX.Element> {
       accent: 'sky' as const,
       icon: Icon.dollar,
       stats: [
-        { label: 'Receita', value: '—' },
-        { label: 'Despesas', value: '—' },
+        { label: 'Receita', value: data?.monthlyRevenue ?? '—' },
+        { label: 'Despesas', value: data?.monthlyExpenses ?? '—' },
       ],
     },
     {
@@ -98,8 +152,8 @@ export default async function AdminPage(): Promise<JSX.Element> {
       accent: 'violet' as const,
       icon: Icon.briefcase,
       stats: [
-        { label: 'Ativos', value: '1' },
-        { label: 'Sprints', value: '0' },
+        { label: 'Ativos', value: String(data?.activeProjects ?? '—') },
+        { label: 'Tickets', value: String(data?.openTickets ?? '—') },
       ],
     },
     {
@@ -111,7 +165,7 @@ export default async function AdminPage(): Promise<JSX.Element> {
       accent: 'rose' as const,
       icon: Icon.ticket,
       stats: [
-        { label: 'Abertos', value: '0' },
+        { label: 'Abertos', value: String(data?.openTickets ?? '—') },
         { label: 'SLA', value: '100%' },
       ],
     },
@@ -124,7 +178,7 @@ export default async function AdminPage(): Promise<JSX.Element> {
       accent: 'amber' as const,
       icon: Icon.zap,
       stats: [
-        { label: 'Pipelines', value: '1' },
+        { label: 'Pipelines', value: '0' },
         { label: 'Ambientes', value: '0' },
       ],
     },
@@ -166,7 +220,7 @@ export default async function AdminPage(): Promise<JSX.Element> {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-acid opacity-75" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-acid" />
               </span>
-              // console administrativo
+              {'// console administrativo'}
             </div>
             <h1 className="mt-4 font-display text-4xl font-semibold leading-tight tracking-tight text-foreground">
               Bem-vindo,{' '}
@@ -194,7 +248,7 @@ export default async function AdminPage(): Promise<JSX.Element> {
       {/* KPIs */}
       <section className="mb-10">
         <h2 className="mb-4 font-mono text-[10px] font-semibold uppercase tracking-widest text-ash/60">
-          // indicadores
+          {'// indicadores'}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {STATS.map((stat) => (
@@ -208,7 +262,7 @@ export default async function AdminPage(): Promise<JSX.Element> {
         <div className="mb-4 flex items-end justify-between">
           <div>
             <h2 className="font-mono text-[10px] font-semibold uppercase tracking-widest text-ash/60">
-              // módulos da plataforma
+              {'// módulos da plataforma'}
             </h2>
             <p className="mt-1 font-body text-sm text-ash/60">
               Cada módulo é servido por um microserviço NestJS dedicado, com
@@ -236,7 +290,7 @@ export default async function AdminPage(): Promise<JSX.Element> {
       <section className="rounded-xl border border-white/8 bg-white/[0.02] p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-mono text-[10px] font-semibold uppercase tracking-widest text-ash/60">
-            // sessão atual
+            {'// sessão atual'}
           </h2>
           <span className="font-mono text-[10px] text-ash/40">
             resolvida pelo auth-service

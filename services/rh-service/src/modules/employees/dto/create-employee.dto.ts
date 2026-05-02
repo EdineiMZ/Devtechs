@@ -27,6 +27,7 @@ export class CreateEmployeeDto {
   @IsString({ message: 'name must be a string' })
   @MinLength(2, { message: 'name must be at least 2 characters long' })
   @MaxLength(120, { message: 'name must be at most 120 characters long' })
+  @Matches(/^[^<>'"&]*$/, { message: 'name must not contain HTML characters' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   name!: string;
 

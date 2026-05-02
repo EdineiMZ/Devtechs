@@ -72,7 +72,7 @@ export default function ContatoPage(): JSX.Element {
             <div className="animate-fade-up text-center flex flex-col items-center gap-5 mb-12">
               <TerminalBadge variant="copper">
                 <Mail className="h-3 w-3" />
-                // resposta em até 24h
+                {'// resposta em até 24h'}
               </TerminalBadge>
 
               <h1 className="font-display font-semibold text-foreground tracking-tight" style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.1 }}>

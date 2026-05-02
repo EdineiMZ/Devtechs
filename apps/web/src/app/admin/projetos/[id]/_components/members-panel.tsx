@@ -56,9 +56,11 @@ const ROLE_COLORS: Record<string, string> = {
 function initials(name: string | null, email: string): string {
   if (name) {
     const parts = name.trim().split(/\s+/);
+    const first = parts[0] ?? '';
+    const last = parts[parts.length - 1] ?? '';
     return parts.length >= 2
-      ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-      : parts[0].slice(0, 2).toUpperCase();
+      ? (first.charAt(0) + last.charAt(0)).toUpperCase()
+      : first.slice(0, 2).toUpperCase();
   }
   return email.slice(0, 2).toUpperCase();
 }
@@ -76,7 +78,7 @@ function avatarColor(id: string): string {
   ];
   let hash = 0;
   for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
-  return colors[Math.abs(hash) % colors.length];
+  return colors[Math.abs(hash) % colors.length] ?? 'bg-violet-600';
 }
 
 // ---------------------------------------------------------------------------
@@ -403,7 +405,7 @@ export function MembersPanel({
 
           {!searching && query.trim() && searchResults.length === 0 && (
             <p className="mt-2 text-xs text-ash">
-              Nenhum usuário encontrado para "{query}".
+              Nenhum usuário encontrado para &quot;{query}&quot;.
             </p>
           )}
         </div>

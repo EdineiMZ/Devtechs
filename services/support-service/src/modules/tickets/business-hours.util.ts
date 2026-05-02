@@ -138,7 +138,6 @@ export function businessHoursBetween(a: Date, b: Date): number {
 
   // Cap at 10000 iterations so a bad input never spins forever.
   for (let i = 0; i < 10_000 && cursor < b; i++) {
-    const hourInDay = cursor.getHours() + cursor.getMinutes() / 60;
     const endOfDay = new Date(cursor);
     endOfDay.setHours(BUSINESS_END_HOUR, 0, 0, 0);
 

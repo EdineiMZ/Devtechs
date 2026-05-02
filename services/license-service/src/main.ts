@@ -37,10 +37,11 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
+  app.getHttpAdapter().getInstance().disable('x-powered-by');
   app.useGlobalFilters(new AllExceptionsFilter());
 
   const port = Number(
-    process.env.LICENSE_SERVICE_PORT ?? process.env.PORT ?? 3008,
+    process.env.LICENSE_SERVICE_PORT ?? process.env.PORT ?? 4007,
   );
   // -----------------------------------------------------------------------
   // Swagger / OpenAPI

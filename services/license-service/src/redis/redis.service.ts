@@ -60,7 +60,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async onModuleDestroy(): Promise<void> {
     try {
       await this.client?.quit();
-    } catch {}
+    } catch (_) { /* quit may fail if already disconnected */ }
   }
 
   getClient(): Redis {

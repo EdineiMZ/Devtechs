@@ -181,7 +181,7 @@ export class ServicesService {
   }> {
     const id = await this.findByServiceName(serviceName);
     const summary = await this.summarize(id);
-    const port = summary.ports.find((p) => p.public != null)?.public
+    const port = summary.ports.find((p) => p.public !== null)?.public
       ?? summary.ports[0]?.private;
     if (!port) {
       return { service: serviceName, reachable: false, error: 'No exposed port' };

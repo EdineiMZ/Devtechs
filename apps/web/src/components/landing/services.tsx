@@ -62,7 +62,7 @@ export function Services() {
     <section id="servicos" className="py-24 lg:py-32 bg-ink">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="flex flex-col gap-4 mb-14">
-          <TerminalBadge variant="acid">// o que construímos</TerminalBadge>
+          <TerminalBadge variant="acid">{'// o que construímos'}</TerminalBadge>
           <BlurText
             text="Serviços de engenharia."
             className="font-display font-semibold text-foreground"
@@ -78,6 +78,7 @@ export function Services() {
           {/* Large card */}
           {(() => {
             const s = SERVICES[0];
+            if (!s) return null;
             const Icon = s.icon;
             return (
               <motion.div

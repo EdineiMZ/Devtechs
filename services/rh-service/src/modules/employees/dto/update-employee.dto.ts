@@ -36,6 +36,7 @@ export class UpdateEmployeeDto {
   @IsString()
   @MinLength(2)
   @MaxLength(120)
+  @Matches(/^[^<>'"&]*$/, { message: 'name must not contain HTML characters' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   name?: string;
 

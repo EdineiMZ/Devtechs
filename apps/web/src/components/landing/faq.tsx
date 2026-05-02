@@ -72,7 +72,7 @@ export function Faq(): JSX.Element {
     <section id="faq" className="py-24 lg:py-32 bg-ink border-t border-white/5">
       <div className="mx-auto max-w-3xl px-6 lg:px-8">
         <div className="flex flex-col gap-4 mb-14">
-          <TerminalBadge variant="muted">// perguntas frequentes</TerminalBadge>
+          <TerminalBadge variant="muted">{'// perguntas frequentes'}</TerminalBadge>
           <BlurText
             text="Direto ao ponto."
             className="font-display font-semibold text-foreground"

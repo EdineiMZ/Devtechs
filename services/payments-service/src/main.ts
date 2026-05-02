@@ -53,6 +53,8 @@ async function bootstrap(): Promise<void> {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
+  app.disable('x-powered-by');
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

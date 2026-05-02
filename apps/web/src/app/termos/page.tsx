@@ -57,7 +57,7 @@ export default async function TermosPage(): Promise<JSX.Element> {
         {/* Título */}
         <div className="mb-12 border-b border-white/8 pb-8">
           <p className="mb-2 font-mono text-xs font-semibold uppercase tracking-widest text-copper">
-            // legal / termos
+            {'// legal / termos'}
           </p>
           <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
             Termos de Uso
@@ -96,7 +96,7 @@ export default async function TermosPage(): Promise<JSX.Element> {
               <strong className="text-foreground">Plataforma DevTechs</strong> — conjunto de módulos
               de software acessados via navegador web (SaaS), compreendendo, entre outros: gestão de
               projetos, recursos humanos, financeiro, DevOps, licenças, suporte e portal do cliente
-              (<strong className="text-foreground">"Plataforma"</strong>).
+              (<strong className="text-foreground">&quot;Plataforma&quot;</strong>).
             </p>
           </section>
 
@@ -250,7 +250,7 @@ export default async function TermosPage(): Promise<JSX.Element> {
             <SubH>5.2 Conteúdo do Usuário</SubH>
             <p className="mt-2">
               O Usuário mantém todos os direitos sobre os dados e conteúdos que inserir na Plataforma
-              (<strong className="text-foreground">"Conteúdo do Usuário"</strong>). Ao inserir
+              (<strong className="text-foreground">&quot;Conteúdo do Usuário&quot;</strong>). Ao inserir
               conteúdo, o Usuário concede à Prestadora uma licença limitada, não exclusiva e
               revogável, apenas para prestar os serviços contratados.
             </p>

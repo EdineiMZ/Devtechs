@@ -349,7 +349,7 @@ export function ConfigPanel({
     <>
       <header className="mb-8">
         <p className="font-mono text-[11px] font-semibold uppercase tracking-widest text-copper">
-          // developer / config
+          {'// developer / config'}
         </p>
         <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-foreground">
           Configurações da Plataforma

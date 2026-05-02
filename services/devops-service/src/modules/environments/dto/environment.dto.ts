@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsString,
   IsUrl,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -22,6 +23,7 @@ export class CreateEnvironmentDto {
   @IsString()
   @MinLength(2)
   @MaxLength(80)
+  @Matches(/^[^<>'"&]*$/, { message: 'name must not contain HTML characters' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   name!: string;
 
@@ -40,6 +42,8 @@ export class UpdateEnvironmentDto {
   @IsString()
   @MinLength(2)
   @MaxLength(80)
+  @Matches(/^[^<>'"&]*$/, { message: 'name must not contain HTML characters' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   name?: string;
 
   @IsOptional()

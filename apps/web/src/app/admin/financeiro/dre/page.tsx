@@ -7,12 +7,17 @@ import { getFinanceServiceUrl } from '@/lib/finance-api';
 
 export const dynamic = 'force-dynamic';
 
+interface DreCategoryBucket {
+  category: string;
+  total: number;
+}
+
 interface DRESummary {
-  income: number;
-  expense: number;
+  from: string;
+  to: string;
+  income: { total: number; byCategory: DreCategoryBucket[] };
+  expense: { total: number; byCategory: DreCategoryBucket[] };
   balance: number;
-  byCategory: Array<{ category: string; type: string; amount: number }>;
-  period: { from: string; to: string };
 }
 
 interface SearchParams {
@@ -55,8 +60,8 @@ export default async function DrePage({
   const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
   const dateFmt = new Intl.DateTimeFormat('pt-BR');
 
-  const incomeItems = dre?.byCategory?.filter((c) => c.type === 'INCOME') ?? [];
-  const expenseItems = dre?.byCategory?.filter((c) => c.type === 'EXPENSE') ?? [];
+  const incomeItems = dre?.income?.byCategory ?? [];
+  const expenseItems = dre?.expense?.byCategory ?? [];
 
   const categoryLabels: Record<string, string> = {
     SALARY: 'Salários',
@@ -126,7 +131,7 @@ export default async function DrePage({
           <section className="rounded-xl border border-white/8 bg-white/[0.02]">
             <div className="flex items-center justify-between border-b border-white/8 px-5 py-4">
               <h2 className="text-sm font-semibold text-foreground">Receitas</h2>
-              <span className="text-sm font-bold text-emerald-400">{fmt.format(dre.income)}</span>
+              <span className="text-sm font-bold text-emerald-400">{fmt.format(dre.income.total)}</span>
             </div>
             <ul className="divide-y divide-border/60">
               {incomeItems.length === 0 ? (
@@ -137,7 +142,7 @@ export default async function DrePage({
                     <span className="text-ash">
                       {categoryLabels[item.category] ?? item.category}
                     </span>
-                    <span className="font-medium text-emerald-400">{fmt.format(item.amount)}</span>
+                    <span className="font-medium text-emerald-400">{fmt.format(item.total)}</span>
                   </li>
                 ))
               )}
@@ -148,7 +153,7 @@ export default async function DrePage({
           <section className="rounded-xl border border-white/8 bg-white/[0.02]">
             <div className="flex items-center justify-between border-b border-white/8 px-5 py-4">
               <h2 className="text-sm font-semibold text-foreground">Despesas</h2>
-              <span className="text-sm font-bold text-red-400">{fmt.format(dre.expense)}</span>
+              <span className="text-sm font-bold text-red-400">{fmt.format(dre.expense.total)}</span>
             </div>
             <ul className="divide-y divide-border/60">
               {expenseItems.length === 0 ? (
@@ -159,7 +164,7 @@ export default async function DrePage({
                     <span className="text-ash">
                       {categoryLabels[item.category] ?? item.category}
                     </span>
-                    <span className="font-medium text-red-400">{fmt.format(item.amount)}</span>
+                    <span className="font-medium text-red-400">{fmt.format(item.total)}</span>
                   </li>
                 ))
               )}
@@ -184,10 +189,10 @@ export default async function DrePage({
               </p>
             </div>
             {/* Simple margin bar */}
-            {dre.income > 0 && (
+            {dre.income.total > 0 && (
               <div className="mt-4">
                 <p className="mb-1 text-xs text-ash">
-                  Margem líquida: {((dre.balance / dre.income) * 100).toFixed(1)}%
+                  Margem líquida: {((dre.balance / dre.income.total) * 100).toFixed(1)}%
                 </p>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-white/5">
                   <div
@@ -195,7 +200,7 @@ export default async function DrePage({
                       dre.balance >= 0 ? 'bg-emerald-500' : 'bg-red-500'
                     }`}
                     style={{
-                      width: `${Math.min(100, Math.abs(dre.balance / dre.income) * 100)}%`,
+                      width: `${Math.min(100, Math.abs(dre.balance / dre.income.total) * 100)}%`,
                     }}
                   />
                 </div>

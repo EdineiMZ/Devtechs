@@ -173,7 +173,7 @@ export default async function UsuariosPage({
             <div className="flex gap-2">
               {page > 1 && (
                 <a
-                  href={`/admin/configuracoes/usuarios?page=${page - 1}${searchParams.q ? `&q=${searchParams.q}` : ''}`}
+                  href={`/admin/configuracoes/usuarios?page=${page - 1}${searchParams.q ? `&q=${encodeURIComponent(searchParams.q)}` : ''}`}
                   className="rounded-md border border-white/8 px-3 py-1 text-xs hover:bg-white/[0.04]"
                 >
                   Anterior
@@ -181,7 +181,7 @@ export default async function UsuariosPage({
               )}
               {page < totalPages && (
                 <a
-                  href={`/admin/configuracoes/usuarios?page=${page + 1}${searchParams.q ? `&q=${searchParams.q}` : ''}`}
+                  href={`/admin/configuracoes/usuarios?page=${page + 1}${searchParams.q ? `&q=${encodeURIComponent(searchParams.q)}` : ''}`}
                   className="rounded-md border border-white/8 px-3 py-1 text-xs hover:bg-white/[0.04]"
                 >
                   Próxima
