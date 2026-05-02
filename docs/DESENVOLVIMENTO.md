@@ -130,6 +130,67 @@ pnpm db:studio
 
 ---
 
+## 🔐 Configurando OAuth (Google / GitHub)
+
+O login via Google e GitHub é **opcional** em desenvolvimento. Quando as
+variáveis de ambiente não estão preenchidas os botões OAuth são
+automaticamente ocultados na página `/login` — nenhuma configuração extra
+é necessária para o fluxo de email + senha funcionar.
+
+Para habilitar um ou ambos os provedores edite `apps/web/.env.local`:
+
+### Google
+
+1. Acesse [console.cloud.google.com](https://console.cloud.google.com) →
+   **APIs & Services** → **Credentials**.
+2. Clique em **Create Credentials** → **OAuth 2.0 Client ID**.
+3. Tipo: **Web Application**.
+4. Em **Authorized redirect URIs** adicione:
+   - Dev: `http://localhost:3000/api/auth/callback/google`
+   - Prod: `https://<seu-dominio>/api/auth/callback/google`
+5. Copie o **Client ID** e o **Client Secret** para `.env.local`:
+   ```env
+   GOOGLE_CLIENT_ID=<seu-client-id>
+   GOOGLE_CLIENT_SECRET=<seu-client-secret>
+   ```
+
+### GitHub
+
+1. Acesse [github.com](https://github.com) → **Settings** →
+   **Developer settings** → **OAuth Apps** → **New OAuth App**.
+2. Em **Authorization callback URL** informe:
+   - Dev: `http://localhost:3000/api/auth/callback/github`
+   - Prod: `https://<seu-dominio>/api/auth/callback/github`
+3. Clique em **Generate a new client secret** e copie para `.env.local`:
+   ```env
+   GITHUB_CLIENT_ID=<seu-client-id>
+   GITHUB_CLIENT_SECRET=<seu-client-secret>
+   ```
+
+### Reiniciar e validar
+
+Após preencher as credenciais:
+
+```bash
+# Reiniciar apenas o frontend
+pnpm --filter @devtechs/web dev
+```
+
+Fluxo esperado para cada provedor:
+
+1. Abrir `/login` → botão do provedor aparece.
+2. Clicar → consentimento do provedor → callback NextAuth.
+3. NextAuth chama `POST /auth/oauth/login` no auth-service, que cria ou
+   vincula a conta e devolve `accessToken` + `refreshToken`.
+4. Sessão ativa → redireciona para `/perfil` (cliente) ou `/admin`
+   (usuário com role admin).
+5. Confirmar que a tabela `OAuthAccount` no Postgres tem o registro novo:
+   ```bash
+   pnpm db:studio   # abre Prisma Studio em http://localhost:5555
+   ```
+
+---
+
 ## 🔍 Qualidade e testes
 
 ```bash

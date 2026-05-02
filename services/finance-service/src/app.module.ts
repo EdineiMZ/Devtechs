@@ -9,10 +9,12 @@ import { AuthClientModule } from './auth-client/auth-client.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionResolverModule } from './common/permissions/permission-resolver.module';
 import { JwtStrategy } from './common/strategies/jwt.strategy';
+import { CheckoutModule } from './modules/checkout/checkout.module';
 import { CostCentersModule } from './modules/cost-centers/cost-centers.module';
 import { HealthModule } from './modules/health/health.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
 import { OverdueSweepModule } from './modules/jobs/overdue-sweep.module';
+import { PaymentConditionsModule } from './modules/payment-conditions/payment-conditions.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
@@ -49,14 +51,25 @@ import { RedisModule } from './redis/redis.module';
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
+        const devMode = (process.env.NODE_ENV ?? 'development') !== 'production';
+        const tolerance = devMode
+          ? {
+              maxRetriesPerRequest: 1,
+              connectTimeout: 2000,
+              lazyConnect: true,
+              enableOfflineQueue: false,
+              retryStrategy: (): null => null,
+            }
+          : {};
         const url = config.get<string>('REDIS_URL');
         if (url) {
-          return { connection: { url } };
+          return { connection: { url, ...tolerance } };
         }
         return {
           connection: {
             host: config.get<string>('REDIS_HOST', 'redis'),
             port: Number(config.get<string>('REDIS_PORT', '6379')),
+            ...tolerance,
           },
         };
       },
@@ -68,6 +81,8 @@ import { RedisModule } from './redis/redis.module';
     TransactionsModule,
     CostCentersModule,
     InvoicesModule,
+    CheckoutModule,
+    PaymentConditionsModule,
     OverdueSweepModule,
     HealthModule,
   ],

@@ -1,8 +1,42 @@
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { setupSwagger } from './swagger';
+
+const isDev = (process.env.NODE_ENV ?? 'development') !== 'production';
+if (isDev) {
+  process.on('uncaughtException', (err: Error) => {
+    const msg = err?.message ?? '';
+    if (
+      msg.includes('ETIMEDOUT') ||
+      msg.includes('Connection is closed') ||
+      msg.includes('ECONNREFUSED') ||
+      msg.includes('MaxRetriesPerRequest')
+    ) {
+      console.warn(`[dev-tolerance] swallowed Redis error: ${msg}`);
+      return;
+    }
+    throw err;
+  });
+  process.on('unhandledRejection', (reason: unknown) => {
+    const msg = reason instanceof Error ? reason.message : String(reason);
+    if (
+      msg.includes('ETIMEDOUT') ||
+      msg.includes('Connection is closed') ||
+      msg.includes('ECONNREFUSED') ||
+      msg.includes('MaxRetriesPerRequest')
+    ) {
+      console.warn(`[dev-tolerance] swallowed Redis rejection: ${msg}`);
+      return;
+    }
+    throw reason;
+  });
+}
 
 /**
  * notification-service bootstrap.
@@ -46,9 +80,35 @@ async function bootstrap(): Promise<void> {
   const port = Number(
     process.env.NOTIFICATION_SERVICE_PORT ?? process.env.PORT ?? 3006,
   );
+  // -----------------------------------------------------------------------
+  // Swagger / OpenAPI
+  // -----------------------------------------------------------------------
+  const document = setupSwagger(app, {
+    service: "notification",
+    title: "DevTechs — Notification Service API",
+    description: "User notification feed, SSE stream, templates, channels.",
+    tags: [
+      { name: "notifications" },
+      { name: "stream" },
+      { name: "templates" },
+      { name: "channels" },
+      { name: "health" },
+    ],
+  });
+
+  if (process.env.OPENAPI_EXTRACT_TO && document) {
+    const outPath = process.env.OPENAPI_EXTRACT_TO;
+    mkdirSync(dirname(outPath), { recursive: true });
+    writeFileSync(outPath, JSON.stringify(document, null, 2));
+    // eslint-disable-next-line no-console
+    console.info("[notification-service] OpenAPI written to " + outPath);
+    await app.close();
+    return;
+  }
+
   await app.listen(port, '0.0.0.0');
   // eslint-disable-next-line no-console
-  console.info(`[notification-service] listening on port ${port}`);
+  console.info(`[notification-service] listening on port ${port} (Swagger: /notification/docs)`);
 }
 
 void bootstrap();

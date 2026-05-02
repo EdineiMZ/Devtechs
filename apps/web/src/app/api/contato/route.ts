@@ -42,6 +42,10 @@ const EVENT_CHANNEL = 'notifications:email';
 const TEMPLATE_OPS = 'contact-form';
 const TEMPLATE_CONFIRMATION = 'contact-confirmation';
 
+const SUPPORT_SERVICE_URL =
+  process.env.SUPPORT_SERVICE_URL ?? 'http://127.0.0.1:4008';
+const AUTH_INTERNAL_SECRET = process.env.AUTH_INTERNAL_SECRET ?? '';
+
 export async function POST(request: Request): Promise<Response> {
   const ip = getClientIp(request);
 
@@ -179,7 +183,31 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   // ---------------------------------------------------------------
-  // 5. Happy path
+  // 5. Create support ticket (fire-and-forget — don't block the
+  //    response on a support-service hiccup)
+  // ---------------------------------------------------------------
+  if (AUTH_INTERNAL_SECRET) {
+    fetch(`${SUPPORT_SERVICE_URL}/tickets/public`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-secret': AUTH_INTERNAL_SECRET,
+      },
+      body: JSON.stringify({
+        name: data.nome,
+        email: data.email,
+        phone: data.telefone ?? null,
+        subject: data.assunto,
+        message: data.mensagem,
+      }),
+    }).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('[contato] failed to create support ticket:', err);
+    });
+  }
+
+  // ---------------------------------------------------------------
+  // 6. Happy path
   // ---------------------------------------------------------------
   return NextResponse.json({
     success: true,

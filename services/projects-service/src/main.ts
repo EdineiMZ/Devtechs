@@ -2,6 +2,10 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module';
+import { writeFileSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+
+import { setupSwagger } from "./swagger";
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 /**
@@ -47,6 +51,32 @@ async function bootstrap(): Promise<void> {
   const port = Number(
     process.env.PROJECTS_SERVICE_PORT ?? process.env.PORT ?? 3004,
   );
+  // -----------------------------------------------------------------------
+  // Swagger / OpenAPI
+  // -----------------------------------------------------------------------
+  const document = setupSwagger(app, {
+    service: "projects",
+    title: "DevTechs — Projects Service API",
+    description: "Projects, tasks, sprints, time tracking.",
+    tags: [
+      { name: "projects" },
+      { name: "tasks" },
+      { name: "sprints" },
+      { name: "time-tracking" },
+      { name: "health" },
+    ],
+  });
+
+  if (process.env.OPENAPI_EXTRACT_TO && document) {
+    const outPath = process.env.OPENAPI_EXTRACT_TO;
+    mkdirSync(dirname(outPath), { recursive: true });
+    writeFileSync(outPath, JSON.stringify(document, null, 2));
+    // eslint-disable-next-line no-console
+    console.info("[projects-service] OpenAPI written to " + outPath);
+    await app.close();
+    return;
+  }
+
   await app.listen(port, '0.0.0.0');
   // eslint-disable-next-line no-console
   console.info(`[projects-service] listening on port ${port}`);

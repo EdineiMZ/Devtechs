@@ -15,10 +15,10 @@ import Redis from 'ioredis';
  *     `redis://localhost:6379` or `rediss://user:pass@host:6379/0`.
  *   - Fallback: `REDIS_HOST` + `REDIS_PORT`, both optional.
  *
- * Dev tolerance: in development we enable `lazyConnect` and a no-retry
- * strategy so a missing local Redis doesn't log-spam the dev server on
- * every request. Callers that actually NEED the command to succeed
- * still try/catch and decide what to do — see `/api/contato`.
+ * Dev tolerance: in development we use a no-retry strategy so a missing
+ * local Redis doesn't log-spam the dev server on every request. The
+ * connection is established eagerly so commands don't fail immediately
+ * due to an uninitialized stream. Callers still try/catch — see `/api/contato`.
  *
  * Production still uses the hard retry strategy — a missing Redis in
  * prod is an ops alarm, not a soft failure.
@@ -42,7 +42,6 @@ export function getRedisClient(): Redis {
   const dev = isDevRedis();
   const commonOptions = {
     maxRetriesPerRequest: dev ? 1 : 3,
-    lazyConnect: dev,
     enableOfflineQueue: false,
     retryStrategy: dev ? () => null : undefined,
   } as const;

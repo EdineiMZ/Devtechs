@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
@@ -33,7 +33,7 @@ type SubmitState =
  * to re-export anything from `@devtechs/ui`.
  */
 const fieldBaseClasses =
-  'flex w-full rounded-md border bg-background text-sm ring-offset-background transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+  'flex w-full rounded-md border bg-background text-sm ring-offset-background transition-colors placeholder:text-ash focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 
 const fieldDefaultBorder = 'border-input';
 const fieldErrorBorder = 'border-destructive focus-visible:ring-destructive';
@@ -238,7 +238,7 @@ export function ContactForm(): JSX.Element {
             {errors.mensagem.message}
           </p>
         ) : (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-ash">
             Mínimo de 20 caracteres.
           </p>
         )}
@@ -246,7 +246,7 @@ export function ContactForm(): JSX.Element {
 
       {/* Aceite de termos */}
       <div className="flex flex-col gap-1.5">
-        <label className="flex items-start gap-3 text-sm text-muted-foreground">
+        <label className="flex items-start gap-3 text-sm text-ash">
           <input
             type="checkbox"
             disabled={isLoading}

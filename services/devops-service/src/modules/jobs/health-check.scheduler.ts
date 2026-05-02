@@ -19,8 +19,12 @@ export class HealthCheckScheduler implements OnModuleInit {
     @InjectQueue(DEVOPS_JOBS_QUEUE) private readonly queue: Queue,
   ) {}
 
-  async onModuleInit(): Promise<void> {
-    await this.enqueue('startup');
+  onModuleInit(): void {
+    // Fire-and-forget: don't block NestJS bootstrap waiting for BullMQ
+    // to establish its lazy Redis connection.
+    this.enqueue('startup').catch((err: Error) => {
+      this.logger.warn(`Startup health sweep enqueue skipped: ${err.message}`);
+    });
   }
 
   @Cron(CronExpression.EVERY_5_MINUTES, {

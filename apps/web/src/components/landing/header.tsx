@@ -1,32 +1,20 @@
+import { Code2 } from 'lucide-react';
 import Link from 'next/link';
-
-import { Button } from '@devtechs/ui';
 
 import { auth } from '@/auth';
 import { getRedirectForRole } from '@/lib/role-redirect';
 
-import { ArrowRightIcon } from './icons';
-
 /**
- * Top-of-page navigation.
- *
- * Server component so it can read the NextAuth session directly
- * without a client round-trip. When a user is logged in the CTA
- * switches from "Entrar" to "Ir para a plataforma" and points at
- * the role-aware dashboard (admin → /admin, member → /perfil, etc.).
- *
- * - Sticky with a translucent backdrop blur so content scrolls under it.
- * - Uses plain anchor links (`#services`, `#sobre`, `#contato`) so
- *   smooth-scroll is handled entirely by the `scroll-behavior: smooth`
- *   rule on <html> — zero JS for scroll behavior.
- * - The mobile breakpoint drops the inline nav and keeps only the
- *   brand + CTA, which is the minimum viable mobile UX for a
- *   single-page landing.
+ * Auth-aware top navigation bar for pages that need session context
+ * (e.g. pages that can't use the fully-static LandingNavbar).
+ * Shows "Ir para a plataforma" when authenticated, "Entrar" otherwise.
  */
 const NAV_LINKS = [
-  { href: '#servicos', label: 'Serviços' },
-  { href: '#sobre', label: 'Sobre' },
-  { href: '#contato', label: 'Contato' },
+  { href: '#servicos',    label: 'Serviços' },
+  { href: '#processo',    label: 'Processo' },
+  { href: '#cases',       label: 'Cases' },
+  { href: '#faq',         label: 'FAQ' },
+  { href: '#cta',         label: 'Contato' },
 ];
 
 export async function Header(): Promise<JSX.Element> {
@@ -35,60 +23,45 @@ export async function Header(): Promise<JSX.Element> {
   const ctaHref = isAuthenticated
     ? getRedirectForRole(session?.user?.mainRole)
     : '/login';
-  const ctaLabel = isAuthenticated ? 'Ir para a plataforma' : 'Entrar';
+  const ctaLabel = isAuthenticated ? 'Ir para a plataforma' : 'Iniciar projeto';
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
+    <header className="fixed inset-x-0 top-0 z-50 h-16 border-b border-white/5 bg-ink/85 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
+        {/* Logo */}
         <Link
           href="/"
-          className="group flex items-center gap-2 text-lg font-semibold tracking-tight"
-          aria-label="DevTechs — página inicial"
+          className="flex items-center gap-2.5 group"
+          aria-label="DevsTech — página inicial"
         >
-          <span
-            aria-hidden="true"
-            className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-[0_0_20px_hsl(var(--primary)/0.5)] transition-transform group-hover:scale-105"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-4 w-4"
-            >
-              <polyline points="16 18 22 12 16 6" />
-              <polyline points="8 6 2 12 8 18" />
-            </svg>
-          </span>
-          <span>
-            Dev<span className="text-primary">Techs</span>
+          <div className="flex h-8 w-8 items-center justify-center rounded-md border border-acid/30 bg-acid/8 group-hover:border-acid/60 transition-colors">
+            <Code2 className="h-4 w-4 text-acid" />
+          </div>
+          <span className="font-display text-base font-semibold text-foreground tracking-tight">
+            DevsTech
           </span>
         </Link>
 
-        <nav
-          aria-label="Navegação principal"
-          className="hidden items-center gap-8 md:flex"
-        >
+        {/* Desktop nav */}
+        <nav aria-label="Navegação principal" className="hidden items-center gap-6 md:flex">
           {NAV_LINKS.map((link) => (
             <a
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="font-body text-sm text-ash hover:text-foreground transition-colors"
             >
               {link.label}
             </a>
           ))}
         </nav>
 
-        <Button asChild size="sm" className="gap-1.5">
-          <Link href={ctaHref}>
-            {ctaLabel}
-            <ArrowRightIcon className="h-4 w-4" />
-          </Link>
-        </Button>
+        {/* CTA */}
+        <Link
+          href={ctaHref}
+          className="inline-flex items-center justify-center rounded-md bg-copper px-5 py-2 text-sm font-semibold text-ink transition-all hover:bg-copper/85 copper-glow"
+        >
+          {ctaLabel}
+        </Link>
       </div>
     </header>
   );

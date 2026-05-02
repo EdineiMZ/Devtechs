@@ -82,7 +82,8 @@ export function useTicketChat({
 
     socket.on('connect', () => {
       setConnected(true);
-      socket.emit('ticket:join', { ticketId });
+      // Don't emit ticket:join yet — wait for the server's 'connected'
+      // event which fires AFTER handleConnection finishes setting client.data.
     });
     socket.on('disconnect', () => {
       setConnected(false);
@@ -90,8 +91,8 @@ export function useTicketChat({
     });
 
     socket.on('connected', () => {
-      // Server-side handshake accepted — no action needed,
-      // the `connect` handler above already emitted the join.
+      // Server has finished authenticating this socket — safe to join.
+      socket.emit('ticket:join', { ticketId });
     });
 
     socket.on('ticket:joined', (payload) => {

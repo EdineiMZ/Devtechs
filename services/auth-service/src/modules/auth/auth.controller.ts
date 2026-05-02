@@ -10,6 +10,13 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 
@@ -44,6 +51,7 @@ interface RequestWithRefresh extends Request {
   user?: RefreshTokenContext;
 }
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -73,6 +81,73 @@ export class AuthController {
   @SkipThrottle({ [THROTTLERS.DEFAULT]: true })
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Authenticate with email + password',
+    description:
+      'Returns a pair of JWTs (access + refresh) when 2FA is off. When 2FA ' +
+      'is enabled, returns `requires2FA: true` and a `tempToken` that the ' +
+      'client must echo back to `POST /auth/2fa/verify` with the TOTP code.',
+  })
+  @ApiBody({
+    type: LoginDto,
+    examples: {
+      admin: {
+        summary: 'Admin happy path',
+        value: { email: 'admin@devtechs.com', password: 'Admin@DevTechs2026' },
+      },
+      twoFactorPrompt: {
+        summary: 'User with 2FA enabled (will return requires2FA)',
+        value: { email: 'agent@devtechs.com', password: 'Agent@2026' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Login OK — tokens issued, or 2FA challenge returned.',
+    schema: {
+      oneOf: [
+        {
+          type: 'object',
+          properties: {
+            requires2FA: { type: 'boolean', example: false },
+            accessToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+            refreshToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', example: 'cmodlkrhe000uf1japmgdh3w1' },
+                email: { type: 'string', example: 'admin@devtechs.com' },
+                name: { type: 'string', example: 'Administrador DevTechs' },
+                roles: { type: 'array', items: { type: 'string' }, example: ['admin'] },
+                primaryRole: { type: 'string', example: 'admin' },
+                emailVerified: { type: 'boolean', example: true },
+                permissions: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  example: ['auth:users:manage', 'dev:logs:view'],
+                },
+              },
+            },
+          },
+        },
+        {
+          type: 'object',
+          properties: {
+            requires2FA: { type: 'boolean', example: true },
+            tempToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+            tempTokenExpiresAt: {
+              type: 'string',
+              format: 'date-time',
+              example: '2026-04-26T12:05:00.000Z',
+            },
+          },
+        },
+      ],
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Validation failed (bad email/password shape).' })
+  @ApiResponse({ status: 401, description: 'Credentials do not match.' })
+  @ApiResponse({ status: 429, description: 'Too many failed attempts — IP blocked.' })
   login(
     @Body() dto: LoginDto,
     @Ip() ip: string,
@@ -172,6 +247,11 @@ export class AuthController {
   @RequireEmailVerified()
   @Get('me')
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('bearer')
+  @ApiOperation({ summary: 'Currently authenticated user (requires verified email)' })
+  @ApiResponse({ status: 200, description: 'Decoded JWT claims for the caller.' })
+  @ApiResponse({ status: 401, description: 'No valid bearer token.' })
+  @ApiResponse({ status: 403, description: 'Email not verified.' })
   me(@CurrentUser() user: CurrentUserPayload): CurrentUserPayload {
     return user;
   }

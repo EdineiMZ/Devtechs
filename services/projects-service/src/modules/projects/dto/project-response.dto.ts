@@ -9,6 +9,16 @@ export interface UserSummary {
   email: string;
 }
 
+export interface MilestoneDto {
+  id: string;
+  title: string;
+  description: string | null;
+  order: number;
+  completedAt: string | null;
+  dueDate: string | null;
+  createdAt: string;
+}
+
 export interface ProjectListItem {
   id: string;
   name: string;
@@ -16,6 +26,8 @@ export interface ProjectListItem {
   status: string;
   startDate: string;
   endDate: string | null;
+  githubRepo: string | null;
+  progressPercent: number;
   owner: UserSummary;
   client: UserSummary | null;
   memberCount: number;
@@ -32,6 +44,7 @@ export interface ProjectMemberDto {
 
 export interface ProjectDetail extends ProjectListItem {
   members: ProjectMemberDto[];
+  milestones: MilestoneDto[];
 }
 
 export interface PaginatedProjects {

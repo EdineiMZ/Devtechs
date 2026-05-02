@@ -1,69 +1,85 @@
-import { HeartIcon, RocketIcon, SparklesIcon } from './icons';
-import type { ComponentType, SVGProps } from 'react';
+'use client';
 
-interface Differentiator {
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
-  title: string;
-  description: string;
-}
+import { motion } from 'framer-motion';
+import { Code2, GitBranch, HeartHandshake, Zap } from 'lucide-react';
 
-const ITEMS: Differentiator[] = [
+import { BlurText } from './blur-text';
+import { TerminalBadge } from './terminal-badge';
+
+const REASONS = [
   {
-    icon: SparklesIcon,
-    title: 'Tecnologia de ponta',
-    description:
-      'Stack moderna, padrões de mercado e escolhas técnicas sem dívida técnica acumulada. Usamos o que há de melhor em cada camada da plataforma.',
+    n: '01',
+    icon: Code2,
+    title: 'Backend-first',
+    body: 'Nossa especialidade é a fundação: banco de dados bem modelado, API coesa, lógica de negócio testável. O frontend é uma consequência natural disso.',
   },
   {
-    icon: HeartIcon,
-    title: 'Suporte dedicado',
-    description:
-      'Um ponto de contato real, não um portal de tickets sem rosto. Seu time conversa com quem conhece o seu ambiente — sem escalação infinita.',
+    n: '02',
+    icon: GitBranch,
+    title: 'Código auditável',
+    body: 'Tudo com controle de versão, PR reviews, testes automatizados e documentação inline. Você recebe o repositório, não uma caixa preta.',
   },
   {
-    icon: RocketIcon,
-    title: 'Entregas rápidas',
-    description:
-      'Sprints curtas, deploys contínuos e feedback constante. Você vê valor em semanas, não em semestres — e sabe exatamente o que está sendo construído.',
+    n: '03',
+    icon: Zap,
+    title: 'Entrega iterativa',
+    body: 'Ciclos curtos com demonstrações reais. Você vê progresso toda semana, não só na data de entrega final.',
+  },
+  {
+    n: '04',
+    icon: HeartHandshake,
+    title: 'Comunicação direta',
+    body: 'Um canal, uma pessoa de contato. Sem intermediários, sem reuniões desnecessárias, sem surpresas no escopo.',
   },
 ];
 
 export function Differentiators(): JSX.Element {
   return (
-    <section className="border-y border-border/60 bg-card/20 py-20 sm:py-28">
-      <div className="container">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-wider text-primary">
-            Por que a DevTechs
+    <section id="diferenciais" className="py-24 lg:py-32 bg-ink">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="flex flex-col gap-4 mb-14">
+          <TerminalBadge variant="copper">// por que a DevsTech</TerminalBadge>
+          <BlurText
+            text="Engenharia sem verniz."
+            className="font-display font-semibold text-foreground"
+            style={{ fontSize: 'clamp(32px, 4.5vw, 60px)' } as React.CSSProperties}
+          />
+          <p className="max-w-xl text-ash font-body text-base leading-relaxed">
+            Sem jargão vazio. Sem estimativas fantasiosas. Apenas código bem escrito e entregue no prazo.
           </p>
-          <h2 className="mt-3 text-balance text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-            Três pilares que fazem diferença
-          </h2>
         </div>
 
-        <div className="mt-14 grid grid-cols-1 gap-10 md:grid-cols-3">
-          {ITEMS.map((item, index) => {
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {REASONS.map((item) => {
             const Icon = item.icon;
-            const delayClass = [
-              'animate-fade-up',
-              'animate-fade-up-delay-1',
-              'animate-fade-up-delay-2',
-            ][index % 3];
             return (
-              <div
-                key={item.title}
-                className={`${delayClass} flex flex-col items-center text-center`}
+              <motion.div
+                key={item.n}
+                className="liquid-glass rounded-2xl p-8 relative overflow-hidden group cursor-default"
+                whileHover={{ y: -4 }}
+                transition={{ duration: 0.2 }}
               >
-                <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/30">
-                  <Icon className="h-7 w-7" />
-                </div>
-                <h3 className="text-xl font-semibold tracking-tight">
+                {/* Decorative number */}
+                <span
+                  aria-hidden
+                  className="absolute top-4 right-6 font-mono text-7xl font-bold text-white/[0.04] select-none leading-none"
+                >
+                  {item.n}
+                </span>
+
+                {/* Copper glow on hover */}
+                <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                  style={{ boxShadow: '0 0 0 1px hsl(28 72% 58% / 0.25), 0 0 32px hsl(28 72% 58% / 0.08)' }}
+                />
+
+                <Icon className="h-6 w-6 text-acid mb-4 relative z-10" />
+                <h3 className="font-display text-lg font-semibold text-foreground mb-2 relative z-10">
                   {item.title}
                 </h3>
-                <p className="mt-3 max-w-sm text-pretty leading-relaxed text-muted-foreground">
-                  {item.description}
+                <p className="text-ash text-sm leading-relaxed font-body relative z-10 max-w-md">
+                  {item.body}
                 </p>
-              </div>
+              </motion.div>
             );
           })}
         </div>

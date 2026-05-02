@@ -1,4 +1,11 @@
 packages:
-  - "apps/*"
+  # Apps consolidated: only the institutional/SaaS surface (`web`) and
+  # the public planos/checkout SaaS (`store`) ship as standalone
+  # Next.js apps. All admin/client modules (RH, financeiro, projetos,
+  # devops, suporte, developer) are now sub-routes under
+  # `apps/web/src/app/admin/...` and inherit the `/admin/:path*`
+  # middleware gate (NextAuth + email-verified check).
+  - "apps/web"
+  - "apps/store"
   - "services/*"
   - "packages/*"

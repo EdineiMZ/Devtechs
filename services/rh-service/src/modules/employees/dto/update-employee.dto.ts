@@ -1,13 +1,15 @@
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsDateString,
   IsEmail,
   IsEnum,
+  IsNumber,
   IsOptional,
   IsString,
   Length,
   Matches,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator';
 
@@ -85,4 +87,10 @@ export class UpdateEmployeeDto {
     message: `status must be one of: ${EMPLOYEE_STATUSES.join(', ')}`,
   })
   status?: EmployeeStatusLiteral;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  salary?: number;
 }

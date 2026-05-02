@@ -8,6 +8,8 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { IsNumberString, IsString, Length, MaxLength, MinLength } from 'class-validator';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 
@@ -21,6 +23,7 @@ import type {
   Disable2FAResponse,
   Enable2FAResponse,
   LoginSuccessResponse,
+  RecoveryCodesResponse,
   Setup2FAResponse,
 } from './dto/auth-response.dto';
 import { Disable2FADto } from './dto/disable-2fa.dto';
@@ -33,6 +36,25 @@ interface RequestWithTempUser extends Request {
   user?: TwoFactorTempContext;
 }
 
+class VerifySessionDto {
+  @IsString()
+  @Length(6, 8)
+  code!: string;
+}
+
+class DisableWithEmailOtpDto {
+  @IsString()
+  @MinLength(8)
+  @MaxLength(128)
+  currentPassword!: string;
+
+  @IsString()
+  @Length(6, 6)
+  @IsNumberString({ no_symbols: true })
+  emailOtp!: string;
+}
+
+@ApiTags('2fa')
 @Controller('auth/2fa')
 export class TwoFactorController {
   constructor(private readonly twoFactorService: TwoFactorService) {}
@@ -117,6 +139,50 @@ export class TwoFactorController {
   @UseGuards(JwtTwoFactorTempAuthGuard)
   @Post('verify')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Complete login by submitting the TOTP code',
+    description:
+      'Second leg of the 2FA login flow. The `tempToken` was issued by ' +
+      '`POST /auth/login` (the response with `requires2FA: true`). Submit it ' +
+      'together with the live 6-digit TOTP code from the user\'s authenticator ' +
+      'app. On success, returns access + refresh tokens identical to a ' +
+      'non-2FA login.',
+  })
+  @ApiBody({
+    type: Verify2FADto,
+    examples: {
+      default: {
+        summary: 'TOTP code from Google Authenticator',
+        value: {
+          tempToken:
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbW9kbGtyaGUuLi4ifQ.SignaturE',
+          code: '482917',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'TOTP accepted — full session tokens issued.',
+    schema: {
+      type: 'object',
+      properties: {
+        accessToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiI...' },
+        refreshToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiI...' },
+        user: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'cmodlkrhe000uf1japmgdh3w1' },
+            email: { type: 'string', example: 'agent@devtechs.com' },
+            roles: { type: 'array', items: { type: 'string' }, example: ['support'] },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid temp token shape or non-numeric code.' })
+  @ApiResponse({ status: 401, description: 'Wrong TOTP, expired temp token, or replayed code.' })
+  @ApiResponse({ status: 429, description: 'Too many TOTP attempts in 5 min.' })
   verify(
     @Body() dto: Verify2FADto,
     @Req() req: RequestWithTempUser,
@@ -131,5 +197,84 @@ export class TwoFactorController {
       ipAddress: ip,
       userAgent,
     });
+  }
+
+  // -------------------------------------------------------------------
+  // POST /auth/2fa/recovery-codes  — regenerate recovery codes
+  // -------------------------------------------------------------------
+  /**
+   * Wipes any existing recovery codes (used or not) and issues a
+   * fresh batch of 8. Plaintext codes are returned ONCE; the database
+   * only keeps bcrypt hashes. Requires the user to already have 2FA
+   * active and to be authenticated with a full access token.
+   */
+  // -------------------------------------------------------------------
+  // POST /auth/2fa/verify-session  (mid-session 2FA for OAuth users)
+  // -------------------------------------------------------------------
+  /**
+   * Verifies a TOTP code for an already-authenticated user (full access
+   * token required). Used when an OAuth user has 2FA enabled and the
+   * frontend needs to confirm their identity before granting access to
+   * /admin or /developer routes. Returns `{ verified: true }` so the
+   * client can patch the session via NextAuth's unstable_update.
+   */
+  @Post('verify-session')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify TOTP for an already-authenticated OAuth user' })
+  @ApiResponse({ status: 200, schema: { example: { verified: true } } })
+  @ApiResponse({ status: 401, description: 'Invalid TOTP code' })
+  verifySession(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() dto: VerifySessionDto,
+    @Ip() ip: string,
+  ): Promise<{ verified: true }> {
+    return this.twoFactorService.verifySession(user.id, dto.code, ip);
+  }
+
+  // -------------------------------------------------------------------
+  // POST /auth/2fa/request-disable-otp
+  // -------------------------------------------------------------------
+  @Post('request-disable-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request an email OTP to disable 2FA' })
+  requestDisableOtp(
+    @CurrentUser() user: CurrentUserPayload,
+  ): Promise<{ message: string }> {
+    return this.twoFactorService.requestDisableOtp(user.id);
+  }
+
+  // -------------------------------------------------------------------
+  // POST /auth/2fa/disable-with-otp
+  // -------------------------------------------------------------------
+  @Post('disable-with-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Disable 2FA using an email OTP instead of TOTP' })
+  disableWithEmailOtp(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() dto: DisableWithEmailOtpDto,
+    @Ip() ip: string,
+  ): Promise<Disable2FAResponse> {
+    return this.twoFactorService.disableWithEmailOtp(
+      user.id,
+      dto.currentPassword,
+      dto.emailOtp,
+      ip,
+    );
+  }
+
+  @Post('recovery-codes')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Regenerate the 8 one-time recovery codes',
+    description:
+      'Replaces every existing recovery code (used or not) with a fresh ' +
+      'batch of 8. Plaintext codes are returned in the response and ' +
+      'never re-shown afterwards.',
+  })
+  regenerateRecoveryCodes(
+    @CurrentUser() user: CurrentUserPayload,
+    @Ip() ip: string,
+  ): Promise<RecoveryCodesResponse> {
+    return this.twoFactorService.regenerateRecoveryCodes(user.id, ip);
   }
 }

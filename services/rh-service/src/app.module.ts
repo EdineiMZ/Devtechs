@@ -8,8 +8,10 @@ import { AuthClientModule } from './auth-client/auth-client.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionResolverModule } from './common/permissions/permission-resolver.module';
 import { JwtStrategy } from './common/strategies/jwt.strategy';
+import { DepartmentsModule } from './modules/departments/departments.module';
 import { EmployeesModule } from './modules/employees/employees.module';
 import { HealthModule } from './modules/health/health.module';
+import { PositionsModule } from './modules/positions/positions.module';
 import { VacationsModule } from './modules/vacations/vacations.module';
 import { WorkSchedulesModule } from './modules/work-schedules/work-schedules.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -45,6 +47,8 @@ import { RedisModule } from './redis/redis.module';
     PermissionResolverModule,
     StorageModule.forRoot(),
     EmployeesModule,
+    DepartmentsModule,
+    PositionsModule,
     VacationsModule,
     WorkSchedulesModule,
     HealthModule,

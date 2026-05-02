@@ -4,12 +4,70 @@ Turborepo + pnpm workspaces hosting every DevTechs app, service, and
 shared package under a single source tree.
 
 ```
-apps/          # Next.js frontends (web, rh, financeiro, projetos,
-               # devops, suporte, store, developer)
+apps/          # Next.js frontends:
+               #   - web   (institutional + admin/perfil routes)
+               #   - store (public planos / checkout SaaS)
 services/      # NestJS backends (auth-service, rh-service, ...)
 packages/      # Shared libraries (ui, database, storage, types, ...)
 infra/         # docker-compose, nginx gateway, deploy scaffolding
 ```
+
+---
+
+## Frontend architecture: one app, two surfaces
+
+Earlier iterations of DevTechs shipped one Next.js app per business
+module (`apps/rh`, `apps/financeiro`, `apps/projetos`, `apps/devops`,
+`apps/suporte`, `apps/developer`) running on ports 3001-3007. That
+fan-out had two problems:
+
+1. **No auth gate.** Each module was a public Next.js app with its own
+   port, reachable anonymously. Anyone who knew the port could browse
+   the (stub) UI without a session.
+2. **Cookie / session split.** NextAuth issues cookies per-origin, so
+   each port held its own session. Logging into `:3000` did nothing
+   on `:3001`. Sharing would require custom middleware on every app
+   plus a shared-domain cookie.
+
+The chosen fix (Approach A in the migration prompt) consolidates every
+module into the main `apps/web` app:
+
+```
+apps/web/src/app/
+├── page.tsx                    ← public institutional landing
+├── login / register / ...      ← auth pages
+├── perfil/                     ← client portal (protected)
+│   ├── page.tsx
+│   ├── tickets/...
+│   └── faturas / notificacoes / configuracoes
+└── admin/                      ← admin / agent portal (protected)
+    ├── page.tsx
+    ├── rh / financeiro / projetos / devops / configuracoes
+    ├── suporte/                ← ticket queue + agent detail
+    └── developer/              ← container ops + logs + queues
+        ├── page.tsx
+        ├── logs / config / queues
+        └── api/proxy           ← server-side bridge to developer-service
+```
+
+Everything under `/admin/*` and `/perfil/*` is gated by
+`apps/web/src/middleware.ts`:
+
+- Anonymous user hitting any protected prefix → bounced to
+  `/login?callbackUrl=<original-path>`
+- Authenticated user with **unverified email** → bounced to
+  `/verificar-email`
+- Already-authenticated user hitting `/login` or `/register` →
+  bounced to `/perfil` (or `/verificar-email`)
+
+`apps/store` stays separate because it's a public SaaS surface
+(planos / checkout / conta) intentionally reachable without login on
+its first pages. Sub-routes (`/conta/*`, `/checkout/*`) carry their
+own NextAuth gate.
+
+Permission-level access control happens server-side inside each page
+(via `session.user.permissions.includes(...)` + `redirect('/perfil')`)
+— the middleware only enforces session + email-verified.
 
 ---
 

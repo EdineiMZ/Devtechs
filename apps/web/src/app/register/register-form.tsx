@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
@@ -136,7 +136,7 @@ export function RegisterForm(): JSX.Element {
         </Button>
       </form>
 
-      <p className="text-center text-xs text-muted-foreground">
+      <p className="text-center text-xs text-ash">
         Ao criar uma conta você concorda com os{' '}
         <Link
           href="/termos"

@@ -22,6 +22,8 @@ interface DevTechsAuthFields {
   mainRole: string | null;
   permissions: string[];
   emailVerified: boolean;
+  /** Whether the user has TOTP 2FA enabled on their account. */
+  twoFactorEnabled: boolean;
   accessToken: string;
   refreshToken: string;
 }
@@ -37,9 +39,12 @@ declare module 'next-auth' {
       mainRole: string | null;
       permissions: string[];
       emailVerified: boolean;
+      twoFactorEnabled: boolean;
     };
     accessToken: string;
     refreshToken: string;
+    /** Set when the 2FA session check has been completed mid-session. */
+    twoFactorCompleted: boolean;
     error?: 'RefreshAccessTokenError';
   }
 
@@ -54,5 +59,11 @@ declare module 'next-auth/jwt' {
     name?: string | null;
     email?: string | null;
     picture?: string | null;
+    /**
+     * Whether the user completed 2FA in this session. Computed in the `jwt`
+     * callback: always true for credentials/email-otp; false for OAuth users
+     * with twoFactorEnabled who haven't yet visited /2fa-verificar.
+     */
+    twoFactorCompleted?: boolean;
   }
 }

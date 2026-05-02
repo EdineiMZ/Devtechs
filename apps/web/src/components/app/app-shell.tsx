@@ -32,7 +32,7 @@ export async function AppShell({
 }: AppShellProps): Promise<JSX.Element> {
   const topbar = await AppTopbar({ breadcrumbs, actions: topbarActions });
   return (
-    <div className="flex min-h-screen w-full bg-background text-foreground">
+    <div className="flex min-h-screen w-full bg-ink text-foreground">
       <AppSidebar items={navItems} pathname={pathname} permissions={permissions} />
       <div className="flex min-h-screen flex-1 flex-col">
         {topbar}

@@ -1,10 +1,13 @@
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsDateString,
   IsEnum,
+  IsInt,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator';
 
@@ -59,4 +62,18 @@ export class CreateProjectDto {
   @IsOptional()
   @IsString({ message: 'clientId must be a string' })
   clientId?: string;
+
+  /** Optional GitHub repository URL, e.g. "https://github.com/org/repo" */
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  githubRepo?: string;
+
+  /** Overall project progress 0-100 (%) */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  progressPercent?: number;
 }

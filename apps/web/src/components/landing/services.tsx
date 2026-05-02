@@ -1,115 +1,129 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@devtechs/ui';
+'use client';
 
-import {
-  CloudIcon,
-  CodeIcon,
-  DevOpsIcon,
-  SupportIcon,
-} from './icons';
-import type { ComponentType, SVGProps } from 'react';
+import { motion } from 'framer-motion';
+import { Cloud, Database, Globe, LayoutDashboard, ServerCog, ShieldCheck } from 'lucide-react';
 
-interface ServiceItem {
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
-  title: string;
-  description: string;
-}
+import { BlurText } from './blur-text';
+import { TerminalBadge } from './terminal-badge';
 
-const SERVICES: ServiceItem[] = [
+const SERVICES = [
   {
-    icon: CodeIcon,
-    title: 'Desenvolvimento de Sistemas',
-    description:
-      'Aplicações web, APIs e sistemas internos desenhados sob medida para o seu processo. Do MVP ao produto em escala, com testes, CI/CD e arquitetura moderna.',
+    icon: ServerCog,
+    title: 'Arquitetura de Backend',
+    body: 'Design de APIs REST e GraphQL, modelagem de banco de dados PostgreSQL, microsserviços e monólitos modulares — construídos para durar.',
+    techs: ['Node.js', 'PostgreSQL', 'Docker', 'Redis'],
+    large: true,
   },
   {
-    icon: DevOpsIcon,
-    title: 'Plataforma DevOps',
-    description:
-      'Pipelines de CI/CD, observabilidade completa, deploy automatizado e rollback sob demanda. Sua engenharia entrega mais rápido e com segurança.',
+    icon: Globe,
+    title: 'Aplicações Next.js',
+    body: 'Full-stack com Next.js App Router, SSR/ISR otimizado, integração com CMS headless e deploy na Vercel ou VPS próprio.',
+    techs: ['Next.js', 'TypeScript', 'Tailwind', 'Prisma'],
   },
   {
-    icon: SupportIcon,
-    title: 'Suporte Técnico Especializado',
-    description:
-      'Atendimento com SLA garantido, monitoramento proativo e resposta 24/7. Um time dedicado que conhece o seu ambiente e fala a sua linguagem.',
+    icon: ShieldCheck,
+    title: 'Segurança & Pentest',
+    body: 'Testes de invasão autorizados, análise de vulnerabilidades OWASP Top 10, relatórios executivos e remediação guiada.',
+    techs: ['Kali Linux', 'Burp Suite', 'OWASP', 'CVE'],
   },
   {
-    icon: CloudIcon,
-    title: 'Infraestrutura Cloud',
-    description:
-      'Consultoria e gestão multi-cloud (AWS, GCP, Cloudflare). Arquitetura escalável, custos sob controle e segurança como prioridade desde o dia zero.',
+    icon: Database,
+    title: 'Modelagem & Performance de Dados',
+    body: 'Otimização de queries, índices estratégicos, migrations seguras e auditoria de schema para PostgreSQL em produção.',
+    techs: ['PostgreSQL', 'pgAnalyze', 'explain', 'índices'],
+  },
+  {
+    icon: Cloud,
+    title: 'DevOps & Infraestrutura',
+    body: 'CI/CD com GitHub Actions, containerização Docker, deploy em VPS e gerenciamento de ambientes com zero-downtime.',
+    techs: ['Docker', 'Nginx', 'GitHub Actions', 'Ubuntu'],
+  },
+  {
+    icon: LayoutDashboard,
+    title: 'Produtos Digitais Completos',
+    body: 'Do wireframe ao deploy: UX, frontend React, backend robusto e analytics integrado — entregue com documentação.',
+    techs: ['React', 'Figma', 'Node.js', 'PostgreSQL'],
   },
 ];
 
-/**
- * Four service cards in a responsive grid.
- *
- * Mobile: single column, stacked.
- * md (>=768px): 2 columns.
- * lg (>=1024px): 4 columns.
- *
- * Each card uses shadcn/ui `Card` from `@devtechs/ui` and adds a
- * hover-reactive primary-tinted border so the grid feels alive
- * without any JS or library-level animation.
- */
-export function Services(): JSX.Element {
+const CODE_SNIPPET = `// auth.service.ts
+async completeLogin(userId: string) {
+  const tokens = await this.tokenService
+    .issueTokenPair(userId);
+  await this.audit.log({
+    action: 'LOGIN_SUCCESS',
+    userId, module: 'AUTH',
+  });
+  return tokens; // ✔
+}`;
+
+export function Services() {
   return (
-    <section id="servicos" className="py-20 sm:py-28">
-      <div className="container">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-wider text-primary">
-            O que fazemos
-          </p>
-          <h2 className="mt-3 text-balance text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-            Um portfólio completo para sua stack tecnológica
-          </h2>
-          <p className="mt-4 text-pretty text-muted-foreground">
-            Quatro frentes de atuação que, juntas, cobrem todo o ciclo de
-            vida da tecnologia na sua empresa — da primeira linha de código
-            ao rollback em produção.
+    <section id="servicos" className="py-24 lg:py-32 bg-ink">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="flex flex-col gap-4 mb-14">
+          <TerminalBadge variant="acid">// o que construímos</TerminalBadge>
+          <BlurText
+            text="Serviços de engenharia."
+            className="font-display font-semibold text-foreground"
+            style={{ fontSize: 'clamp(32px, 4.5vw, 60px)' } as React.CSSProperties}
+          />
+          <p className="max-w-xl text-ash font-body text-base leading-relaxed">
+            Não somos uma agência de sites. Somos engenheiros que constroem o sistema que sustenta seu produto.
           </p>
         </div>
 
-        <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {SERVICES.map((service, index) => {
-            const Icon = service.icon;
-            // Tailwind's JIT compiler needs the class literal present at
-            // build time, so the delay is selected from a fixed set of
-            // utility classes rather than computed at runtime.
-            const delayClass = [
-              'animate-fade-up',
-              'animate-fade-up-delay-1',
-              'animate-fade-up-delay-2',
-              'animate-fade-up-delay-3',
-            ][index % 4];
+        {/* Bento grid */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {/* Large card */}
+          {(() => {
+            const s = SERVICES[0];
+            const Icon = s.icon;
             return (
-              <Card
-                key={service.title}
-                className={`${delayClass} group relative overflow-hidden border-border/80 bg-card/60 transition-all duration-300 hover:-translate-y-1 hover:border-primary/60 hover:shadow-[0_0_30px_hsl(var(--primary)/0.15)]`}
+              <motion.div
+                key={s.title}
+                className="liquid-glass rounded-2xl p-8 md:col-span-2 relative overflow-hidden group"
+                whileHover={{ y: -4 }}
+                transition={{ duration: 0.2 }}
               >
-                {/* Subtle gradient overlay that brightens on hover */}
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/0 via-primary/0 to-primary/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-hover:from-primary/5"
-                />
-                <CardHeader className="pb-4">
-                  <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20 transition-colors group-hover:bg-primary/15 group-hover:ring-primary/40">
-                    <Icon className="h-6 w-6" />
-                  </div>
-                  <CardTitle className="text-xl">{service.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-pretty leading-relaxed">
-                    {service.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
+                <pre className="absolute bottom-0 right-0 w-64 terminal-card rounded-tl-xl p-4 text-[10px] leading-5 opacity-25 group-hover:opacity-45 transition-opacity overflow-hidden pointer-events-none select-none text-acid">
+                  {CODE_SNIPPET}
+                </pre>
+                <Icon className="h-9 w-9 text-copper mb-4" />
+                <h3 className="font-display text-xl font-semibold text-foreground mb-2">{s.title}</h3>
+                <p className="text-ash text-sm leading-relaxed font-body mb-6 max-w-sm">{s.body}</p>
+                <div className="flex flex-wrap gap-2">
+                  {s.techs.map((t) => <span key={t} className="code-pill">{t}</span>)}
+                </div>
+              </motion.div>
+            );
+          })()}
+
+          {/* Two stacked */}
+          <div className="flex flex-col gap-4">
+            {SERVICES.slice(1, 3).map((s) => {
+              const Icon = s.icon;
+              return (
+                <motion.div key={s.title} className="liquid-glass rounded-2xl p-6 flex-1" whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
+                  <Icon className="h-7 w-7 text-copper mb-3" />
+                  <h3 className="font-display text-base font-semibold text-foreground mb-1">{s.title}</h3>
+                  <p className="text-ash text-sm leading-relaxed font-body mb-4">{s.body}</p>
+                  <div className="flex flex-wrap gap-1.5">{s.techs.map((t) => <span key={t} className="code-pill">{t}</span>)}</div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Three equal */}
+          {SERVICES.slice(3).map((s) => {
+            const Icon = s.icon;
+            return (
+              <motion.div key={s.title} className="liquid-glass rounded-2xl p-6" whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
+                <Icon className="h-7 w-7 text-copper mb-3" />
+                <h3 className="font-display text-base font-semibold text-foreground mb-1">{s.title}</h3>
+                <p className="text-ash text-sm leading-relaxed font-body mb-4">{s.body}</p>
+                <div className="flex flex-wrap gap-1.5">{s.techs.map((t) => <span key={t} className="code-pill">{t}</span>)}</div>
+              </motion.div>
             );
           })}
         </div>

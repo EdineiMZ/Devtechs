@@ -1,0 +1,10 @@
+{
+  "rh-service":           { "slug": "rh",           "title": "RH Service API",           "desc": "Employees, vacations, schedules, departments, payroll documents.", "tags": ["employees","vacations","schedules","documents","departments","positions","health"] },
+  "finance-service":      { "slug": "finance",      "title": "Finance Service API",      "desc": "Transactions, invoices, accounts, DRE reports.",                  "tags": ["transactions","invoices","accounts","dre","reports","health"] },
+  "projects-service":     { "slug": "projects",     "title": "Projects Service API",     "desc": "Projects, tasks, sprints, time tracking.",                          "tags": ["projects","tasks","sprints","time-tracking","health"] },
+  "support-service":      { "slug": "support",      "title": "Support Service API",      "desc": "Tickets, real-time chat (Socket.IO /support), KB, SLA.",            "tags": ["tickets","messages","kb","sla","health"] },
+  "payments-service":     { "slug": "payments",     "title": "Payments Service API",     "desc": "Subscriptions, payments, plans, coupons, MP webhooks.",             "tags": ["subscriptions","payments","plans","coupons","webhooks","health"] },
+  "license-service":      { "slug": "license",      "title": "License Service API",      "desc": "Licensed products, client bindings, activation tokens.",            "tags": ["products","bindings","tokens","activations","health"] },
+  "developer-service":    { "slug": "developer",    "title": "Developer Service API",    "desc": "Internal ops console: docker services, queues, logs, config, VPS.", "tags": ["services","queues","logs","config","vps","health"] },
+  "notification-service": { "slug": "notification", "title": "Notification Service API", "desc": "User notification feed, SSE stream, templates, channels.",         "tags": ["notifications","stream","templates","channels","health"] }
+}

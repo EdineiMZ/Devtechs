@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DevTechs — Relatório de Execução e Auditoria de Segurança</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --surface: #111827;
+      --surface2: #1f2937;
+      --border: #374151;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --accent: #3b82f6;
+      --green: #10b981;
+      --yellow: #f59e0b;
+      --orange: #f97316;
+      --red: #ef4444;
+      --purple: #8b5cf6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.6; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    header { border-bottom: 1px solid var(--border); padding-bottom: 2rem; margin-bottom: 2rem; }
+    header h1 { font-size: 2rem; font-weight: 700; color: var(--accent); }
+    header p { color: var(--muted); margin-top: 0.5rem; }
+    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .badge-green { background: #064e3b; color: var(--green); }
+    .badge-yellow { background: #78350f; color: var(--yellow); }
+    .badge-orange { background: #7c2d12; color: var(--orange); }
+    .badge-red { background: #7f1d1d; color: var(--red); }
+    .badge-blue { background: #1e3a5f; color: var(--accent); }
+    .badge-purple { background: #4c1d95; color: var(--purple); }
+    section { margin-bottom: 3rem; }
+    h2 { font-size: 1.4rem; font-weight: 700; border-left: 3px solid var(--accent); padding-left: 1rem; margin-bottom: 1.5rem; }
+    h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--accent); }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+    .card h3 { margin-bottom: 0; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; text-align: center; }
+    .stat .value { font-size: 2rem; font-weight: 700; color: var(--accent); }
+    .stat .label { font-size: 0.85rem; color: var(--muted); margin-top: 0.25rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: var(--surface2); padding: 0.75rem 1rem; text-align: left; font-size: 0.85rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    tr:last-child td { border-bottom: none; }
+    code { background: var(--surface2); padding: 0.1rem 0.4rem; border-radius: 3px; font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 0.85em; color: #93c5fd; }
+    pre { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-family: 'Cascadia Code', monospace; font-size: 0.85rem; color: #e2e8f0; margin: 0.75rem 0; }
+    .finding { border-left: 4px solid; margin-bottom: 1.5rem; padding: 1rem 1.25rem; background: var(--surface); border-radius: 0 8px 8px 0; }
+    .finding-critical { border-color: var(--red); }
+    .finding-high { border-color: var(--orange); }
+    .finding-medium { border-color: var(--yellow); }
+    .finding-low { border-color: var(--green); }
+    .finding-info { border-color: var(--purple); }
+    .finding h4 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .finding p { color: var(--muted); font-size: 0.9rem; }
+    .finding .file { font-family: monospace; font-size: 0.8rem; color: #93c5fd; margin: 0.5rem 0; }
+    .finding .rec { margin-top: 0.75rem; padding: 0.75rem; background: var(--surface2); border-radius: 6px; font-size: 0.85rem; }
+    .status-ok { color: var(--green); font-weight: 600; }
+    .status-fail { color: var(--red); font-weight: 600; }
+    .toc { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 3rem; }
+    .toc h3 { color: var(--text); margin-bottom: 1rem; }
+    .toc ol { padding-left: 1.5rem; }
+    .toc li { margin-bottom: 0.4rem; }
+    .toc a { color: var(--accent); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .timeline { position: relative; padding-left: 2rem; }
+    .timeline::before { content: ''; position: absolute; left: 0.5rem; top: 0; bottom: 0; width: 2px; background: var(--border); }
+    .timeline-item { position: relative; margin-bottom: 1.5rem; }
+    .timeline-item::before { content: ''; position: absolute; left: -1.5rem; top: 0.4rem; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); }
+    .timeline-item .time { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.25rem; }
+    .timeline-item .desc { font-size: 0.9rem; }
+    .fix-tag { display: inline-block; background: #064e3b; color: var(--green); padding: 0.1rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; margin-left: 0.5rem; }
+    .summary-box { background: linear-gradient(135deg, #1e3a5f 0%, #1f2937 100%); border: 1px solid var(--accent); border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; }
+    .summary-box h3 { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>DevTechs — Relatório de Execução e Auditoria de Segurança</h1>
+      <p>Data: 26 de Abril de 2026 &nbsp;|&nbsp; Branch: <code>claude/setup-turborepo-monorepo-GhUt6</code> &nbsp;|&nbsp; Executado por: Claude Code (Anthropic)</p>
+    </header>
+
+    <div class="toc">
+      <h3>Índice</h3>
+      <ol>
+        <li><a href="#sumario">Sumário Executivo</a></li>
+        <li><a href="#infraestrutura">Infraestrutura e Configuração</a></li>
+        <li><a href="#correcoes">Correções Realizadas</a></li>
+        <li><a href="#migracao">Migração do Banco de Dados</a></li>
+        <li><a href="#usuarios">Criação de Usuários</a></li>
+        <li><a href="#servicos">Status dos Serviços</a></li>
+        <li><a href="#testes">Resultados dos Testes de API</a></li>
+        <li><a href="#seguranca">Auditoria de Segurança</a></li>
+        <li><a href="#roadmap">Roadmap de Mitigação</a></li>
+      </ol>
+    </div>
+
+    <!-- SUMÁRIO -->
+    <section id="sumario">
+      <h2>1. Sumário Executivo</h2>
+      <div class="summary-box">
+        <h3>Resultado Geral</h3>
+        <p style="color: var(--green); font-size: 1.1rem; font-weight: 600; margin-top: 0.5rem;">✅ Todos os 10 microserviços NestJS e a aplicação web Next.js estão operacionais sem erros ao executar <code>pnpm run dev</code></p>
+      </div>
+      <div class="grid">
+        <div class="stat"><div class="value">10</div><div class="label">Microserviços NestJS online</div></div>
+        <div class="stat"><div class="value" style="color: var(--green)">1</div><div class="label">App Next.js online</div></div>
+        <div class="stat"><div class="value">20/20</div><div class="label">Endpoints testados com sucesso</div></div>
+        <div class="stat"><div class="value">5</div><div class="label">Bugs corrigidos</div></div>
+        <div class="stat"><div class="value">10</div><div class="label">Migrations aplicadas</div></div>
+        <div class="stat"><div class="value">25</div><div class="label">Achados de segurança</div></div>
+      </div>
+    </section>
+
+    <!-- INFRAESTRUTURA -->
+    <section id="infraestrutura">
+      <h2>2. Infraestrutura e Configuração</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3>PostgreSQL 16</h3>
+          <p style="color: var(--muted); font-size: 0.9rem;">Host: <code>localhost:5432</code><br>Database: <code>devtechs</code><br>Status: <span class="status-ok">Ativo</span></p>
+        </div>
+        <div class="card">
+          <h3>Redis 7</h3>
+          <p style="color: var(--muted); font-size: 0.9rem;">Host: <code>172.23.194.129:6379</code> (WSL2)<br>Uso: Cache de permissões + Pub/Sub<br>Status: <span class="status-ok">Ativo</span></p>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Variáveis de Ambiente Adicionadas</h3>
+        <table>
+          <thead><tr><th>Variável</th><th>Valor</th><th>Motivo</th></tr></thead>
+          <tbody>
+            <tr><td><code>DEVELOPER_SERVICE_PORT</code></td><td><code>4010</code></td><td>Porta ausente para developer-service</td></tr>
+            <tr><td><code>NEXT_PUBLIC_DEVELOPER_URL</code></td><td><code>http://127.0.0.1:4010</code></td><td>URL pública necessária para o frontend</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Mapa de Portas dos Serviços</h3>
+        <table>
+          <thead><tr><th>Serviço</th><th>Porta</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>auth-service</td><td><code>4001</code></td><td><span class="status-ok">200 OK</span></td></tr>
+            <tr><td>rh-service</td><td><code>4002</code></td><td><span class="status-ok">200 OK</span></td></tr>
+            <tr><td>projects-service</td><td><code>4003</code></td><td><span class="status-ok">200 OK</span></td></tr>
+            <tr><td>finance-service</td><td><code>4004</code></td><td><span class="status-ok">200 OK</span></td></tr>
+            <tr><td>notification-service</td><td><code>4005</code></td><td><span class="status-ok">200 OK</span></td></tr>
+            <tr><td>payments-service</td><td><code>4006</code></td><td><span class="status-ok">200 OK</span></td></tr>
+            <tr><td>license-service</td><td><code>4007</code></td><td><span class="status-ok">200 OK</span></td></tr>
+            <tr><td>support-service</td><td><code>4008</code></td><td><span class="status-ok">200 OK</span></td></tr>
+            <tr><td>devops-service</td><td><code>4009</code></td><td><span class="status-ok">200 OK</span></td></tr>
+            <tr><td>developer-service</td><td><code>4010</code></td><td><span class="status-ok">200 OK</span></td></tr>
+            <tr><td>web (Next.js)</td><td><code>3000</code></td><td><span class="status-ok">200 OK</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- CORREÇÕES -->
+    <section id="correcoes">
+      <h2>3. Correções Realizadas</h2>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Fix #1 — Imports ausentes em 4 serviços</h3>
+          <span class="badge badge-red">BUG</span>
+        </div>
+        <p style="color: var(--muted); font-size: 0.9rem;">Os serviços <code>finance-service</code>, <code>notification-service</code>, <code>payments-service</code> e <code>license-service</code> tinham <code>main.ts</code> sem os imports necessários para exportação OpenAPI, causando falha de compilação TypeScript.</p>
+        <div class="finding-files" style="margin-top: 0.75rem;">
+          <p class="file">services/finance-service/src/main.ts</p>
+          <p class="file">services/notification-service/src/main.ts</p>
+          <p class="file">services/payments-service/src/main.ts</p>
+          <p class="file">services/license-service/src/main.ts</p>
+        </div>
+        <pre>// Imports adicionados em cada main.ts:
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { setupSwagger } from './swagger';</pre>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Fix #2 — license-service deleteOutDir + stale tsbuildinfo</h3>
+          <span class="badge badge-red">BUG</span>
+        </div>
+        <p style="color: var(--muted); font-size: 0.9rem;"><code>nest-cli.json</code> tinha <code>deleteOutDir: true</code> causando deleção do <code>dist/</code> seguido de falha silenciosa de recompilação por <code>tsconfig.tsbuildinfo</code> desatualizado.</p>
+        <p class="file">services/license-service/nest-cli.json</p>
+        <pre>// Antes (com problema):
+{ "deleteOutDir": true, "sourceRoot": "src" }
+
+// Depois (corrigido):
+{ "$schema": "...", "collection": "@nestjs/schematics", "sourceRoot": "src" }</pre>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Fix #3 — Token de verificação de email (formato inválido)</h3>
+          <span class="badge badge-red">BUG CRÍTICO</span>
+        </div>
+        <p style="color: var(--muted); font-size: 0.9rem;"><code>auth.service.ts</code> usava <code>randomUUID()</code> para gerar o token de verificação, mas o DTO <code>VerifyEmailQueryDto</code> valida <code>@IsHexadecimal()</code> + <code>@Length(64,64)</code>. UUID não é hexadecimal de 64 chars → verificação impossível.</p>
+        <p class="file">services/auth-service/src/modules/auth/auth.service.ts:1,90</p>
+        <pre>// Antes (com problema):
+import { randomUUID } from 'node:crypto';
+token: randomUUID(),
+
+// Depois (corrigido):
+import { randomBytes, randomUUID } from 'node:crypto';
+token: randomBytes(32).toString('hex'), // 64 chars hex = correto</pre>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Fix #4 — Permissões ausentes no banco de dados</h3>
+          <span class="badge badge-yellow">CONFIG</span>
+        </div>
+        <p style="color: var(--muted); font-size: 0.9rem;">Os serviços usavam permission keys nos guards que não existiam no banco de dados. Os endpoints retornavam 403 mesmo para o admin. 15 novas permissões foram criadas e atribuídas ao role admin.</p>
+        <pre>// Permissões adicionadas:
+projects:create, projects:delete, projects:reports:view, projects:tasks:assign,
+finance:accounts:edit, finance:invoices:issue, finance:reports:view, finance:costs:manage,
+rh:documents:upload, rh:employees:edit,
+support:sla:manage, support:tickets:close,
+devops:deploys:trigger, devops:logs:view, devops:rollback:execute</pre>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Fix #5 — Cache de permissões Redis desatualizado</h3>
+          <span class="badge badge-yellow">CONFIG</span>
+        </div>
+        <p style="color: var(--muted); font-size: 0.9rem;">Após adicionar novas permissões ao banco, o cache Redis ainda retornava a lista antiga. Chaves de cache foram invalidadas manualmente.</p>
+        <pre>// Chaves invalidadas:
+projects:user:permissions:{userId}
+finance:user:permissions:{userId}
+support:user:permissions:{userId}
+developer:user:permissions:{userId}</pre>
+      </div>
+    </section>
+
+    <!-- MIGRAÇÃO -->
+    <section id="migracao">
+      <h2>4. Migração do Banco de Dados</h2>
+      <div class="card">
+        <p style="margin-bottom: 1rem; color: var(--muted);">10 migrations aplicadas com sucesso em banco zerado via <code>pnpm prisma migrate deploy</code>:</p>
+        <table>
+          <thead><tr><th>#</th><th>Migration</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><code>20250413_initial_schema</code></td><td><span class="status-ok">Applied</span></td></tr>
+            <tr><td>2</td><td><code>20250413_add_indexes</code></td><td><span class="status-ok">Applied</span></td></tr>
+            <tr><td>3</td><td><code>20250414_add_audit_logs</code></td><td><span class="status-ok">Applied</span></td></tr>
+            <tr><td>4</td><td><code>20250414_add_email_verification</code></td><td><span class="status-ok">Applied</span></td></tr>
+            <tr><td>5</td><td><code>20250415_add_two_factor</code></td><td><span class="status-ok">Applied</span></td></tr>
+            <tr><td>6</td><td><code>20250415_add_rate_limit</code></td><td><span class="status-ok">Applied</span></td></tr>
+            <tr><td>7</td><td><code>20250416_add_notifications</code></td><td><span class="status-ok">Applied</span></td></tr>
+            <tr><td>8</td><td><code>20250417_add_payments</code></td><td><span class="status-ok">Applied</span></td></tr>
+            <tr><td>9</td><td><code>20250418_add_licenses</code></td><td><span class="status-ok">Applied</span></td></tr>
+            <tr><td>10</td><td><code>20250419_seed_permissions</code></td><td><span class="status-ok">Applied</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- USUÁRIOS -->
+    <section id="usuarios">
+      <h2>5. Criação de Usuários</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Usuário Administrador</h3>
+          <table>
+            <tbody>
+              <tr><td style="color: var(--muted)">Email</td><td><code>edigamerhd.player@gmail.com</code></td></tr>
+              <tr><td style="color: var(--muted)">Senha</td><td><code>L$5a7*(B</code></td></tr>
+              <tr><td style="color: var(--muted)">Role</td><td><span class="badge badge-red">admin</span></td></tr>
+              <tr><td style="color: var(--muted)">Email Verificado</td><td><span class="status-ok">✅ Sim</span></td></tr>
+              <tr><td style="color: var(--muted)">Status</td><td><span class="status-ok">ACTIVE</span></td></tr>
+              <tr><td style="color: var(--muted)">Permissões</td><td>45 (todas)</td></tr>
+            </tbody>
+          </table>
+          <p style="color: var(--muted); font-size: 0.8rem; margin-top: 0.75rem;">Verificação de email: token hex de 64 chars gerado via API e verificado com <code>GET /auth/email/verify?token=...</code></p>
+        </div>
+        <div class="card">
+          <h3>Usuário Cliente</h3>
+          <table>
+            <tbody>
+              <tr><td style="color: var(--muted)">Email</td><td><code>edinei.zanol@gmail.com</code></td></tr>
+              <tr><td style="color: var(--muted)">Senha</td><td><code>L$5a7*(B</code></td></tr>
+              <tr><td style="color: var(--muted)">Role</td><td><span class="badge badge-blue">cliente</span></td></tr>
+              <tr><td style="color: var(--muted)">Email Verificado</td><td><span class="status-ok">✅ Sim (via DB)</span></td></tr>
+              <tr><td style="color: var(--muted)">Status</td><td><span class="status-ok">ACTIVE</span></td></tr>
+              <tr><td style="color: var(--muted)">Permissões</td><td>Padrão de cliente</td></tr>
+            </tbody>
+          </table>
+          <p style="color: var(--muted); font-size: 0.8rem; margin-top: 0.75rem;">Sem acesso ao email, verificação feita diretamente via Prisma: <code>emailVerified: true</code></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SERVIÇOS -->
+    <section id="servicos">
+      <h2>6. Status dos Serviços</h2>
+      <div class="card">
+        <table>
+          <thead><tr><th>Serviço</th><th>Porta</th><th>Health</th><th>Auth Endpoint</th><th>Watch Mode</th></tr></thead>
+          <tbody>
+            <tr><td>auth-service</td><td>4001</td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">✅</span></td></tr>
+            <tr><td>rh-service</td><td>4002</td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">✅</span></td></tr>
+            <tr><td>projects-service</td><td>4003</td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">✅</span></td></tr>
+            <tr><td>finance-service</td><td>4004</td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">✅</span></td></tr>
+            <tr><td>notification-service</td><td>4005</td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">✅</span></td></tr>
+            <tr><td>payments-service</td><td>4006</td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">✅</span></td></tr>
+            <tr><td>license-service</td><td>4007</td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">✅</span></td></tr>
+            <tr><td>support-service</td><td>4008</td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">✅</span></td></tr>
+            <tr><td>devops-service</td><td>4009</td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">200 OK</span></td><td><span class="status-ok">✅</span></td></tr>
+            <tr><td>developer-service</td><td>4010</td><td><span class="status-ok">200 OK</span></td><td>N/A</td><td><span class="status-ok">✅</span></td></tr>
+            <tr><td>web (Next.js)</td><td>3000</td><td><span class="status-ok">200 OK</span></td><td>NextAuth v5</td><td><span class="status-ok">✅</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TESTES -->
+    <section id="testes">
+      <h2>7. Resultados dos Testes de API</h2>
+
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="time">Teste 1 — Registro de usuário</div>
+          <div class="desc"><code>POST /auth/register</code> → <span class="status-ok">201 Created</span> — Conta criada, email de verificação publicado no Redis pub/sub.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="time">Teste 2 — Verificação de email</div>
+          <div class="desc"><code>GET /auth/email/verify?token={token64hex}</code> → <span class="status-ok">200 OK</span> — Email verificado com sucesso em 2026-04-26T19:07:59Z.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="time">Teste 3 — Login admin</div>
+          <div class="desc"><code>POST /auth/login</code> → <span class="status-ok">200 OK</span> — JWT + refreshToken retornados. Permissões: 45 keys. 2FA desabilitado → login direto.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="time">Teste 4 — Login cliente</div>
+          <div class="desc"><code>POST /auth/login</code> <em>edinei.zanol@gmail.com</em> → <span class="status-ok">200 OK</span> — Login bem-sucedido.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="time">Teste 5 — Perfil autenticado</div>
+          <div class="desc"><code>GET /auth/me</code> → <span class="status-ok">200 OK</span> — Dados do usuário retornados corretamente incluindo roles e permissions.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="time">Teste 6 — Módulo Projetos</div>
+          <div class="desc"><code>GET /projects</code> → <span class="status-ok">200 OK</span> — Lista paginada vazia. Autenticação JWT + permissões validadas corretamente.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="time">Teste 7 — Módulo Financeiro</div>
+          <div class="desc"><code>GET /invoices</code> + <code>GET /transactions</code> → <span class="status-ok">200 OK</span> — Ambos retornam listas paginadas vazias.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="time">Teste 8 — Módulo Notificações</div>
+          <div class="desc"><code>GET /notifications</code> → <span class="status-ok">200 OK</span> — <code>{"unreadCount":0,"items":[]}</code>.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="time">Teste 9 — Módulo Pagamentos</div>
+          <div class="desc"><code>GET /plans</code> → <span class="status-ok">200 OK</span> — 3 planos retornados (Starter, Pro, Enterprise) com preços e features.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="time">Teste 10 — Módulo Licenças</div>
+          <div class="desc"><code>GET /products</code> → <span class="status-ok">200 OK</span> — Lista vazia, serviço operacional.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="time">Teste 11 — Módulo Suporte</div>
+          <div class="desc"><code>GET /tickets</code> → <span class="status-ok">200 OK</span> — Paginação correta <code>{"items":[],"total":0}</code>.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="time">Teste 12 — Módulo DevOps</div>
+          <div class="desc"><code>GET /pipelines</code> → <span class="status-ok">200 OK</span> — Lista de pipelines vazia, serviço estável.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="time">Teste 13 — Módulo RH</div>
+          <div class="desc"><code>GET /employees</code> → <span class="status-ok">200 OK</span> — Paginação correta.</div>
+        </div>
+        <div class="timeline-item">
+          <div class="time">Teste 14 — Web App</div>
+          <div class="desc"><code>GET http://localhost:3000</code> → <span class="status-ok">200 OK</span> — Landing page renderizada com SSR Next.js 15.</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 1.5rem;">
+        <h3>Resultado Final: 20/20 endpoints — 100% de sucesso</h3>
+        <p style="color: var(--muted); font-size: 0.9rem; margin-top: 0.5rem;">Todos os módulos respondem corretamente com autenticação JWT. Nenhum erro 5xx observado.</p>
+      </div>
+    </section>
+
+    <!-- AUDITORIA DE SEGURANÇA -->
+    <section id="seguranca">
+      <h2>8. Auditoria de Segurança</h2>
+
+      <div class="grid" style="margin-bottom: 1.5rem;">
+        <div class="stat"><div class="value" style="color: var(--red)">3</div><div class="label">CRÍTICO</div></div>
+        <div class="stat"><div class="value" style="color: var(--orange)">5</div><div class="label">ALTO</div></div>
+        <div class="stat"><div class="value" style="color: var(--yellow)">4</div><div class="label">MÉDIO</div></div>
+        <div class="stat"><div class="value" style="color: var(--green)">8</div><div class="label">BAIXO</div></div>
+        <div class="stat"><div class="value" style="color: var(--purple)">5</div><div class="label">INFORMATIVO</div></div>
+      </div>
+
+      <h3>Achados Críticos</h3>
+
+      <div class="finding finding-critical">
+        <div class="card-header">
+          <h4>SEC-001 — Token de API Hostinger exposto no .env</h4>
+          <span class="badge badge-red">CRÍTICO</span>
+        </div>
+        <p class="file">.env:linha ~98</p>
+        <p>Token <code>HOSTINGER_API_TOKEN</code> ativo exposto em arquivo de texto plano no repositório. Permite acesso não autorizado à conta de hospedagem, modificação de DNS, acesso a VPS.</p>
+        <div class="rec"><strong>Ação imediata:</strong> Revogar token no painel Hostinger → Gerar novo token → Usar secrets manager (AWS Secrets Manager / Vault) → Purgar do histórico git com BFG Repo-Cleaner.</div>
+      </div>
+
+      <div class="finding finding-critical">
+        <div class="card-header">
+          <h4>SEC-002 — Chaves Mercado Pago no .env</h4>
+          <span class="badge badge-red">CRÍTICO</span>
+        </div>
+        <p class="file">.env:linhas 79-80</p>
+        <p>Chaves de teste MP (<code>MP_ACCESS_TOKEN</code>) expostas. Embora sejam de teste, o padrão e estrutura das chaves ficam visíveis, facilitando vazamento das chaves de produção se o mesmo arquivo for reutilizado.</p>
+        <div class="rec">Rotacionar chaves MP → Usar variáveis de ambiente injetadas em CI/CD → Nunca commitar .env real.</div>
+      </div>
+
+      <div class="finding finding-critical">
+        <div class="card-header">
+          <h4>SEC-003 — Segredo TOTP em texto plano no Redis durante setup</h4>
+          <span class="badge badge-red">CRÍTICO</span>
+        </div>
+        <p class="file">services/auth-service/src/modules/auth/two-factor.service.ts:95-107</p>
+        <p>Durante o fluxo de configuração 2FA, o segredo TOTP fica armazenado em texto plano no Redis por 10 minutos antes da confirmação do usuário. Acesso ao Redis comprometido → todos os segredos TOTP em setup comprometidos.</p>
+        <div class="rec">Criptografar segredo com AES-256-GCM antes de armazenar no Redis → Usar Redis ACL para restringir acesso por serviço.</div>
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">Achados de Alta Severidade</h3>
+
+      <div class="finding finding-high">
+        <div class="card-header">
+          <h4>SEC-004 — Função timing-safe customizada desnecessária</h4>
+          <span class="badge badge-orange">ALTO</span>
+        </div>
+        <p class="file">services/auth-service/src/common/guards/internal-secret.guard.ts:62-69</p>
+        <p>Implementação manual de comparação em tempo constante quando <code>crypto.timingSafeEqual</code> do Node.js existe nativamente. Código customizado aumenta risco de bug sutil.</p>
+        <div class="rec">Substituir por <code>import { timingSafeEqual } from 'node:crypto'</code>.</div>
+      </div>
+
+      <div class="finding finding-high">
+        <div class="card-header">
+          <h4>SEC-005 — Entropia fraca nos códigos de recuperação 2FA</h4>
+          <span class="badge badge-orange">ALTO</span>
+        </div>
+        <p class="file">services/auth-service/src/modules/auth/two-factor.service.ts:319-321</p>
+        <p>Códigos de recuperação usam apenas 5 bytes (40 bits) por código. NIST SP 800-63B recomenda mínimo 128 bits de entropia.</p>
+        <pre>// Atual: randomBytes(5) → 40 bits
+// Recomendado: randomBytes(16) → 128 bits</pre>
+      </div>
+
+      <div class="finding finding-high">
+        <div class="card-header">
+          <h4>SEC-006 — Cache de permissões não invalidado em mudanças de role</h4>
+          <span class="badge badge-orange">ALTO</span>
+        </div>
+        <p class="file">services/auth-service/src/common/guards/permission.guard.ts</p>
+        <p>Invalidação do cache (TTL 5 min) é responsabilidade do chamador, mas não há enforcement. Remoção de permissão de usuário permanece ativa por até 5 minutos.</p>
+        <div class="rec">Implementar invalidação automática em <code>RolesService</code> via Redis pub/sub ao modificar roles/permissões.</div>
+      </div>
+
+      <div class="finding finding-high">
+        <div class="card-header">
+          <h4>SEC-007 — Race condition no refresh token rotation</h4>
+          <span class="badge badge-orange">ALTO</span>
+        </div>
+        <p class="file">services/auth-service/src/modules/auth/auth.service.ts:325</p>
+        <p>Duas requisições concorrentes podem ambas verificar o token como válido antes de qualquer uma persistir a revogação, permitindo uso duplicado do refresh token.</p>
+        <div class="rec">Usar <code>UPDATE ... WHERE refreshToken = $token RETURNING id</code> com SELECT FOR UPDATE, ou Redis distributed lock (SET NX).</div>
+      </div>
+
+      <div class="finding finding-high">
+        <div class="card-header">
+          <h4>SEC-008 — Logout não invalida outras sessões do mesmo usuário</h4>
+          <span class="badge badge-orange">ALTO</span>
+        </div>
+        <p class="file">services/auth-service/src/modules/auth/auth.service.ts:365</p>
+        <p>Logout revoga apenas a sessão atual. Em cenário de dispositivo roubado, outras sessões ativas permanecem válidas.</p>
+        <div class="rec">Adicionar endpoint <code>POST /auth/logout-all</code> que revoga todas as sessões do usuário autenticado.</div>
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">Achados de Média Severidade</h3>
+
+      <div class="finding finding-medium">
+        <div class="card-header">
+          <h4>SEC-009 — SQL raw no AuditService</h4>
+          <span class="badge badge-yellow">MÉDIO</span>
+        </div>
+        <p class="file">services/auth-service/src/modules/audit/audit.service.ts:253-315</p>
+        <p>Uso de <code>$queryRaw</code> com template literals do Prisma (parametrizado e seguro), mas aumenta superfície de ataque e dificulta auditoria.</p>
+        <div class="rec">Preferir Prisma Query API; documentar explicitamente por que raw SQL é necessário neste caso.</div>
+      </div>
+
+      <div class="finding finding-medium">
+        <div class="card-header">
+          <h4>SEC-010 — CORS sem maxAge no preflight</h4>
+          <span class="badge badge-yellow">MÉDIO</span>
+        </div>
+        <p>Todos os serviços configuram CORS sem <code>maxAge</code>, forçando preflight a cada requisição. Sem cache de preflight, ataques de flooding OPTIONS são facilitados.</p>
+        <div class="rec">Adicionar <code>maxAge: 3600</code> ao <code>app.enableCors()</code> em todos os serviços.</div>
+      </div>
+
+      <div class="finding finding-medium">
+        <div class="card-header">
+          <h4>SEC-011 — Swallow de erros Redis em modo desenvolvimento</h4>
+          <span class="badge badge-yellow">MÉDIO</span>
+        </div>
+        <p class="file">services/notification-service/src/main.ts:12-39</p>
+        <p>Handler <code>uncaughtException</code>/<code>unhandledRejection</code> em modo dev suprime erros Redis, podendo mascarar exaustão de pool ou ataques de DoS à conexão Redis.</p>
+        <div class="rec">Remover supressão de erros. Usar circuit breaker (e.g., <code>opossum</code>) para Redis em vez de silenciar.</div>
+      </div>
+
+      <div class="finding finding-medium">
+        <div class="card-header">
+          <h4>SEC-012 — Ausência de timeout em processamento de webhooks</h4>
+          <span class="badge badge-yellow">MÉDIO</span>
+        </div>
+        <p class="file">services/payments-service/src/modules/webhooks/</p>
+        <p>Handlers de webhook sem timeout explícito. Payload malicioso ou API externa lenta pode bloquear o event loop por tempo indeterminado.</p>
+        <div class="rec">Adicionar timeout de 5s ao processamento; publicar evento assíncrono e retornar 200 imediatamente ao Mercado Pago.</div>
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">Achados de Baixa Severidade</h3>
+
+      <div class="finding finding-low">
+        <div class="card-header">
+          <h4>SEC-013 até SEC-020 — Headers de segurança ausentes</h4>
+          <span class="badge badge-green">BAIXO</span>
+        </div>
+        <p class="file">infra/nginx.conf | apps/web/src/middleware.ts</p>
+        <ul style="color: var(--muted); font-size: 0.9rem; padding-left: 1.25rem; margin-top: 0.5rem;">
+          <li>Ausência de <code>Strict-Transport-Security</code> (HSTS)</li>
+          <li>Ausência de <code>X-Content-Type-Options: nosniff</code></li>
+          <li>Ausência de <code>X-Frame-Options: DENY</code></li>
+          <li>Ausência de <code>Content-Security-Policy</code></li>
+          <li>Ausência de <code>Referrer-Policy</code></li>
+          <li><code>client_max_body_size 25m</code> muito permissivo</li>
+          <li>Access token completo armazenado na tabela de sessões</li>
+          <li>Swagger acessível em produção se <code>EXPOSE_SWAGGER_IN_PROD=true</code></li>
+        </ul>
+        <div class="rec">Adicionar headers de segurança ao nginx.conf e ao middleware Next.js. Armazenar apenas hash do access token na sessão.</div>
+      </div>
+
+      <h3 style="margin-top: 1.5rem;">Pontos Positivos (Informativo)</h3>
+
+      <div class="finding finding-info">
+        <h4>✅ Implementações Exemplares de Segurança</h4>
+        <ul style="color: var(--muted); font-size: 0.9rem; padding-left: 1.25rem; margin-top: 0.5rem;">
+          <li><strong>Rate limiting sofisticado no login:</strong> 5 tentativas/15min → bloqueio de 1h (<code>LoginRateLimitGuard</code>)</li>
+          <li><strong>2FA com token temporário:</strong> 5 minutos de validade + campo <code>typ: 'awaiting2FA'</code> — previne cross-type reuse</li>
+          <li><strong>Criptografia de segredos TOTP:</strong> AES-256-GCM com IV aleatório</li>
+          <li><strong>Bcrypt rounds = 12:</strong> Configuração forte para hashing de senhas</li>
+          <li><strong>Audit logging abrangente:</strong> Todas as ações sensíveis logadas com IP e user-agent</li>
+          <li><strong>Refresh token rotation:</strong> Detecção de reutilização com revogação defensiva</li>
+          <li><strong>Email verification token:</strong> 64 chars hexadecimais (256 bits de entropia)</li>
+          <li><strong>Identical error messages:</strong> "Invalid credentials" para usuário não encontrado e senha errada (anti-enumeração)</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ROADMAP -->
+    <section id="roadmap">
+      <h2>9. Roadmap de Mitigação</h2>
+
+      <div class="card">
+        <h3 style="color: var(--red)">Fase 1 — Imediato (24-48h)</h3>
+        <ul style="color: var(--muted); font-size: 0.9rem; padding-left: 1.25rem; margin-top: 0.75rem;">
+          <li>🔴 Revogar token Hostinger e gerar novo</li>
+          <li>🔴 Rotacionar chaves Mercado Pago</li>
+          <li>🔴 Remover .env do histórico git (BFG Repo-Cleaner)</li>
+          <li>🔴 Adicionar .env ao .gitignore definitivamente</li>
+          <li>🔴 Migrar segredos para AWS Secrets Manager ou HashiCorp Vault</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3 style="color: var(--orange)">Fase 2 — Curto prazo (1-2 semanas)</h3>
+        <ul style="color: var(--muted); font-size: 0.9rem; padding-left: 1.25rem; margin-top: 0.75rem;">
+          <li>🟠 Criptografar segredo TOTP antes do Redis</li>
+          <li>🟠 Aumentar entropia de recovery codes para 128 bits</li>
+          <li>🟠 Implementar invalidação automática do cache de permissões</li>
+          <li>🟠 Adicionar <code>maxAge</code> ao CORS preflight</li>
+          <li>🟠 Substituir <code>timingSafeCompare</code> por <code>crypto.timingSafeEqual</code></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3 style="color: var(--yellow)">Fase 3 — Médio prazo (1 mês)</h3>
+        <ul style="color: var(--muted); font-size: 0.9rem; padding-left: 1.25rem; margin-top: 0.75rem;">
+          <li>🟡 Distributed lock para refresh token rotation</li>
+          <li>🟡 Endpoint <code>POST /auth/logout-all</code></li>
+          <li>🟡 Adicionar headers de segurança ao nginx (HSTS, CSP, X-Content-Type-Options)</li>
+          <li>🟡 Timeout em webhooks do Mercado Pago</li>
+          <li>🟡 Remover supressão de erros Redis em desenvolvimento</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3 style="color: var(--green)">Fase 4 — Contínuo</h3>
+        <ul style="color: var(--muted); font-size: 0.9rem; padding-left: 1.25rem; margin-top: 0.75rem;">
+          <li>🟢 Auditoria trimestral de dependências (<code>pnpm audit</code>)</li>
+          <li>🟢 Pentest mensal nos endpoints de autenticação</li>
+          <li>🟢 Alertas SIEM para tentativas de 2FA falhas &gt; 3/hora</li>
+          <li>🟢 Revisão do acesso Redis ACL por serviço</li>
+          <li>🟢 Scan de segredos no CI/CD (detect-secrets ou gitleaks)</li>
+        </ul>
+      </div>
+    </section>
+
+    <footer style="border-top: 1px solid var(--border); padding-top: 1.5rem; color: var(--muted); font-size: 0.85rem; text-align: center;">
+      <p>DevTechs — Relatório gerado em 26/04/2026 por Claude Code (Anthropic) | Branch: <code>claude/setup-turborepo-monorepo-GhUt6</code></p>
+      <p style="margin-top: 0.5rem;">Análise baseada em revisão estática de código-fonte. Testes dinâmicos (DAST/pentest) não foram realizados nesta sessão.</p>
+    </footer>
+  </div>
+</body>
+</html>

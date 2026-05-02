@@ -1,0 +1,178 @@
+{
+  "auth-service": {
+    "title": "auth-service",
+    "tagline": "Authentication, sessions, 2FA, OAuth, audit log surface.",
+    "port": 3001,
+    "envPort": "AUTH_SERVICE_PORT",
+    "extraEnv": [
+      "JWT_SECRET — HS256 signing key for access tokens",
+      "JWT_REFRESH_SECRET — HS256 signing key for refresh tokens",
+      "JWT_2FA_TEMP_SECRET — HS256 signing key for the 2FA temp token",
+      "AUTH_INTERNAL_SECRET — shared secret peer services use on /auth/oauth/login",
+      "ENCRYPTION_KEY — AES key encrypting per-user TOTP secrets at rest",
+      "GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET — optional, enables Google OAuth",
+      "GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET — optional, enables GitHub OAuth"
+    ],
+    "endpoints": [
+      "POST /auth/register — sign up (email + password)",
+      "POST /auth/login — sign in; returns tokens or `requires2FA`",
+      "POST /auth/2fa/verify — second leg of 2FA login",
+      "POST /auth/refresh — exchange refresh token for fresh access token",
+      "POST /auth/logout — revoke current session",
+      "GET /auth/me — current user (requires verified email)",
+      "POST /auth/email/send-verification — request a fresh verification email",
+      "GET /auth/email/verify?token=... — confirm an email",
+      "POST /auth/2fa/setup — start 2FA (returns QR + secret)",
+      "POST /auth/2fa/enable / disable — toggle 2FA",
+      "POST /auth/oauth/login — internal endpoint for NextAuth callback",
+      "GET POST PUT DELETE /roles — role CRUD (`dev:config:edit`)",
+      "POST /roles/:id/assign/:userId — attach role to user",
+      "GET POST DELETE /permissions — permission grants",
+      "GET /audit/logs — cursor-paginated query (`dev:logs:view`)",
+      "GET /audit/logs/export?format=csv — CSV export",
+      "GET /audit/stats — top actions / users / modules with errors",
+      "GET /audit/users/:userId/timeline — per-user activity",
+      "GET /audit/security-report — failed-login IPs, 403 spikes, old sessions (`dev:config:edit`)",
+      "GET /admin/users/:userId/sessions — list active sessions",
+      "DELETE /admin/users/:userId/sessions/:sessionId — soft-revoke (`auth:users:manage`)"
+    ]
+  },
+  "rh-service": {
+    "title": "rh-service",
+    "tagline": "Human Resources: employees, departments, vacations, schedules, payroll docs.",
+    "port": 3002,
+    "envPort": "RH_SERVICE_PORT",
+    "extraEnv": ["AUTH_INTERNAL_SECRET — used to validate access tokens locally"],
+    "endpoints": [
+      "GET POST PATCH DELETE /employees — CRUD (`rh:employees:manage`)",
+      "GET /employees/:id — read (`rh:employees:view`)",
+      "POST /employees/:id/documents — upload payroll/contract docs",
+      "GET POST /vacations — request and list vacations",
+      "POST /vacations/:id/approve — `rh:vacations:approve`",
+      "GET POST /schedules — work schedule management (`rh:schedules:manage`)"
+    ]
+  },
+  "finance-service": {
+    "title": "finance-service",
+    "tagline": "Financial transactions, invoices, accounts, DRE.",
+    "port": 3003,
+    "envPort": "FINANCE_SERVICE_PORT",
+    "extraEnv": ["AUTH_INTERNAL_SECRET — bearer-token validation"],
+    "endpoints": [
+      "GET POST /transactions — list/create (`finance:transactions:view|create`)",
+      "GET POST PATCH /invoices — invoice management",
+      "POST /invoices/:id/pay — generate payment link",
+      "GET /invoices/:id/pdf — stream PDF",
+      "GET /accounts — chart of accounts",
+      "GET /dre — income statement (`finance:dre:view`)"
+    ]
+  },
+  "projects-service": {
+    "title": "projects-service",
+    "tagline": "Project management: kanban, sprints, time tracking.",
+    "port": 3004,
+    "envPort": "PROJECTS_SERVICE_PORT",
+    "extraEnv": ["AUTH_INTERNAL_SECRET"],
+    "endpoints": [
+      "GET POST /projects — list/create (`projects:view|create`)",
+      "GET POST PATCH DELETE /projects/:id/tasks — kanban tasks",
+      "POST /projects/:id/sprints — sprint creation (`projects:sprints:manage`)",
+      "POST /tasks/:id/time-entries — log work time"
+    ]
+  },
+  "support-service": {
+    "title": "support-service",
+    "tagline": "Tickets + real-time chat (Socket.IO `/support` namespace).",
+    "port": 3006,
+    "envPort": "SUPPORT_SERVICE_PORT",
+    "extraEnv": [
+      "REDIS_URL — required for Socket.IO Redis adapter",
+      "AUTH_INTERNAL_SECRET"
+    ],
+    "endpoints": [
+      "GET POST /tickets — list/open (`support:tickets:view`)",
+      "PATCH /tickets/:id — update (`support:tickets:manage`)",
+      "POST /tickets/:id/assign — `support:tickets:assign`",
+      "POST /tickets/:id/messages — REST send-message",
+      "GET /tickets/:id/messages — message history",
+      "GET POST PATCH /kb — knowledge base (`support:kb:edit`)",
+      "Socket.IO `/support` — events `ticket:join`, `message:send`, `message:new`, `typing:*`"
+    ]
+  },
+  "payments-service": {
+    "title": "payments-service",
+    "tagline": "Subscriptions, payments, plans, coupons, Mercado Pago webhooks.",
+    "port": 3007,
+    "envPort": "PAYMENTS_SERVICE_PORT",
+    "extraEnv": [
+      "MP_ACCESS_TOKEN — Mercado Pago access token",
+      "MP_WEBHOOK_SECRET — used to verify incoming webhook signatures",
+      "AUTH_INTERNAL_SECRET"
+    ],
+    "endpoints": [
+      "GET POST /plans — `payments:plans:manage`",
+      "GET POST /coupons — `payments:coupons:create`",
+      "POST /subscriptions — start a subscription",
+      "POST /subscriptions/:id/cancel — `payments:subscriptions:cancel`",
+      "POST /payments — initiate Pix or card payment",
+      "POST /webhooks/mp — Mercado Pago webhook (signed)"
+    ]
+  },
+  "license-service": {
+    "title": "license-service",
+    "tagline": "Software licensing: products, client bindings, activation tokens.",
+    "port": 3009,
+    "envPort": "LICENSE_SERVICE_PORT",
+    "extraEnv": [
+      "LICENSE_SIGNING_KEY — Ed25519 private key (PEM)",
+      "LICENSE_PUBLIC_KEY — Ed25519 public key (PEM)",
+      "AUTH_INTERNAL_SECRET"
+    ],
+    "endpoints": [
+      "GET POST /products — registered products (`licenses:audit:view`)",
+      "POST /clients/:userId/products — bind a product to a client (`licenses:clients:bind`)",
+      "POST /tokens — issue activation token (`licenses:tokens:generate`)",
+      "POST /tokens/:id/revoke — `licenses:tokens:revoke`",
+      "POST /activations — verify a token (called by client SDK)"
+    ]
+  },
+  "developer-service": {
+    "title": "developer-service",
+    "tagline": "Internal ops console: docker services, queues, logs, config, VPS Hostinger.",
+    "port": 3010,
+    "envPort": "DEVELOPER_SERVICE_PORT",
+    "extraEnv": [
+      "DOCKER_SOCKET_PATH — usually /var/run/docker.sock",
+      "HOSTINGER_API_TOKEN — Bearer token for the Hostinger VPS API",
+      "HOSTINGER_API_URL — defaults to https://developers.hostinger.com/api/vps/v1",
+      "AUTH_INTERNAL_SECRET"
+    ],
+    "endpoints": [
+      "GET /services — list docker compose containers (`dev:services:view`)",
+      "POST /services/:name/start|stop|restart — control containers",
+      "GET /logs?service=&since= — log stream (`dev:logs:view`)",
+      "GET POST /config — feature flags, integrations (`dev:config:edit`)",
+      "GET /queues — BullMQ inspection",
+      "GET POST /vps — VPS attach/list (`dev:vps:manage`)",
+      "POST /vps/:id/start|stop|restart|snapshots — VPS actuators"
+    ]
+  },
+  "notification-service": {
+    "title": "notification-service",
+    "tagline": "User notification feed + SSE push, Redis-backed pub/sub.",
+    "port": 3008,
+    "envPort": "NOTIFICATION_SERVICE_PORT",
+    "extraEnv": [
+      "REDIS_URL — pub/sub channel",
+      "SMTP_* — email transport (optional)",
+      "RESEND_API_KEY — Resend.com transport (optional)"
+    ],
+    "endpoints": [
+      "GET /notifications?unreadOnly=&page= — list",
+      "POST /notifications/:id/read — mark read",
+      "POST /notifications/read-all — mark all read",
+      "DELETE /notifications/:id — dismiss",
+      "GET /notifications/stream — Server-Sent Events feed"
+    ]
+  }
+}

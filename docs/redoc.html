@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DevTechs — API Reference</title>
+    <link rel="icon" href="data:," />
+    <style>
+      body { margin: 0; padding: 0; }
+    </style>
+  </head>
+  <body>
+    <!--
+      Redoc is loaded from the same origin (nginx serves the static
+      `redoc.standalone.js` it pulls from the docker image), so no
+      third-party CDN dependency at runtime. The unified spec sits at
+      `/docs/openapi.unified.json` — also same origin.
+    -->
+    <redoc spec-url="/docs/openapi.unified.json" hide-loading></redoc>
+    <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+  </body>
+</html>

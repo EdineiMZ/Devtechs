@@ -24,11 +24,17 @@ export const loginSchema = z.object({
    * TOTP code — only required when the credentials endpoint returns
    * `requires2FA: true`. The client surfaces the field conditionally
    * so a user without 2FA never has to fill it in.
+   *
+   * `react-hook-form` keeps `defaultValues.code = ''`, so the schema
+   * must accept the empty string. Validate the regex only when the
+   * caller actually filled it in.
    */
   code: z
     .string()
-    .regex(/^\d{6}$/, 'O código deve ter 6 dígitos')
-    .optional(),
+    .optional()
+    .refine((value) => !value || /^\d{6}$/.test(value), {
+      message: 'O código deve ter 6 dígitos',
+    }),
   remember: z.boolean().optional(),
 });
 

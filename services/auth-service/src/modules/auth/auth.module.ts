@@ -8,8 +8,14 @@ import { InternalSecretGuard } from '../../common/guards/internal-secret.guard';
 import { TwoFactorGuard } from '../../common/guards/two-factor.guard';
 import { LoginRateLimitGuard } from '../../common/rate-limit/login-rate-limit.guard';
 
+import { AccountController } from './account.controller';
+import { AccountService } from './account.service';
+import { AdminSessionsController } from './admin-sessions.controller';
 import { AuthController } from './auth.controller';
+import { UsersAdminController } from './users-admin.controller';
 import { AuthService } from './auth.service';
+import { EmailOtpController } from './email-otp.controller';
+import { EmailOtpService } from './email-otp.service';
 import { EmailVerificationService } from './email-verification.service';
 import { OAuthAuthService } from './oauth-auth.service';
 import { OAuthController } from './oauth.controller';
@@ -39,12 +45,22 @@ import { TwoFactorService } from './two-factor.service';
       }),
     }),
   ],
-  controllers: [AuthController, TwoFactorController, OAuthController],
+  controllers: [
+    AuthController,
+    AccountController,
+    TwoFactorController,
+    OAuthController,
+    AdminSessionsController,
+    UsersAdminController,
+    EmailOtpController,
+  ],
   providers: [
     AuthService,
+    AccountService,
     EmailVerificationService,
     TwoFactorService,
     OAuthAuthService,
+    EmailOtpService,
     JwtStrategy,
     JwtRefreshStrategy,
     Jwt2faTempStrategy,
@@ -55,6 +71,7 @@ import { TwoFactorService } from './two-factor.service';
   ],
   exports: [
     AuthService,
+    AccountService,
     EmailVerificationService,
     TwoFactorService,
     OAuthAuthService,

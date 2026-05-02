@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import type { Prisma } from '@devtechs/database';
 
+import { AuditClientService } from '../../common/audit/audit-client.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
 import type { CreateTaskDto } from './dto/create-task.dto';
@@ -31,7 +32,10 @@ type TaskWithRelations = Prisma.TaskGetPayload<{ include: typeof TASK_INCLUDE }>
 export class TasksService {
   private readonly logger = new Logger(TasksService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditClientService,
+  ) {}
 
   // ===================================================================
   // Create
@@ -109,6 +113,13 @@ export class TasksService {
     });
 
     this.logger.log(`Created task ${task.id} in column ${columnId} (order ${order})`);
+    void this.audit.log({
+      userId: dto.reporterId ?? null,
+      action: 'TASK_CREATED',
+      module: 'PROJETOS',
+      resourceId: task.id,
+      meta: { projectId: dto.projectId, title: dto.title, priority: dto.priority ?? 'MEDIUM' },
+    });
     return this.toDetail(task);
   }
 
@@ -325,6 +336,16 @@ export class TasksService {
     this.logger.log(
       `Moved task ${taskId}: ${task.columnId}@${task.order} → ${dto.targetColumnId}@${clampedNewOrder}`,
     );
+    void this.audit.log({
+      action: 'TASK_MOVED',
+      module: 'PROJETOS',
+      resourceId: taskId,
+      meta: {
+        fromColumnId: task.columnId,
+        toColumnId: dto.targetColumnId,
+        newOrder: clampedNewOrder,
+      },
+    });
 
     return {
       message: 'Task moved',

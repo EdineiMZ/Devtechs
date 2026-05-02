@@ -47,14 +47,25 @@ import { RedisModule } from './redis/redis.module';
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
+        const devMode = (process.env.NODE_ENV ?? 'development') !== 'production';
+        const tolerance = devMode
+          ? {
+              maxRetriesPerRequest: 1,
+              connectTimeout: 2000,
+              lazyConnect: true,
+              enableOfflineQueue: false,
+              retryStrategy: (): null => null,
+            }
+          : {};
         const url = config.get<string>('REDIS_URL');
         if (url) {
-          return { connection: { url } };
+          return { connection: { url, ...tolerance } };
         }
         return {
           connection: {
             host: config.get<string>('REDIS_HOST', 'redis'),
             port: Number(config.get<string>('REDIS_PORT', '6379')),
+            ...tolerance,
           },
         };
       },

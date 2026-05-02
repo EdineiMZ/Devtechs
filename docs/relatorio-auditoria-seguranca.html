@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DevTechs — Relatório de Auditoria de Segurança</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --surface: #111827;
+      --border: #1f2937;
+      --text: #e5e7eb;
+      --muted: #6b7280;
+      --primary: #38bdf8;
+      --critical: #ef4444;
+      --high: #f97316;
+      --medium: #eab308;
+      --low: #22c55e;
+      --info: #3b82f6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; line-height: 1.6; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+    header { border-bottom: 1px solid var(--border); padding-bottom: 2rem; margin-bottom: 2rem; }
+    header h1 { font-size: 2rem; font-weight: 700; color: var(--primary); }
+    header p { color: var(--muted); margin-top: .4rem; }
+    .meta { display: flex; gap: 2rem; flex-wrap: wrap; margin-top: 1rem; }
+    .meta-item { font-size: .85rem; }
+    .meta-item span { color: var(--muted); }
+    .meta-item strong { color: var(--text); }
+    h2 { font-size: 1.4rem; font-weight: 600; margin: 2rem 0 1rem; padding-bottom: .5rem; border-bottom: 1px solid var(--border); }
+    h3 { font-size: 1.1rem; font-weight: 600; margin-top: 1.5rem; }
+    /* Summary cards */
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; padding: 1.25rem; text-align: center; }
+    .summary-card .count { font-size: 2.5rem; font-weight: 700; }
+    .summary-card .label { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-top: .25rem; }
+    .critical .count { color: var(--critical); }
+    .high .count { color: var(--high); }
+    .medium .count { color: var(--medium); }
+    .low .count { color: var(--low); }
+    /* Badge */
+    .badge { display: inline-block; padding: .2rem .6rem; border-radius: 9999px; font-size: .75rem; font-weight: 600; }
+    .badge.CRITICAL { background: rgba(239,68,68,.2); color: var(--critical); border: 1px solid var(--critical); }
+    .badge.HIGH { background: rgba(249,115,22,.2); color: var(--high); border: 1px solid var(--high); }
+    .badge.MEDIUM { background: rgba(234,179,8,.2); color: var(--medium); border: 1px solid var(--medium); }
+    .badge.LOW { background: rgba(34,197,94,.2); color: var(--low); border: 1px solid var(--low); }
+    .badge.OK { background: rgba(34,197,94,.2); color: var(--low); border: 1px solid var(--low); }
+    /* Finding */
+    .finding { background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; padding: 1.25rem; margin-bottom: 1rem; }
+    .finding-header { display: flex; align-items: center; gap: .75rem; margin-bottom: .75rem; }
+    .finding-title { font-weight: 600; font-size: 1rem; }
+    .finding-location { font-family: monospace; font-size: .8rem; color: var(--muted); background: var(--bg); padding: .2rem .5rem; border-radius: .3rem; display: inline-block; margin-bottom: .5rem; }
+    .finding-desc { font-size: .9rem; color: #d1d5db; }
+    .finding-fix { margin-top: .75rem; padding: .75rem; background: rgba(59,130,246,.1); border-left: 3px solid var(--info); border-radius: 0 .4rem .4rem 0; }
+    .finding-fix strong { color: var(--info); font-size: .8rem; display: block; margin-bottom: .3rem; }
+    .finding-fix p { font-size: .85rem; }
+    code { font-family: monospace; font-size: .85em; background: var(--bg); padding: .1rem .3rem; border-radius: .25rem; color: var(--primary); }
+    pre { font-family: monospace; font-size: .82rem; background: var(--bg); padding: .75rem 1rem; border-radius: .5rem; overflow-x: auto; margin: .5rem 0; border: 1px solid var(--border); color: #a5f3fc; }
+    /* Test results */
+    .test-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    .test-table th { text-align: left; padding: .6rem .75rem; background: var(--surface); color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--border); }
+    .test-table td { padding: .6rem .75rem; border-bottom: 1px solid var(--border); }
+    .test-table tr:hover td { background: rgba(255,255,255,.02); }
+    .status-ok { color: var(--low); font-weight: 600; }
+    .status-fix { color: var(--medium); font-weight: 600; }
+    .status-err { color: var(--critical); font-weight: 600; }
+    /* Priority table */
+    .priority-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    .priority-table th { text-align: left; padding: .6rem .75rem; background: var(--surface); color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--border); }
+    .priority-table td { padding: .6rem .75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .priority-table tr:hover td { background: rgba(255,255,255,.02); }
+    footer { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); text-align: center; color: var(--muted); font-size: .85rem; }
+    .section-intro { color: var(--muted); font-size: .95rem; margin-bottom: 1rem; }
+    ul.findings-list { list-style: none; }
+    .toc { background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; padding: 1.25rem 1.75rem; margin-bottom: 2rem; }
+    .toc h3 { font-size: 1rem; margin-bottom: .75rem; }
+    .toc ol { margin-left: 1.25rem; }
+    .toc li { margin: .3rem 0; }
+    .toc a { color: var(--primary); text-decoration: none; font-size: .9rem; }
+    .toc a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Relatório de Auditoria de Segurança</h1>
+    <p>DevTechs — Plataforma de Gestão Empresarial (Monorepo)</p>
+    <div class="meta">
+      <div class="meta-item"><span>Data: </span><strong>26/04/2026</strong></div>
+      <div class="meta-item"><span>Branch: </span><strong>claude/setup-turborepo-monorepo-GhUt6</strong></div>
+      <div class="meta-item"><span>Auditores: </span><strong>Claude Sonnet 4.6 (AI Security Analyst)</strong></div>
+      <div class="meta-item"><span>Escopo: </span><strong>Código-fonte completo + Infraestrutura</strong></div>
+      <div class="meta-item"><span>Serviços avaliados: </span><strong>10 (auth, rh, projects, finance, notification, payments, license, support, devops, developer)</strong></div>
+    </div>
+  </header>
+
+  <div class="toc">
+    <h3>Sumário</h3>
+    <ol>
+      <li><a href="#executive-summary">Resumo Executivo</a></li>
+      <li><a href="#findings-critical">Achados Críticos</a></li>
+      <li><a href="#findings-high">Achados de Alta Severidade</a></li>
+      <li><a href="#findings-medium">Achados de Média Severidade</a></li>
+      <li><a href="#findings-low">Achados de Baixa Severidade</a></li>
+      <li><a href="#positive">Controles Positivos Identificados</a></li>
+      <li><a href="#test-results">Resultados dos Testes Funcionais</a></li>
+      <li><a href="#priority">Plano de Remediação Priorizado</a></li>
+    </ol>
+  </div>
+
+  <!-- Executive Summary -->
+  <section id="executive-summary">
+    <h2>Resumo Executivo</h2>
+    <p class="section-intro">
+      A auditoria abrangeu análise estática de código, revisão de configurações de infraestrutura,
+      teste funcional de todos os módulos e avaliação de mecanismos de autenticação e autorização.
+    </p>
+    <div class="summary-grid">
+      <div class="summary-card critical">
+        <div class="count">1</div>
+        <div class="label">Crítico</div>
+      </div>
+      <div class="summary-card high">
+        <div class="count">5</div>
+        <div class="label">Alto</div>
+      </div>
+      <div class="summary-card medium">
+        <div class="count">11</div>
+        <div class="label">Médio</div>
+      </div>
+      <div class="summary-card low">
+        <div class="count">3</div>
+        <div class="label">Baixo</div>
+      </div>
+    </div>
+    <p style="color:var(--muted); font-size:.9rem;">
+      A aplicação possui uma base sólida de segurança — JWT com rotação, rate limiting por IP,
+      auditoria de eventos, guards de permissão em todos os endpoints sensíveis, e proteção contra
+      open redirect. Os principais riscos identificados concentram-se em gestão de segredos e
+      hardening de tokens de sessão.
+    </p>
+  </section>
+
+  <!-- Critical Findings -->
+  <section id="findings-critical">
+    <h2>Achados Críticos</h2>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge CRITICAL">CRÍTICO</span>
+        <span class="finding-title">SEC-001 — Credenciais reais expostas no arquivo .env</span>
+      </div>
+      <div class="finding-location">.env (linhas 87–88, 94, 105–106)</div>
+      <div class="finding-desc">
+        O arquivo <code>.env</code> contém tokens e senhas de produção que, embora estejam no
+        <code>.gitignore</code>, ficam expostos a qualquer pessoa com acesso à máquina de desenvolvimento
+        ou que obtenha acesso ao ambiente:
+        <ul style="margin:.5rem 0 0 1.25rem; font-size:.85rem; color:var(--muted);">
+          <li>Mercado Pago: <code>MP_ACCESS_TOKEN=TEST-6479766634240109-…</code></li>
+          <li>Resend API: <code>RESEND_API_KEY=re_iAJSLi4A_…</code></li>
+          <li>Hostinger API: <code>HOSTINGER_API_TOKEN=y3PD5OcOEUOAZ34U…</code></li>
+          <li>PostgreSQL: senha com caracteres especiais em texto claro</li>
+        </ul>
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação imediata</strong>
+        <p>1. Revogar e regenerar <strong>todos</strong> os tokens listados acima.<br>
+        2. Migrar para gerenciador de segredos (AWS Secrets Manager, HashiCorp Vault, ou Doppler).<br>
+        3. Para desenvolvimento: usar <code>.env.local</code> (gitignored separadamente) com variáveis injetadas por CI/CD.<br>
+        4. Adicionar <code>git-secrets</code> ou <code>gitleaks</code> como hook de pre-commit.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- High Findings -->
+  <section id="findings-high">
+    <h2>Achados de Alta Severidade</h2>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge HIGH">ALTO</span>
+        <span class="finding-title">SEC-002 — Refresh Token exposto ao cliente JavaScript</span>
+      </div>
+      <div class="finding-location">apps/web/src/auth.ts (linhas 263, 319)</div>
+      <div class="finding-desc">
+        O refresh token é armazenado no objeto de sessão e retornado via <code>useSession()</code>,
+        tornando-o acessível ao JavaScript do lado do cliente. Um XSS bem-sucedido pode roubar o
+        refresh token e manter acesso persistente mesmo após expiração do access token.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Remover <code>session.refreshToken</code> do retorno da callback <code>session()</code>.
+        Armazenar o refresh token exclusivamente no JWT HttpOnly do servidor.
+        Criar um endpoint <code>POST /api/auth/refresh</code> que leia o token via cookie
+        e execute o refresh transparentemente.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge HIGH">ALTO</span>
+        <span class="finding-title">SEC-003 — Segredos JWT fracos / previsíveis em desenvolvimento</span>
+      </div>
+      <div class="finding-location">.env (linhas 32–38)</div>
+      <div class="finding-desc">
+        Os segredos JWT usam strings legíveis como <code>dev-jwt-access-secret-please-change-in-prod-2026-04</code>.
+        Mesmo em desenvolvimento, segredos previsíveis reduzem a eficácia de testes de segurança locais
+        e aumentam o risco de "copy-paste" para produção.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Gerar segredos com: <code>openssl rand -base64 64</code> para cada variável JWT.<br>
+        Adicionar validação de startup que rejeite segredos menores que 32 caracteres em produção.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge HIGH">ALTO</span>
+        <span class="finding-title">SEC-004 — Swagger/OpenAPI exposto sem autenticação de camada de rede</span>
+      </div>
+      <div class="finding-location">infra/nginx.conf (linhas 126–140)</div>
+      <div class="finding-desc">
+        A documentação Swagger dos serviços (<code>/auth/docs</code>, etc.) é servida pelo nginx sem
+        autenticação adicional. Mesmo que a aplicação desabilite Swagger em produção via variável de
+        ambiente, a configuração nginx não tem fallback.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Adicionar <code>satisfy any; allow 127.0.0.1; deny all;</code> no bloco nginx para rotas <code>/docs</code>
+        em produção. Alternativamente, usar <code>auth_request</code> para verificar sessão válida antes de servir a documentação.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge HIGH">ALTO</span>
+        <span class="finding-title">SEC-005 — Valores placeholder no .env.example muito próximos de credenciais reais</span>
+      </div>
+      <div class="finding-location">.env.example</div>
+      <div class="finding-desc">
+        O arquivo de exemplo usa valores como <code>POSTGRES_PASSWORD=devtechs</code> e
+        <code>minioadmin</code> para MinIO — credenciais padrão amplamente conhecidas.
+        Desenvolvedores novos podem copiá-las sem alterar.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Substituir por <code>POSTGRES_PASSWORD=SUBSTITUA_POR_SENHA_FORTE_AQUI</code> e adicionar
+        comentários explicando requisitos mínimos (ex.: mínimo 24 caracteres, gerado por <code>openssl rand</code>).</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge HIGH">ALTO</span>
+        <span class="finding-title">SEC-006 — Rate limiting usando memória local (não Redis)</span>
+      </div>
+      <div class="finding-location">services/auth-service/src/common/rate-limit/rate-limit.module.ts</div>
+      <div class="finding-desc">
+        O módulo de throttling global cai para armazenamento em memória por instância.
+        Em deployments multi-instância (horizontal scaling), cada instância mantém contadores
+        independentes, permitindo que atacantes ultrapassem limites distribuindo requisições
+        entre instâncias. O <code>LoginRateLimitGuard</code> (Redis-backed) é a exceção correta.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Implementar <code>ThrottlerStorageRedisService</code> via <code>@nest-lab/throttler-storage-redis</code>
+        para todos os limitadores de taxa. O pattern já existe no <code>LoginRateLimitGuard</code>
+        e pode ser replicado.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Medium Findings -->
+  <section id="findings-medium">
+    <h2>Achados de Média Severidade</h2>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge MEDIUM">MÉDIO</span>
+        <span class="finding-title">SEC-007 — Content Security Policy (CSP) ausente</span>
+      </div>
+      <div class="finding-location">apps/web/next.config.ts / infra/nginx.conf</div>
+      <div class="finding-desc">
+        A aplicação define headers como <code>X-Frame-Options</code> e <code>X-Content-Type-Options</code>,
+        mas não possui <code>Content-Security-Policy</code>. Scripts inline e <code>eval()</code>
+        ficam não-restritos, ampliando superfície de ataque XSS.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Adicionar em <code>next.config.ts</code>:
+        <pre>{ key: 'Content-Security-Policy',
+  value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' ws: wss:;" }</pre>
+        Iniciar com política permissiva e endurecer progressivamente usando relatórios (<code>report-uri</code>).</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge MEDIUM">MÉDIO</span>
+        <span class="finding-title">SEC-008 — CORS com exposedHeaders: Authorization</span>
+      </div>
+      <div class="finding-location">services/*/src/main.ts</div>
+      <div class="finding-desc">
+        A configuração CORS expõe o header <code>Authorization</code> para todas as origens permitidas.
+        Isso permite que páginas em origens listadas leiam tokens Bearer de respostas cross-origin.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Remover <code>Authorization</code> de <code>exposedHeaders</code>. O cliente já possui
+        o token no momento da requisição; não é necessário lê-lo da resposta.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge MEDIUM">MÉDIO</span>
+        <span class="finding-title">SEC-009 — Ausência de @UseGuards explícito em alguns controllers</span>
+      </div>
+      <div class="finding-location">services/notification-service/src/ · services/payments-service/src/</div>
+      <div class="finding-desc">
+        Alguns controllers dependem implicitamente do guard global registrado no AppModule.
+        Refatorações futuras que removam o guard global podem expor endpoints involuntariamente.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Adicionar <code>@UseGuards(JwtAuthGuard)</code> explicitamente em cada controller que
+        requer autenticação. Defesa em profundidade.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge MEDIUM">MÉDIO</span>
+        <span class="finding-title">SEC-010 — Porta 5432 do PostgreSQL exposta no host</span>
+      </div>
+      <div class="finding-location">infra/docker-compose.yml (linha 55)</div>
+      <div class="finding-desc">
+        O PostgreSQL expõe a porta 5432 em todas as interfaces do host. Em ambiente de
+        desenvolvimento com redes compartilhadas ou VMs, isso aumenta a superfície de ataque.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Alterar para <code>127.0.0.1:5432:5432</code> para restringir ao localhost,
+        ou remover o mapeamento de porta e acessar exclusivamente via rede Docker interna.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge MEDIUM">MÉDIO</span>
+        <span class="finding-title">SEC-011 — Ausência de rotação de refresh token (token reuse detection)</span>
+      </div>
+      <div class="finding-location">apps/web/src/auth.ts (linhas 268–288)</div>
+      <div class="finding-desc">
+        O fluxo de refresh emite novos tokens mas não invalida o refresh token anterior,
+        permitindo replay de refresh tokens roubados.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Implementar "refresh token family" — ao usar um refresh token, marcá-lo como usado e
+        detectar reuso (indicador de roubo). Invalidar toda a família de tokens em caso de reuso.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge MEDIUM">MÉDIO</span>
+        <span class="finding-title">SEC-012 — Credenciais padrão em docker-compose</span>
+      </div>
+      <div class="finding-location">infra/docker-compose.yml (linhas 50–53)</div>
+      <div class="finding-desc">
+        Valores default como <code>POSTGRES_USER:-devtechs</code> e <code>POSTGRES_PASSWORD:-devtechs</code>
+        são usados quando variáveis não estão definidas.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Remover os fallbacks e exigir variáveis explicitamente. Adicionar validação no startup
+        que falhe se variáveis obrigatórias estiverem ausentes.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge MEDIUM">MÉDIO</span>
+        <span class="finding-title">SEC-013 — Autenticação entre serviços (service-to-service) incompleta</span>
+      </div>
+      <div class="finding-location">services/* (múltiplos)</div>
+      <div class="finding-desc">
+        Existe <code>AUTH_INTERNAL_SECRET</code> mas não é utilizado de forma consistente em
+        todas as chamadas inter-serviços. Serviços comprometidos poderiam fazer chamadas não-autenticadas.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Implementar um <code>InternalAuthGuard</code> que verifique o header
+        <code>X-Internal-Secret</code> em todas as rotas inter-serviços.
+        Usar o <code>AUTH_INTERNAL_SECRET</code> já definido no .env.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge MEDIUM">MÉDIO</span>
+        <span class="finding-title">SEC-014 — Limite de body size inconsistente (nginx vs. serviços)</span>
+      </div>
+      <div class="finding-location">infra/nginx.conf (linha 30) · services/payments-service/src/main.ts</div>
+      <div class="finding-desc">
+        Nginx permite <code>client_max_body_size 25m</code> enquanto serviços limitam a 1MB.
+        A discrepância pode mascarar vulnerabilidades de upload em ambientes sem nginx.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Alinhar limites por rota: <code>10mb</code> para uploads de documentos, <code>100kb</code>
+        para endpoints de API padrão. Definir no nginx por location block.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge MEDIUM">MÉDIO</span>
+        <span class="finding-title">SEC-015 — Eventos de segurança não auditados completamente</span>
+      </div>
+      <div class="finding-location">services/auth-service/src/modules/audit/</div>
+      <div class="finding-desc">
+        Tentativas de refresh de token, bypasses de rate limit, e tentativas de escalação de
+        permissão não são registradas no log de auditoria.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Expandir o <code>AuditDecorator</code> para cobrir: refresh token usage,
+        rate limit hits, permission denied, e OAuth account linking.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge MEDIUM">MÉDIO</span>
+        <span class="finding-title">SEC-016 — HTTP sem redirecionamento para HTTPS em nginx</span>
+      </div>
+      <div class="finding-location">infra/nginx.conf</div>
+      <div class="finding-desc">
+        O servidor HTTP (porta 80) não redireciona para HTTPS, tornando cookies de sessão
+        vulneráveis a interceptação em produção.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Adicionar no bloco server porta 80: <code>return 301 https://$host$request_uri;</code>
+        e garantir que cookies de sessão tenham atributo <code>Secure</code>.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge MEDIUM">MÉDIO</span>
+        <span class="finding-title">SEC-017 — CSRF não documentado para rotas de API customizadas</span>
+      </div>
+      <div class="finding-location">apps/web/src/app/api/</div>
+      <div class="finding-desc">
+        NextAuth v5 protege suas rotas automaticamente, mas rotas de API customizadas
+        não possuem proteção CSRF explícita documentada.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Verificar que todas as rotas <code>POST/PUT/DELETE</code> customizadas exigem
+        sessão válida via <code>auth()</code>. NextAuth's session cookie é SameSite=Lax por
+        padrão — suficiente para a maioria dos casos. Documentar a estratégia.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Low Findings -->
+  <section id="findings-low">
+    <h2>Achados de Baixa Severidade</h2>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge LOW">BAIXO</span>
+        <span class="finding-title">SEC-018 — Header X-Permitted-Cross-Domain-Policies ausente</span>
+      </div>
+      <div class="finding-location">apps/web/next.config.ts</div>
+      <div class="finding-desc">Proteção contra políticas cross-domain (Flash/PDF) ausente.</div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Adicionar: <code>{ key: 'X-Permitted-Cross-Domain-Policies', value: 'none' }</code></p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge LOW">BAIXO</span>
+        <span class="finding-title">SEC-019 — Endpoint /health sem rate limiting</span>
+      </div>
+      <div class="finding-location">services/*/src/health.controller.ts</div>
+      <div class="finding-desc">
+        Endpoints de health check estão sem rate limiting. Embora de baixo risco,
+        podem ser alvos de fingerprinting de serviços.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Limitar /health a 60 requisições/minuto por IP. Adequado para health checks de load balancers.</p>
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-header">
+        <span class="badge LOW">BAIXO</span>
+        <span class="finding-title">SEC-020 — Logs de desenvolvimento podem vazar informações de stack traces</span>
+      </div>
+      <div class="finding-location">services/*/src/main.ts (LOG_LEVEL=info)</div>
+      <div class="finding-desc">
+        Com <code>LOG_LEVEL=info</code>, stack traces completos de erros podem ser retornados
+        em respostas de erro em ambiente de desenvolvimento.
+      </div>
+      <div class="finding-fix">
+        <strong>Remediação</strong>
+        <p>Em produção, usar <code>LOG_LEVEL=warn</code> e garantir que respostas de erro
+        retornem apenas mensagens genéricas para o cliente (o NestJS HttpExceptionFilter
+        já faz isso — verificar configuração).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Positive Controls -->
+  <section id="positive">
+    <h2>Controles Positivos Identificados</h2>
+    <table class="test-table">
+      <thead>
+        <tr>
+          <th>Controle</th>
+          <th>Localização</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Rate limiting com Redis no fluxo de login</td>
+          <td>services/auth-service/src/common/rate-limit/login-rate-limit.guard.ts</td>
+          <td class="status-ok">✅ Implementado</td>
+        </tr>
+        <tr>
+          <td>Proteção contra open redirect no callback de login</td>
+          <td>apps/web/src/app/login/login-form.tsx · safeCallback()</td>
+          <td class="status-ok">✅ Implementado</td>
+        </tr>
+        <tr>
+          <td>Auditoria de eventos de segurança</td>
+          <td>services/auth-service/src/modules/audit/</td>
+          <td class="status-ok">✅ Implementado</td>
+        </tr>
+        <tr>
+          <td>Autenticação 2FA (TOTP) com criptografia AES do segredo</td>
+          <td>services/auth-service/src/modules/two-factor/</td>
+          <td class="status-ok">✅ Implementado</td>
+        </tr>
+        <tr>
+          <td>Guards de permissão granular por módulo</td>
+          <td>services/*/src/common/guards/permission.guard.ts</td>
+          <td class="status-ok">✅ Implementado</td>
+        </tr>
+        <tr>
+          <td>Queries Prisma parametrizadas (sem SQL injection)</td>
+          <td>services/*/src/**/*.service.ts</td>
+          <td class="status-ok">✅ Seguro</td>
+        </tr>
+        <tr>
+          <td>Validação de DTOs com class-validator</td>
+          <td>services/*/src/**/*.dto.ts</td>
+          <td class="status-ok">✅ Implementado</td>
+        </tr>
+        <tr>
+          <td>Headers de segurança básicos (X-Frame-Options, X-Content-Type-Options)</td>
+          <td>infra/nginx.conf · apps/web/next.config.ts</td>
+          <td class="status-ok">✅ Configurado</td>
+        </tr>
+        <tr>
+          <td>Refresh token com expiração configurável</td>
+          <td>services/auth-service + JWT_REFRESH_EXPIRES_IN</td>
+          <td class="status-ok">✅ Implementado</td>
+        </tr>
+        <tr>
+          <td>Senhas com bcrypt (hash forte)</td>
+          <td>services/auth-service/src/modules/auth/auth.service.ts</td>
+          <td class="status-ok">✅ Implementado</td>
+        </tr>
+        <tr>
+          <td>Verificação de email obrigatória (emailVerifiedAt)</td>
+          <td>packages/database/prisma/schema.prisma</td>
+          <td class="status-ok">✅ Implementado</td>
+        </tr>
+        <tr>
+          <td>Tokens de verificação de email com expiração</td>
+          <td>services/auth-service/src/modules/email-verification/</td>
+          <td class="status-ok">✅ Implementado</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Functional Test Results -->
+  <section id="test-results">
+    <h2>Resultados dos Testes Funcionais</h2>
+    <p class="section-intro">Módulos testados com usuário administrador (edigamerhd.player@gmail.com) no navegador.</p>
+
+    <h3>Infraestrutura &amp; Serviços</h3>
+    <table class="test-table">
+      <thead>
+        <tr><th>Serviço</th><th>Porta</th><th>Health</th><th>Observações</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>auth-service</td><td>4001</td><td class="status-ok">✅ OK</td><td>JWT, rate limiting, 2FA operacionais</td></tr>
+        <tr><td>rh-service</td><td>4002</td><td class="status-ok">✅ OK</td><td>Funcionando após correção de URL</td></tr>
+        <tr><td>projects-service</td><td>4003</td><td class="status-ok">✅ OK</td><td>Funcionando após correção de URL</td></tr>
+        <tr><td>finance-service</td><td>4004</td><td class="status-ok">✅ OK</td><td>Funcionando após correção de tipo de resposta</td></tr>
+        <tr><td>notification-service</td><td>4005</td><td class="status-ok">✅ OK</td><td>Operacional</td></tr>
+        <tr><td>payments-service</td><td>4006</td><td class="status-ok">✅ OK</td><td>Mercado Pago integrado</td></tr>
+        <tr><td>license-service</td><td>4007</td><td class="status-ok">✅ OK</td><td>Operacional</td></tr>
+        <tr><td>support-service</td><td>4008</td><td class="status-ok">✅ OK</td><td>WebSocket suporte operacional</td></tr>
+        <tr><td>devops-service</td><td>4009</td><td class="status-ok">✅ OK</td><td>Pipelines e deployments operacionais</td></tr>
+        <tr><td>developer-service</td><td>4010</td><td class="status-ok">✅ OK</td><td>VPS/Hostinger integrado</td></tr>
+        <tr><td>Next.js (apps/web)</td><td>3000</td><td class="status-ok">✅ OK</td><td>SSR funcionando, HMR ativo</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Módulo Admin — Configurações</h3>
+    <table class="test-table">
+      <thead>
+        <tr><th>Página</th><th>Rota</th><th>Status</th><th>Achados/Ações</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Resumo de permissões</td><td>/admin/configuracoes</td><td class="status-ok">✅ OK</td><td>51 permissões, 9 módulos exibidos</td></tr>
+        <tr><td>Papéis</td><td>/admin/configuracoes/papeis</td><td class="status-ok">✅ OK</td><td>CRUD de roles funcionando</td></tr>
+        <tr><td>Permissões</td><td>/admin/configuracoes/permissoes</td><td class="status-ok">✅ OK</td><td>Listagem agrupada por módulo</td></tr>
+        <tr><td>Usuários</td><td>/admin/configuracoes/usuarios</td><td class="status-ok">✅ OK</td><td>Listagem, ban/unban funcionando</td></tr>
+        <tr><td>Auditoria</td><td>/admin/configuracoes/auditoria</td><td class="status-fix">✅ Corrigido</td><td>Filtro de data corrigido (dateTo estendido para T23:59:59Z)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Módulo Admin — Developer</h3>
+    <table class="test-table">
+      <thead>
+        <tr><th>Página</th><th>Rota</th><th>Status</th><th>Achados/Ações</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Serviços</td><td>/admin/developer</td><td class="status-ok">✅ OK</td><td>Health check de todos os 10 serviços</td></tr>
+        <tr><td>Logs</td><td>/admin/developer/logs</td><td class="status-ok">✅ OK</td><td>WebSocket streaming funcionando</td></tr>
+        <tr><td>Filas (Queues)</td><td>/admin/developer/queues</td><td class="status-ok">✅ OK</td><td>6 filas BullMQ visíveis</td></tr>
+        <tr><td>Configuração</td><td>/admin/developer/config</td><td class="status-ok">✅ OK</td><td>Variáveis de ambiente</td></tr>
+        <tr><td>VPS</td><td>/admin/developer/vps</td><td class="status-fix">✅ Corrigido</td><td>6 permissões adicionadas + re-login necessário</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Módulos Principais</h3>
+    <table class="test-table">
+      <thead>
+        <tr><th>Módulo</th><th>Rota</th><th>Status</th><th>Achados/Ações</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>RH</td><td>/admin/rh</td><td class="status-fix">✅ Corrigido</td><td>URL da API corrigida (porta 4002, fallback NEXT_PUBLIC_RH_URL)</td></tr>
+        <tr><td>Projetos</td><td>/admin/projetos</td><td class="status-fix">✅ Corrigido</td><td>URL da API corrigida (porta 4003)</td></tr>
+        <tr><td>Financeiro</td><td>/admin/financeiro</td><td class="status-fix">✅ Corrigido</td><td>Bug "R$ NaN" corrigido — income.total vs income</td></tr>
+        <tr><td>Suporte</td><td>/admin/suporte</td><td class="status-ok">✅ OK</td><td>1 ticket visível, chat operacional</td></tr>
+        <tr><td>DevOps</td><td>/admin/devops</td><td class="status-fix">✅ Corrigido</td><td>URL corrigida (porta 4009)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Bugs Corrigidos Durante a Sessão</h3>
+    <table class="test-table">
+      <thead>
+        <tr><th>#</th><th>Arquivo</th><th>Bug</th><th>Correção</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>apps/web/src/lib/rh-api.ts</td>
+          <td>URL padrão porta 3002 (errada), sem fallback NEXT_PUBLIC_RH_URL</td>
+          <td>Porta corrigida para 4002, fallback adicionado</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>apps/web/src/lib/projects-api.ts</td>
+          <td>URL padrão porta 3004 (errada)</td>
+          <td>Porta corrigida para 4003</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>apps/web/src/lib/devops-api.ts</td>
+          <td>URL padrão porta 3005 (errada)</td>
+          <td>Porta corrigida para 4009</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>apps/web/src/lib/developer-api.ts</td>
+          <td>Sem fallback NEXT_PUBLIC_DEVELOPER_URL</td>
+          <td>Fallback adicionado</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>apps/web/src/app/admin/financeiro/page.tsx</td>
+          <td>Interface TransactionSummary incorreta — income: number em vez de { total: number }</td>
+          <td>Interface atualizada, uso de income.total</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>services/auth-service/src/modules/audit/audit.service.ts</td>
+          <td>Filtro dateTo excluía registros do dia atual (midnight UTC)</td>
+          <td>dateTo estendido para T23:59:59.999Z quando apenas data fornecida</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>packages/database/prisma/seed.ts</td>
+          <td>6 permissões do módulo developer ausentes no DB</td>
+          <td>dev:services:view, dev:services:restart, dev:services:stop, dev:config:view, dev:queues:view, dev:vps:manage adicionadas</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>.env</td>
+          <td>Variáveis *_SERVICE_URL ausentes; serviços usavam *_URL não reconhecidas</td>
+          <td>RH_SERVICE_URL, PROJECTS_SERVICE_URL, FINANCE_SERVICE_URL, etc. adicionadas</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Remediation Plan -->
+  <section id="priority">
+    <h2>Plano de Remediação Priorizado</h2>
+    <table class="priority-table">
+      <thead>
+        <tr>
+          <th>Prioridade</th>
+          <th>ID</th>
+          <th>Ação</th>
+          <th>Esforço</th>
+          <th>Responsável</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge CRITICAL">CRÍTICO</span></td>
+          <td>SEC-001</td>
+          <td>Revogar e regenerar todos os tokens expostos (MP, Resend, Hostinger)</td>
+          <td>1h</td>
+          <td>DevOps / Lead</td>
+        </tr>
+        <tr>
+          <td><span class="badge HIGH">ALTO</span></td>
+          <td>SEC-002</td>
+          <td>Remover refreshToken do objeto de sessão client-side</td>
+          <td>2h</td>
+          <td>Backend</td>
+        </tr>
+        <tr>
+          <td><span class="badge HIGH">ALTO</span></td>
+          <td>SEC-003</td>
+          <td>Gerar segredos JWT criptograficamente fortes</td>
+          <td>30min</td>
+          <td>DevOps</td>
+        </tr>
+        <tr>
+          <td><span class="badge HIGH">ALTO</span></td>
+          <td>SEC-006</td>
+          <td>Migrar rate limiting global para Redis</td>
+          <td>4h</td>
+          <td>Backend</td>
+        </tr>
+        <tr>
+          <td><span class="badge MEDIUM">MÉDIO</span></td>
+          <td>SEC-007</td>
+          <td>Adicionar Content-Security-Policy header</td>
+          <td>2h</td>
+          <td>Frontend</td>
+        </tr>
+        <tr>
+          <td><span class="badge MEDIUM">MÉDIO</span></td>
+          <td>SEC-010</td>
+          <td>Restringir porta PostgreSQL ao localhost</td>
+          <td>30min</td>
+          <td>DevOps</td>
+        </tr>
+        <tr>
+          <td><span class="badge MEDIUM">MÉDIO</span></td>
+          <td>SEC-011</td>
+          <td>Implementar detecção de reuso de refresh token</td>
+          <td>8h</td>
+          <td>Backend</td>
+        </tr>
+        <tr>
+          <td><span class="badge MEDIUM">MÉDIO</span></td>
+          <td>SEC-013</td>
+          <td>Autenticar chamadas inter-serviços com AUTH_INTERNAL_SECRET</td>
+          <td>6h</td>
+          <td>Backend</td>
+        </tr>
+        <tr>
+          <td><span class="badge MEDIUM">MÉDIO</span></td>
+          <td>SEC-016</td>
+          <td>Forçar HTTPS no nginx com redirect 301</td>
+          <td>1h</td>
+          <td>DevOps</td>
+        </tr>
+        <tr>
+          <td><span class="badge LOW">BAIXO</span></td>
+          <td>SEC-009</td>
+          <td>Adicionar @UseGuards explícito em todos os controllers</td>
+          <td>2h</td>
+          <td>Backend</td>
+        </tr>
+        <tr>
+          <td><span class="badge LOW">BAIXO</span></td>
+          <td>SEC-018</td>
+          <td>Adicionar X-Permitted-Cross-Domain-Policies: none</td>
+          <td>15min</td>
+          <td>Frontend</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    <p>DevTechs — Relatório de Auditoria de Segurança &amp; Testes Funcionais</p>
+    <p>Gerado em 26/04/2026 por Claude Sonnet 4.6 (AI Security Analyst)</p>
+    <p style="margin-top:.5rem; color:#374151; font-size:.8rem;">
+      Este relatório é baseado em análise estática de código e testes funcionais.
+      Não substitui uma auditoria de penetração profissional completa.
+    </p>
+  </footer>
+
+</div>
+</body>
+</html>

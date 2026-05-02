@@ -21,6 +21,21 @@ interface PermissionSeed {
 
 const PERMISSIONS: PermissionSeed[] = [
   // ------------------------------------------------------------------
+  // AUTH
+  // ------------------------------------------------------------------
+  {
+    key: 'auth:users:manage',
+    name: 'Manage users',
+    description: 'List, ban, suspend, activate users and revoke sessions',
+    module: PermissionModule.AUTH,
+  },
+  {
+    key: 'auth:sessions:manage',
+    name: 'Manage sessions',
+    description: 'View and revoke active user sessions',
+    module: PermissionModule.AUTH,
+  },
+  // ------------------------------------------------------------------
   // RH
   // ------------------------------------------------------------------
   {
@@ -238,6 +253,12 @@ const PERMISSIONS: PermissionSeed[] = [
   // Developer (super-user / platform-level)
   // ------------------------------------------------------------------
   {
+    key: 'dev:services:view',
+    name: 'View services',
+    description: 'View containers and service status',
+    module: PermissionModule.DEVELOPER,
+  },
+  {
     key: 'dev:services:restart',
     name: 'Restart services',
     description: 'Restart internal services on the VPS',
@@ -256,10 +277,22 @@ const PERMISSIONS: PermissionSeed[] = [
     module: PermissionModule.DEVELOPER,
   },
   {
+    key: 'dev:config:view',
+    name: 'View platform config',
+    description: 'View platform configuration (read-only)',
+    module: PermissionModule.DEVELOPER,
+  },
+  {
     key: 'dev:config:edit',
     name: 'Edit platform config',
     description:
       'Edit roles, permissions, and other platform configuration (required to manage RBAC itself)',
+    module: PermissionModule.DEVELOPER,
+  },
+  {
+    key: 'dev:queues:view',
+    name: 'View queues',
+    description: 'View BullMQ job queues and metrics',
     module: PermissionModule.DEVELOPER,
   },
   {
@@ -355,6 +388,64 @@ async function upsertMemberRole(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------
+// Dev user
+// ---------------------------------------------------------------------
+
+/**
+ * Default development user — created only in non-production environments.
+ *
+ * email    : edigamerhd.player@gmail.com
+ * password : L$5a7*(B  (bcrypt hash below, rounds=12)
+ *
+ * The user is assigned the `admin` role and has emailVerified=true so
+ * every protected route is accessible without extra setup steps.
+ * Idempotent: safe to run repeatedly.
+ */
+async function upsertDevUser(): Promise<void> {
+  if (process.env.NODE_ENV === 'production') {
+    console.info('[seed] skipping dev user in production');
+    return;
+  }
+
+  const DEV_EMAIL = 'edigamerhd.player@gmail.com';
+
+  // pre-computed: bcrypt.hashSync('L$5a7*(B', 12)
+  const DEV_PASSWORD_HASH =
+    '$2b$12$jYasMRgxPHoR.edz.yr74.LNi0I9nFwhhWj.MOi3a8xmcofFEnzP6';
+
+  console.info(`[seed] upserting dev user ${DEV_EMAIL}…`);
+
+  const user = await prisma.user.upsert({
+    where: { email: DEV_EMAIL },
+    update: {
+      name: 'Dev Admin',
+      passwordHash: DEV_PASSWORD_HASH,
+      emailVerified: true,
+      emailVerifiedAt: new Date('2026-01-01T00:00:00Z'),
+      status: 'ACTIVE',
+    },
+    create: {
+      email: DEV_EMAIL,
+      name: 'Dev Admin',
+      passwordHash: DEV_PASSWORD_HASH,
+      emailVerified: true,
+      emailVerifiedAt: new Date('2026-01-01T00:00:00Z'),
+      status: 'ACTIVE',
+    },
+  });
+
+  // Assign the admin role (idempotent)
+  const adminRole = await prisma.role.findUniqueOrThrow({ where: { name: 'admin' } });
+  await prisma.userRole.upsert({
+    where: { userId_roleId: { userId: user.id, roleId: adminRole.id } },
+    update: {},
+    create: { userId: user.id, roleId: adminRole.id },
+  });
+
+  console.info(`[seed] dev user ready (id=${user.id})`);
+}
+
+// ---------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------
 
@@ -362,6 +453,7 @@ async function main(): Promise<void> {
   await upsertPermissions();
   await upsertAdminRole();
   await upsertMemberRole();
+  await upsertDevUser();
   console.info('[seed] done');
 }
 

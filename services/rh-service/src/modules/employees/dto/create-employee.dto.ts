@@ -1,12 +1,14 @@
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsDateString,
   IsEmail,
+  IsNumber,
   IsOptional,
   IsString,
   Length,
   Matches,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator';
 
@@ -72,4 +74,12 @@ export class CreateEmployeeDto {
   @IsOptional()
   @IsString({ message: 'userId must be a string' })
   userId?: string;
+
+  /// Individual salary in BRL (Reais). Optional — if not provided,
+  /// defaults to the Position's salary band (if set).
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'salary must be a valid monetary value' })
+  @Min(0, { message: 'salary must be >= 0' })
+  salary?: number;
 }

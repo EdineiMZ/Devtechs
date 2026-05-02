@@ -21,6 +21,7 @@ export interface LoginUserDto {
   roles: string[];
   primaryRole: string | null;
   emailVerified?: boolean;
+  twoFactorEnabled?: boolean;
   permissions?: string[];
 }
 
@@ -60,23 +61,38 @@ export function getAuthServiceUrl(): string {
 
 /**
  * POST to an auth-service endpoint with JSON body + JSON parse.
- * Throws on network failure; returns the parsed body on HTTP error
- * too, so callers can inspect `statusCode` and show targeted errors.
+ * Returns a structured result on both success and failure — never
+ * throws — so callers can inspect `statusCode` and show targeted
+ * errors without needing their own try/catch.
  */
 export async function authServiceFetch<T>(
   path: string,
   init: { method?: string; body?: unknown; headers?: Record<string, string> } = {},
 ): Promise<{ ok: boolean; status: number; data: T | ErrorResponseDto }> {
-  const res = await fetch(`${getAuthServiceUrl()}${path}`, {
-    method: init.method ?? 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init.headers ?? {}),
-    },
-    body: init.body ? JSON.stringify(init.body) : undefined,
-    // Never cache auth calls — they're explicitly per-request.
-    cache: 'no-store',
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${getAuthServiceUrl()}${path}`, {
+      method: init.method ?? 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init.headers ?? {}),
+      },
+      body: init.body ? JSON.stringify(init.body) : undefined,
+      // Never cache auth calls — they're explicitly per-request.
+      cache: 'no-store',
+    });
+  } catch {
+    // Network-level failure (service unreachable, DNS error, etc.)
+    return {
+      ok: false,
+      status: 503,
+      data: {
+        statusCode: 503,
+        message:
+          'Serviço de autenticação indisponível. Verifique sua conexão ou tente novamente em instantes.',
+      },
+    };
+  }
 
   let data: T | ErrorResponseDto;
   try {

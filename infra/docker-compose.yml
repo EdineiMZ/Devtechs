@@ -3,10 +3,26 @@ version: "3.9"
 # -----------------------------------------------------------------------------
 # DevTechs - docker-compose base
 #
-# All services share the `devtechs` network and read secrets from the root
-# `.env` file (copy `.env.example` to `.env` and fill in real values).
-# Each NestJS microservice is built from its own workspace in `services/`
-# via a multi-stage Dockerfile that understands pnpm workspaces.
+# Profiles
+# --------
+#   (none)        postgres + redis + (optional) dev tooling. This is the
+#                 stack you want when developing — the apps and services
+#                 themselves run natively on the host with `pnpm dev`,
+#                 talking to containerized infra on localhost ports.
+#   prod          The full production topology: nginx + every service +
+#                 every Next.js app, all containerized, no host ports for
+#                 the services (only nginx is exposed to the host).
+#   dev-tools     Optional extras (adminer, mailhog, prisma studio).
+#                 Add and gate behind this profile when you need them.
+#
+# Usage:
+#   docker compose up -d                     # infra only (dev workflow)
+#   docker compose --profile prod up -d      # full prod-shaped stack
+#   docker compose --profile dev-tools up -d # tooling only
+#
+# All services share the `devtechs` network and read secrets from the
+# root `.env` file (copy `.env.example` to `.env` and fill in real
+# values).
 # -----------------------------------------------------------------------------
 
 x-service-defaults: &service-defaults
@@ -20,6 +36,8 @@ x-service-defaults: &service-defaults
       condition: service_healthy
     redis:
       condition: service_healthy
+  profiles:
+    - prod
 
 services:
   # ---------------------------------------------------------------------------
@@ -68,12 +86,18 @@ services:
     image: nginx:alpine
     container_name: devtechs-nginx
     restart: unless-stopped
+    profiles:
+      - prod
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certs:/etc/nginx/certs:ro
+      # Static API docs (Redoc page + unified OpenAPI spec). Generated
+      # by `pnpm docs:generate` at the repo root before each prod
+      # deploy. Read-only mount.
+      - ../docs:/usr/share/nginx/html/docs:ro
     networks:
       - devtechs
     depends_on:
@@ -88,6 +112,7 @@ services:
       - license-service
       - developer-service
       - web
+      - store
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
       interval: 30s
@@ -286,8 +311,18 @@ services:
       PORT: 3010
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      AUTH_INTERNAL_SECRET: ${AUTH_INTERNAL_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      DOCKER_SOCKET_PATH: /var/run/docker.sock
     expose:
       - "3010"
+    # Mount the host Docker socket so dockerode can manage sibling
+    # containers (start/stop/restart/logs). The developer-service
+    # process must run as a user inside the host's `docker` group
+    # for this to work without root — see Dockerfile.
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3010/health"]
       interval: 30s
@@ -301,6 +336,8 @@ services:
   web:
     restart: unless-stopped
     container_name: devtechs-web
+    profiles:
+      - prod
     build:
       context: ..
       dockerfile: apps/web/Dockerfile
@@ -312,85 +349,18 @@ services:
       - "4000"
     networks:
       - devtechs
+    depends_on:
+      auth-service:
+        condition: service_healthy
 
-  rh:
-    restart: unless-stopped
-    container_name: devtechs-rh
-    build:
-      context: ..
-      dockerfile: apps/rh/Dockerfile
-    env_file:
-      - ../.env
-    environment:
-      PORT: 4001
-    expose:
-      - "4001"
-    networks:
-      - devtechs
-
-  financeiro:
-    restart: unless-stopped
-    container_name: devtechs-financeiro
-    build:
-      context: ..
-      dockerfile: apps/financeiro/Dockerfile
-    env_file:
-      - ../.env
-    environment:
-      PORT: 4002
-    expose:
-      - "4002"
-    networks:
-      - devtechs
-
-  projetos:
-    restart: unless-stopped
-    container_name: devtechs-projetos
-    build:
-      context: ..
-      dockerfile: apps/projetos/Dockerfile
-    env_file:
-      - ../.env
-    environment:
-      PORT: 4003
-    expose:
-      - "4003"
-    networks:
-      - devtechs
-
-  devops:
-    restart: unless-stopped
-    container_name: devtechs-devops
-    build:
-      context: ..
-      dockerfile: apps/devops/Dockerfile
-    env_file:
-      - ../.env
-    environment:
-      PORT: 4004
-    expose:
-      - "4004"
-    networks:
-      - devtechs
-
-  suporte:
-    restart: unless-stopped
-    container_name: devtechs-suporte
-    build:
-      context: ..
-      dockerfile: apps/suporte/Dockerfile
-    env_file:
-      - ../.env
-    environment:
-      PORT: 4005
-    expose:
-      - "4005"
-    networks:
-      - devtechs
-
+  # Module apps (rh / financeiro / projetos / devops / suporte / developer)
+  # were retired and consolidated into `web` under /admin/* and /perfil/*.
+  # Only `web` and the public planos/checkout SaaS `store` remain.
   store:
     restart: unless-stopped
     container_name: devtechs-store
+    profiles:
+      - prod
     build:
       context: ..
       dockerfile: apps/store/Dockerfile
@@ -402,21 +372,9 @@ services:
       - "4006"
     networks:
       - devtechs
-
-  developer:
-    restart: unless-stopped
-    container_name: devtechs-developer
-    build:
-      context: ..
-      dockerfile: apps/developer/Dockerfile
-    env_file:
-      - ../.env
-    environment:
-      PORT: 4007
-    expose:
-      - "4007"
-    networks:
-      - devtechs
+    depends_on:
+      payments-service:
+        condition: service_healthy
 
 networks:
   devtechs:
