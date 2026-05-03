@@ -402,6 +402,26 @@ services:
       payments-service:
         condition: service_healthy
 
+  # ---------------------------------------------------------------------------
+  # One-shot Prisma migration runner
+  # Run with: docker compose --profile migrate run --rm migrate
+  # ---------------------------------------------------------------------------
+  migrate:
+    build:
+      context: ..
+      dockerfile: Dockerfile.migrate
+    container_name: SZDevs-migrate
+    env_file:
+      - ../.env
+    networks:
+      - SZDevs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    profiles:
+      - migrate
+
 networks:
   SZDevs:
     driver: bridge
