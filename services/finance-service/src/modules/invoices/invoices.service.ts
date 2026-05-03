@@ -5,7 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@devtechs/database';
+import type { Prisma } from '@szdevs/database';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
@@ -45,6 +45,15 @@ export class InvoicesService {
       },
     });
     return rows.map((r) => this.serialize(r));
+  }
+
+  async listClients(): Promise<{ id: string; name: string; email: string }[]> {
+    const rows = await this.prisma.user.findMany({
+      where: { banned: false },
+      select: { id: true, name: true, email: true },
+      orderBy: { name: 'asc' },
+    });
+    return rows.map((u) => ({ id: u.id, name: u.name ?? u.email, email: u.email }));
   }
 
   async get(id: string): Promise<unknown> {
@@ -303,7 +312,7 @@ export class InvoicesService {
    * numbered sequentially within the year so the sequence resets
    * every January.
    *
-   * Uses a simple "max + 1" approach — fine for DevTechs's volume.
+   * Uses a simple "max + 1" approach — fine for SZDevs's volume.
    * Under heavy concurrency a proper sequence would be safer, but
    * the Prisma unique constraint catches any collision and the
    * service retries.

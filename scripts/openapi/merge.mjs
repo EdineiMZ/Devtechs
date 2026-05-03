@@ -10,7 +10,7 @@
  *
  *   - **Path prefixing**: every service's path is rewritten to
  *     `/{service}{originalPath}`. So `auth-service`'s `/auth/login`
- *     becomes `/auth/auth/login`... wait — that double-prefixes.
+ *     becomes `/auth/auth/login`... wait â€” that double-prefixes.
  *     We don't double-prefix. Each service's existing controller
  *     paths already start with the service slug (e.g. `auth/login`,
  *     `rh/employees`), so we leave them as-is.
@@ -62,7 +62,7 @@ function rewriteRefs(node, slug) {
 const merged = {
   openapi: '3.0.0',
   info: {
-    title: 'DevTechs — Unified API',
+    title: 'SZDevs â€” Unified API',
     description:
       'Aggregated OpenAPI specification for every NestJS microservice. ' +
       'Served at `/docs` via Redoc; per-service Swagger UIs live at ' +
@@ -103,24 +103,24 @@ for (const file of files) {
   // 1. Rewrite refs in the whole doc.
   rewriteRefs(doc, slug);
 
-  // 2. Tags — first wins.
+  // 2. Tags â€” first wins.
   for (const tag of doc.tags ?? []) {
     if (!seenTags.has(tag.name)) {
       seenTags.set(tag.name, tag);
     }
   }
 
-  // 3. Schemas — namespace.
+  // 3. Schemas â€” namespace.
   for (const [name, schema] of Object.entries(doc.components?.schemas ?? {})) {
     merged.components.schemas[namespace(name, slug)] = schema;
   }
 
-  // 4. Paths — copy as-is. Per-service paths already start with their
+  // 4. Paths â€” copy as-is. Per-service paths already start with their
   //    slug because controllers are mounted on `@Controller('auth')`,
   //    `@Controller('rh/employees')`, etc.
   for (const [pathKey, ops] of Object.entries(doc.paths ?? {})) {
     if (merged.paths[pathKey]) {
-      console.warn(`  collision on path ${pathKey} from ${slug} — overwriting`);
+      console.warn(`  collision on path ${pathKey} from ${slug} â€” overwriting`);
     }
     merged.paths[pathKey] = ops;
   }
@@ -131,7 +131,7 @@ merged.tags = Array.from(seenTags.values());
 mkdirSync(resolve(REPO_ROOT, 'docs'), { recursive: true });
 writeFileSync(OUT_PATH, JSON.stringify(merged, null, 2));
 console.log(
-  `\nMerged ${files.length} specs → ${OUT_PATH} (${Object.keys(merged.paths).length} paths, ${
+  `\nMerged ${files.length} specs â†’ ${OUT_PATH} (${Object.keys(merged.paths).length} paths, ${
     Object.keys(merged.components.schemas).length
   } schemas).`,
 );

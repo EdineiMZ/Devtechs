@@ -1,7 +1,7 @@
 import 'next-auth';
 import 'next-auth/jwt';
 
-interface DevTechsAuthFields {
+interface SZDevsAuthFields {
   id: string;
   roles: string[];
   mainRole: string | null;
@@ -28,14 +28,14 @@ declare module 'next-auth' {
     error?: 'RefreshAccessTokenError';
   }
 
-  interface User extends DevTechsAuthFields {
+  interface User extends SZDevsAuthFields {
     name: string | null;
     email: string | null;
   }
 }
 
 declare module 'next-auth/jwt' {
-  interface JWT extends DevTechsAuthFields {
+  interface JWT extends SZDevsAuthFields {
     name?: string | null;
     email?: string | null;
     picture?: string | null;

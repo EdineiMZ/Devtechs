@@ -1,8 +1,8 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 
-import { Button } from '@devtechs/ui';
+import { Button } from '@szdevs/ui';
 
 /**
  * One-time display of recovery codes. The user MUST acknowledge
@@ -37,7 +37,7 @@ export function RecoveryCodes({
   function downloadTxt(): void {
     const blob = new Blob(
       [
-        'DevTechs - Códigos de recuperação 2FA\n',
+        'SZDevs - Códigos de recuperação 2FA\n',
         '====================================\n',
         'Cada código pode ser usado uma única vez.\n',
         'Guarde este arquivo em local seguro.\n\n',
@@ -49,7 +49,7 @@ export function RecoveryCodes({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'devtechs-recovery-codes.txt';
+    a.download = 'SZDevs-recovery-codes.txt';
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -60,13 +60,13 @@ export function RecoveryCodes({
     const w = window.open('', '_blank', 'width=480,height=640');
     if (!w) return;
     w.document.write(`<!doctype html>
-<html><head><title>Códigos de recuperação 2FA — DevTechs</title>
+<html><head><title>Códigos de recuperação 2FA — SZDevs</title>
 <style>body{font-family:system-ui,Segoe UI,sans-serif;padding:32px}
 h1{font-size:20px;margin:0 0 8px}p{color:#555;margin:0 0 16px;font-size:13px}
 ul{font-family:ui-monospace,monospace;font-size:18px;line-height:1.7;list-style:none;padding:0}
 li{border-bottom:1px dashed #ccc;padding:6px 0}</style></head>
 <body><h1>Códigos de recuperação 2FA</h1>
-<p>DevTechs · Cada código pode ser usado uma única vez.</p>
+<p>SZDevs · Cada código pode ser usado uma única vez.</p>
 <ul>${codes.map((c) => `<li>${c}</li>`).join('')}</ul>
 <script>window.onload=()=>window.print()</script>
 </body></html>`);

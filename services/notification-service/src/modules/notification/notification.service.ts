@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import type { Prisma } from '@devtechs/database';
+import type { Prisma } from '@szdevs/database';
 
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -98,7 +98,7 @@ export class NotificationService {
     });
     if (!existing) throw new NotFoundException('Notification not found');
     if (existing.read) {
-      // Idempotent — just return the current row without hitting UPDATE.
+      // Idempotent â€” just return the current row without hitting UPDATE.
       const row = await this.prisma.notification.findUnique({
         where: { id },
       });

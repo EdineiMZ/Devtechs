@@ -1,11 +1,11 @@
 import type { Config } from 'tailwindcss';
 
 /**
- * Shared Tailwind preset used by `@devtechs/ui` and consumed by every
+ * Shared Tailwind preset used by `@szdevs/ui` and consumed by every
  * Next.js app in the monorepo. Apps should import this as a preset:
  *
  *   // apps/<name>/tailwind.config.ts
- *   import preset from '@devtechs/ui/tailwind.config';
+ *   import preset from '@szdevs/ui/tailwind.config';
  *   export default {
  *     presets: [preset],
  *     content: [
@@ -56,13 +56,20 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        // DevTechs operational status palette
+        // SZDevs operational status palette
         status: {
           online: '#16a34a',
           degraded: '#f59e0b',
           offline: '#dc2626',
           maintenance: '#2563eb',
         },
+        // SZDevs terminal / auth palette (CSS-variable backed)
+        ink:    'hsl(var(--ink) / <alpha-value>)',
+        carbon: 'hsl(var(--carbon) / <alpha-value>)',
+        copper: 'hsl(var(--copper) / <alpha-value>)',
+        ember:  'hsl(var(--ember) / <alpha-value>)',
+        acid:   'hsl(var(--acid) / <alpha-value>)',
+        ash:    'hsl(var(--ash) / <alpha-value>)',
       },
       borderRadius: {
         lg: 'var(--radius)',

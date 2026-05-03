@@ -1,5 +1,5 @@
 /**
- * Trace what happens on form submit — full request/response logging.
+ * Trace what happens on form submit â€” full request/response logging.
  */
 import { chromium } from 'playwright';
 
@@ -28,8 +28,8 @@ import { chromium } from 'playwright';
   });
 
   await page.goto('http://localhost:3000/login', { waitUntil: 'networkidle' });
-  await page.locator('input[type="email"]').first().fill('admin@devtechs.com');
-  await page.locator('input[type="password"]').first().fill('Admin@DevTechs2026');
+  await page.locator('input[type="email"]').first().fill('admin@SZDevs.com');
+  await page.locator('input[type="password"]').first().fill('Admin@SZDevs2026');
 
   // Inject a wrapper around signIn to capture the result
   await page.evaluate(() => {

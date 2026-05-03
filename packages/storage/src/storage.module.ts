@@ -7,12 +7,12 @@ import { StorageFactory, type StorageEnv } from './factory';
  * Injection token for the active `StorageAdapter`. Use `@Inject(STORAGE)`
  * in services that need raw access to the adapter interface, or (more
  * commonly) inject the adapter by interface in a constructor field
- * typed as `StorageAdapter` — the token resolves the same instance
+ * typed as `StorageAdapter` â€” the token resolves the same instance
  * either way.
  *
  *   constructor(@Inject(STORAGE) private readonly storage: StorageAdapter) {}
  */
-export const STORAGE = Symbol.for('@devtechs/storage:STORAGE');
+export const STORAGE = Symbol.for('@szdevs/storage:STORAGE');
 
 /**
  * `StorageModule.forRoot()` wires a singleton `StorageAdapter` built

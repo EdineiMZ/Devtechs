@@ -1,5 +1,5 @@
 // =============================================================================
-// DevTechs - Prisma schema
+// SZDevs - Prisma schema
 //
 // Initial version: authentication & permissions domain only.
 // Future modules (RH, Financeiro, Projetos, etc.) will be added in
@@ -323,6 +323,14 @@ model AuditLog {
   resourceId String?
   meta       Json             @default("{}")
   ipAddress  String?
+  /// Browser / client User-Agent header. Stored verbatim — useful for
+  /// post-incident forensics (identify device type, browser, OS) without
+  /// needing to join the sessions table (which may already be revoked).
+  userAgent  String?
+  /// The session that performed this action. Lets you pull all audit events
+  /// for a given session (e.g. after revoking a compromised session to see
+  /// exactly what it did) and correlate AuditLog with Session.userAgent.
+  sessionId  String?
   createdAt  DateTime         @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -330,6 +338,7 @@ model AuditLog {
   @@index([userId])
   @@index([module])
   @@index([userId, module])
+  @@index([sessionId])
   @@index([createdAt])
   @@map("audit_logs")
 }
@@ -484,7 +493,7 @@ model EmployeeDocument {
   employeeId String
   name       String
   type       EmployeeDocumentType @default(OTHER)
-  /// Opaque key into the `@devtechs/storage` adapter (R2 or local).
+  /// Opaque key into the `@szdevs/storage` adapter (R2 or local).
   /// The storage adapter resolves this to the real object at download
   /// time — this column is intentionally format-agnostic so swapping
   /// R2 for another S3 provider requires no schema change.
@@ -575,7 +584,7 @@ model VacationRequest {
 ///
 /// Each day stores the number of HOURS the employee is expected to
 /// work. `0` means "day off" (weekends or a shortened week).
-/// Int (not Decimal) because DevTechs's schedules never need
+/// Int (not Decimal) because SZDevs's schedules never need
 /// sub-hour precision and integers are cheaper to compare.
 model WorkSchedule {
   id         String @id @default(cuid())
@@ -1031,7 +1040,7 @@ model FinanceTransaction {
   paidAt        DateTime?
   projectId     String?
   costCenterId  String?
-  /// Opaque key into the `@devtechs/storage` adapter (R2/local)
+  /// Opaque key into the `@szdevs/storage` adapter (R2/local)
   /// for the supporting document (receipt, invoice PDF).
   attachmentKey String?
   notes         String?
@@ -1345,7 +1354,7 @@ model TicketAttachment {
   /// itself (e.g. the initial payload) without belonging to any
   /// single message yet.
   messageId  String?
-  /// Opaque key into the `@devtechs/storage` adapter.
+  /// Opaque key into the `@szdevs/storage` adapter.
   fileKey    String
   filename   String
   size       Int
@@ -1884,7 +1893,7 @@ model ClientVPS {
 // Design notes:
 //   - Singleton table: only one row is ever expected (the owning company).
 //     The `singleton` column is a unique boolean constraint that enforces this.
-//   - `logoKey` is an opaque @devtechs/storage key, just like employee docs.
+//   - `logoKey` is an opaque @szdevs/storage key, just like employee docs.
 //   - Brazilian legal fields (CNPJ, IE, IM) are stored as plain strings so
 //     we can accommodate future formatting changes without a migration.
 // =============================================================================

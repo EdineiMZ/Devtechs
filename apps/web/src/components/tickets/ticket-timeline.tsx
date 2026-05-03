@@ -1,4 +1,4 @@
-﻿import { MessageBubble, type TimelineMessage } from './message-bubble';
+import { MessageBubble, type TimelineMessage } from './message-bubble';
 
 interface StatusEvent {
   kind: 'status';

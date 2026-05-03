@@ -68,7 +68,7 @@ export class TwoFactorController {
    * Authy / 1Password / etc., and stashes the secret in Redis for 10
    * minutes so the user has time to scan + confirm via `/enable`.
    *
-   * Gated by `JwtAuthGuard` (global) — the user must be logged in.
+   * Gated by `JwtAuthGuard` (global) â€” the user must be logged in.
    * `TwoFactorService.setup()` additionally requires `emailVerified`.
    */
   @Post('setup')
@@ -129,7 +129,7 @@ export class TwoFactorController {
    * real access + refresh tokens exactly as a non-2FA login would.
    *
    * Marked `@Public()` so the global `JwtAuthGuard` doesn't reject the
-   * request for lacking a full access token — the `JwtTwoFactorTempAuthGuard`
+   * request for lacking a full access token â€” the `JwtTwoFactorTempAuthGuard`
    * takes over and validates the temp token on the body.
    */
   @Public()
@@ -163,7 +163,7 @@ export class TwoFactorController {
   })
   @ApiResponse({
     status: 200,
-    description: 'TOTP accepted — full session tokens issued.',
+    description: 'TOTP accepted â€” full session tokens issued.',
     schema: {
       type: 'object',
       properties: {
@@ -173,7 +173,7 @@ export class TwoFactorController {
           type: 'object',
           properties: {
             id: { type: 'string', example: 'cmodlkrhe000uf1japmgdh3w1' },
-            email: { type: 'string', example: 'agent@devtechs.com' },
+            email: { type: 'string', example: 'agent@SZDevs.com' },
             roles: { type: 'array', items: { type: 'string' }, example: ['support'] },
           },
         },
@@ -200,7 +200,7 @@ export class TwoFactorController {
   }
 
   // -------------------------------------------------------------------
-  // POST /auth/2fa/recovery-codes  — regenerate recovery codes
+  // POST /auth/2fa/recovery-codes  â€” regenerate recovery codes
   // -------------------------------------------------------------------
   /**
    * Wipes any existing recovery codes (used or not) and issues a

@@ -6,8 +6,8 @@ module.exports = {
   testMatch: ['<rootDir>/__tests__/**/*.test.ts?(x)'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
-    '^@devtechs/ui$': '<rootDir>/../../packages/ui/src/index.ts',
-    '^@devtechs/ui/(.*)$': '<rootDir>/../../packages/ui/src/$1',
+    '^@szdevs/ui$': '<rootDir>/../../packages/ui/src/index.ts',
+    '^@szdevs/ui/(.*)$': '<rootDir>/../../packages/ui/src/$1',
   },
   transform: {
     '^.+\\.(ts|tsx)$': [
@@ -24,8 +24,8 @@ module.exports = {
           baseUrl: '.',
           paths: {
             '@/*': ['./src/*'],
-            '@devtechs/ui': ['../../packages/ui/src'],
-            '@devtechs/ui/*': ['../../packages/ui/src/*'],
+            '@szdevs/ui': ['../../packages/ui/src'],
+            '@szdevs/ui/*': ['../../packages/ui/src/*'],
           },
         },
       },

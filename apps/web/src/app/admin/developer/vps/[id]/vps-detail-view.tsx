@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, cn } from '@devtechs/ui';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, cn } from '@szdevs/ui';
 
 import { fmtDate, fmtDateTime } from '@/lib/fmt-date';
 
@@ -120,7 +120,7 @@ export function VpsDetailView({ id, initial, error }: Props): JSX.Element {
     return (
       <Card className="border-red-500/30 bg-red-500/5">
         <CardContent className="py-6 text-sm text-red-300">
-          {error ?? 'Detalhes indisponíveis.'}
+          {error ?? 'Detalhes indispon�veis.'}
         </CardContent>
       </Card>
     );
@@ -143,13 +143,13 @@ export function VpsDetailView({ id, initial, error }: Props): JSX.Element {
       const r = await fetch(`/api/admin/vps/${id}/${action}`, { method: 'POST' });
       const body = await r.json().catch(() => ({}));
       if (!r.ok) {
-        showToast('error', (body as { message?: string }).message ?? 'Falha ao executar ação');
+        showToast('error', (body as { message?: string }).message ?? 'Falha ao executar a��o');
         return;
       }
       const b = body as { alreadyInState?: boolean };
       showToast('success', b.alreadyInState
-        ? 'A VM já estava no estado solicitado.'
-        : `Ação ${action} disparada com sucesso.`);
+        ? 'A VM j� estava no estado solicitado.'
+        : `A��o ${action} disparada com sucesso.`);
       startTransition(() => router.refresh());
     } catch (err) {
       showToast('error', err instanceof Error ? err.message : 'Erro desconhecido');
@@ -245,7 +245,7 @@ export function VpsDetailView({ id, initial, error }: Props): JSX.Element {
         showToast('error', (body as { message?: string }).message ?? 'Falha ao excluir snapshot');
         return;
       }
-      showToast('success', 'Snapshot excluído.');
+      showToast('success', 'Snapshot exclu�do.');
       setSnapshots((prev) => prev.filter((s) => s.id !== snapshotId));
     } catch (err) {
       showToast('error', err instanceof Error ? err.message : 'Erro desconhecido');
@@ -264,7 +264,7 @@ export function VpsDetailView({ id, initial, error }: Props): JSX.Element {
         showToast('error', (body as { message?: string }).message ?? 'Falha ao restaurar snapshot');
         return;
       }
-      showToast('success', 'Restauração do snapshot disparada. A VM pode reiniciar.');
+      showToast('success', 'Restaura��o do snapshot disparada. A VM pode reiniciar.');
       startTransition(() => router.refresh());
     } catch (err) {
       showToast('error', err instanceof Error ? err.message : 'Erro desconhecido');
@@ -287,7 +287,7 @@ export function VpsDetailView({ id, initial, error }: Props): JSX.Element {
         showToast('error', (body as { message?: string }).message ?? 'Falha ao restaurar backup');
         return;
       }
-      showToast('success', 'Restauração do backup disparada. A VM pode reiniciar.');
+      showToast('success', 'Restaura��o do backup disparada. A VM pode reiniciar.');
       startTransition(() => router.refresh());
     } catch (err) {
       showToast('error', err instanceof Error ? err.message : 'Erro desconhecido');
@@ -346,7 +346,7 @@ export function VpsDetailView({ id, initial, error }: Props): JSX.Element {
         showToast('error', (body as { message?: string }).message ?? 'Falha ao reinstalar OS');
         return;
       }
-      showToast('success', 'Reinstalação iniciada. A VM será reiniciada.');
+      showToast('success', 'Reinstala��o iniciada. A VM ser� reiniciada.');
       setReinstallTemplateId(null);
       setReinstallSshKeyIds([]);
       setConfirm(null);
@@ -363,8 +363,8 @@ export function VpsDetailView({ id, initial, error }: Props): JSX.Element {
   // ---------------------------------------------------------------------------
 
   const tabs: Array<[Tab, string]> = [
-    ['overview', 'Visão geral'],
-    ['history', 'Histórico'],
+    ['overview', 'Vis�o geral'],
+    ['history', 'Hist�rico'],
     ['snapshots', 'Snapshots'],
     ['backups', 'Backups'],
     ['ptr', 'PTR / DNS'],
@@ -380,7 +380,7 @@ export function VpsDetailView({ id, initial, error }: Props): JSX.Element {
             <div>
               <CardTitle>{vps.label}</CardTitle>
               <div className="mt-1 text-xs text-ash">
-                {vps.hostname} · {vps.ipv4} · {vps.plan} · {vps.dataCenter}
+                {vps.hostname} � {vps.ipv4} � {vps.plan} � {vps.dataCenter}
               </div>
               <div className="mt-1 text-xs text-ash">
                 Cliente: <span className="text-white/90">{vps.client.name}</span> ({vps.client.email})
@@ -407,7 +407,7 @@ export function VpsDetailView({ id, initial, error }: Props): JSX.Element {
             onClick={() =>
               setConfirm({
                 action: 'stop',
-                label: 'A VM será desligada — todos os serviços ativos serão interrompidos.',
+                label: 'A VM ser� desligada � todos os servi�os ativos ser�o interrompidos.',
                 onConfirm: () => callAction('stop'),
               })
             }
@@ -423,7 +423,7 @@ export function VpsDetailView({ id, initial, error }: Props): JSX.Element {
             onClick={() =>
               setConfirm({
                 action: 'restart',
-                label: 'A VM será reiniciada — pode haver indisponibilidade de alguns minutos.',
+                label: 'A VM ser� reiniciada � pode haver indisponibilidade de alguns minutos.',
                 onConfirm: () => callAction('restart'),
               })
             }
@@ -486,14 +486,14 @@ export function VpsDetailView({ id, initial, error }: Props): JSX.Element {
           onDelete={(s) =>
             setConfirm({
               action: 'delete-snapshot',
-              label: `O snapshot "${s.label}" será excluído permanentemente.`,
+              label: `O snapshot "${s.label}" ser� exclu�do permanentemente.`,
               onConfirm: () => deleteSnapshot(s.id),
             })
           }
           onRestore={(s) =>
             setConfirm({
               action: 'restore-snapshot',
-              label: `A VM será restaurada para o snapshot "${s.label}". Dados atuais serão perdidos.`,
+              label: `A VM ser� restaurada para o snapshot "${s.label}". Dados atuais ser�o perdidos.`,
               onConfirm: () => restoreSnapshot(s.id),
             })
           }
@@ -506,7 +506,7 @@ export function VpsDetailView({ id, initial, error }: Props): JSX.Element {
           onRestore={(b) =>
             setConfirm({
               action: 'restore-backup',
-              label: `A VM será restaurada para o backup de ${fmtDateTime(b.createdAt)}. Dados atuais serão perdidos.`,
+              label: `A VM ser� restaurada para o backup de ${fmtDateTime(b.createdAt)}. Dados atuais ser�o perdidos.`,
               onConfirm: () => restoreBackup(b.id),
             })
           }
@@ -541,7 +541,7 @@ export function VpsDetailView({ id, initial, error }: Props): JSX.Element {
             const tmpl = osTemplates.find((t) => t.id === reinstallTemplateId);
             setConfirm({
               action: 'reinstall',
-              label: `O sistema operacional da VM será reinstalado com "${tmpl?.name ?? 'template selecionado'}". TODOS OS DADOS SERÃO APAGADOS.`,
+              label: `O sistema operacional da VM ser� reinstalado com "${tmpl?.name ?? 'template selecionado'}". TODOS OS DADOS SER�O APAGADOS.`,
               onConfirm: performReinstall,
             });
           }}
@@ -577,7 +577,7 @@ function StateBadge({ state }: { state: string | null | undefined }): JSX.Elemen
   const cfg = state ? map[state] : null;
   return (
     <Badge className={cn('border', cfg?.className ?? 'border-slate-500/30 bg-slate-500/15 text-slate-300')}>
-      {cfg?.label ?? state ?? '—'}
+      {cfg?.label ?? state ?? '�'}
     </Badge>
   );
 }
@@ -588,8 +588,8 @@ function Overview({ metrics }: { metrics: HostingerMetricsResponse | null }): JS
     return (
       <Card>
         <CardContent className="py-6 text-sm text-ash">
-          Métricas indisponíveis no momento. A Hostinger pode levar alguns minutos para retornar dados
-          recentes após o boot da VM.
+          M�tricas indispon�veis no momento. A Hostinger pode levar alguns minutos para retornar dados
+          recentes ap�s o boot da VM.
         </CardContent>
       </Card>
     );
@@ -598,9 +598,9 @@ function Overview({ metrics }: { metrics: HostingerMetricsResponse | null }): JS
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
-        <KpiCard label="CPU" value={`${last.cpuPercent.toFixed(1)}%`} hint="média recente" />
+        <KpiCard label="CPU" value={`${last.cpuPercent.toFixed(1)}%`} hint="m�dia recente" />
         <KpiCard
-          label="Memória"
+          label="Mem�ria"
           value={`${(last.memoryUsedMb / 1024).toFixed(1)} / ${(last.memoryTotalMb / 1024).toFixed(1)} GB`}
           hint={`${((last.memoryUsedMb / last.memoryTotalMb) * 100).toFixed(0)}% em uso`}
         />
@@ -612,7 +612,7 @@ function Overview({ metrics }: { metrics: HostingerMetricsResponse | null }): JS
       </div>
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Últimas 24h — CPU & Memória</CardTitle>
+          <CardTitle className="text-sm font-medium">�ltimas 24h � CPU & Mem�ria</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           <SparkChart points={metrics.points} />
@@ -657,7 +657,7 @@ function SparkChart({ points }: { points: HostingerMetricsPoint[] }): JSX.Elemen
 
   return (
     <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Métricas CPU e Memória das últimas 24h">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="M�tricas CPU e Mem�ria das �ltimas 24h">
         {[0, 25, 50, 75, 100].map((y) => (
           <g key={y}>
             <line
@@ -687,7 +687,7 @@ function SparkChart({ points }: { points: HostingerMetricsPoint[] }): JSX.Elemen
           <span className="inline-block h-1 w-3 rounded-full bg-sky-400" /> CPU %
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block h-1 w-3 rounded-full bg-emerald-300" /> Memória %
+          <span className="inline-block h-1 w-3 rounded-full bg-emerald-300" /> Mem�ria %
         </span>
       </div>
     </div>
@@ -699,7 +699,7 @@ function ActionsTimeline({ actions }: { actions: HostingerAction[] }): JSX.Eleme
     return (
       <Card>
         <CardContent className="py-6 text-sm text-ash">
-          Nenhuma ação registrada para esta VM.
+          Nenhuma a��o registrada para esta VM.
         </CardContent>
       </Card>
     );
@@ -715,11 +715,11 @@ function ActionsTimeline({ actions }: { actions: HostingerAction[] }): JSX.Eleme
             <Badge className="border-white/8 bg-white/[0.02] uppercase">{a.type}</Badge>
             <div className="flex-1">
               <div className="text-white">
-                {a.status} {a.errorMessage ? `· ${a.errorMessage}` : ''}
+                {a.status} {a.errorMessage ? `� ${a.errorMessage}` : ''}
               </div>
               <div className="text-xs text-ash">
                 {fmtDateTime(a.startedAt)}
-                {a.completedAt ? ` → concluiu em ${fmtDateTime(a.completedAt)}` : ''}
+                {a.completedAt ? ` ? concluiu em ${fmtDateTime(a.completedAt)}` : ''}
               </div>
             </div>
           </div>
@@ -767,7 +767,7 @@ function SnapshotsPane({
         </div>
         <div className="space-y-2">
           {snapshots.length === 0 ? (
-            <p className="text-sm text-ash">Nenhum snapshot. Clique em &quot;Criar snapshot&quot; para começar.</p>
+            <p className="text-sm text-ash">Nenhum snapshot. Clique em &quot;Criar snapshot&quot; para come�ar.</p>
           ) : (
             snapshots.map((s) => (
               <div
@@ -777,7 +777,7 @@ function SnapshotsPane({
                 <div>
                   <div className="text-white">{s.label}</div>
                   <div className="text-xs text-ash">
-                    {(s.sizeBytes / 1024 / 1024 / 1024).toFixed(2)} GB · {fmtDateTime(s.createdAt)}
+                    {(s.sizeBytes / 1024 / 1024 / 1024).toFixed(2)} GB � {fmtDateTime(s.createdAt)}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -825,12 +825,12 @@ function BackupsPane({
   return (
     <Card>
       <CardHeader className="border-b border-white/8">
-        <CardTitle className="text-sm font-medium">Backups automáticos</CardTitle>
+        <CardTitle className="text-sm font-medium">Backups autom�ticos</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 pt-4">
         {backups.length === 0 ? (
           <p className="text-sm text-ash">
-            Nenhum backup disponível. Backups automáticos aparecem aqui quando habilitados no painel da Hostinger.
+            Nenhum backup dispon�vel. Backups autom�ticos aparecem aqui quando habilitados no painel da Hostinger.
           </p>
         ) : (
           backups.map((b) => (
@@ -840,12 +840,12 @@ function BackupsPane({
             >
               <div>
                 <div className="text-white">
-                  Backup {b.type === 'AUTOMATIC' ? 'automático' : 'manual'} ·{' '}
+                  Backup {b.type === 'AUTOMATIC' ? 'autom�tico' : 'manual'} �{' '}
                   {(b.sizeBytes / 1024 / 1024 / 1024).toFixed(2)} GB
                 </div>
                 <div className="text-xs text-ash">
                   Criado: {fmtDateTime(b.createdAt)}
-                  {b.expiresAt ? ` · Expira: ${fmtDate(b.expiresAt)}` : ''}
+                  {b.expiresAt ? ` � Expira: ${fmtDate(b.expiresAt)}` : ''}
                 </div>
               </div>
               <Button
@@ -890,7 +890,7 @@ function PtrPane({
         <div>
           <CardTitle className="text-sm font-medium">PTR Records (DNS reverso)</CardTitle>
           <p className="mt-0.5 text-xs text-ash">
-            Configure o hostname reverso (PTR) para cada IP da VM. Útil para servidores de e-mail e auditoria.
+            Configure o hostname reverso (PTR) para cada IP da VM. �til para servidores de e-mail e auditoria.
           </p>
         </div>
       </CardHeader>
@@ -907,7 +907,7 @@ function PtrPane({
                 <div>
                   <code className="text-sm text-sky-300">{r.ipAddress}</code>
                   <div className="mt-0.5 text-xs text-ash">
-                    PTR atual: <span className="text-white/80">{r.ptr ?? '(não configurado)'}</span>
+                    PTR atual: <span className="text-white/80">{r.ptr ?? '(n�o configurado)'}</span>
                   </div>
                 </div>
                 {editState?.ipAddress !== r.ipAddress ? (
@@ -968,7 +968,7 @@ function ReinstallPane({
         <div>
           <CardTitle className="text-sm font-medium text-red-400">Reinstalar sistema operacional</CardTitle>
           <p className="mt-0.5 text-xs text-ash">
-            A reinstalação apaga todos os dados do disco. Faça um snapshot antes de prosseguir.
+            A reinstala��o apaga todos os dados do disco. Fa�a um snapshot antes de prosseguir.
           </p>
         </div>
       </CardHeader>
@@ -977,7 +977,7 @@ function ReinstallPane({
         <div>
           <label className="mb-2 block text-xs font-medium text-ash">Sistema operacional</label>
           {templates.length === 0 ? (
-            <p className="text-sm text-ash">Carregando templates…</p>
+            <p className="text-sm text-ash">Carregando templates�</p>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
               {templates.map((t) => (
@@ -1024,7 +1024,7 @@ function ReinstallPane({
         ) : null}
 
         <div className="rounded-md border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-300">
-          ⚠ Ação irreversível — todos os dados no disco serão perdidos. Certifique-se de ter um backup ou snapshot recente.
+          ? A��o irrevers�vel � todos os dados no disco ser�o perdidos. Certifique-se de ter um backup ou snapshot recente.
         </div>
 
         <Button
@@ -1056,7 +1056,7 @@ function ConfirmModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
       <Card className="max-w-md">
         <CardHeader>
-          <CardTitle className="text-base">Confirmar ação</CardTitle>
+          <CardTitle className="text-base">Confirmar a��o</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 pt-0">
           <p className="text-sm text-ash">{label}</p>

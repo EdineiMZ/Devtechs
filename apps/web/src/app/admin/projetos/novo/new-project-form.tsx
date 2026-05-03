@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { Button } from '@devtechs/ui';
+import { Button } from '@szdevs/ui';
 
 import { getProjectsServiceUrl } from '@/lib/projects-api';
 

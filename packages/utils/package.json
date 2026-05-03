@@ -1,5 +1,5 @@
 {
-  "name": "@devtechs/utils",
+  "name": "@szdevs/utils",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",
@@ -11,7 +11,7 @@
     "test": "jest --passWithNoTests"
   },
   "devDependencies": {
-    "@devtechs/config": "workspace:*",
+    "@szdevs/config": "workspace:*",
     "typescript": "^5.4.0"
   }
 }

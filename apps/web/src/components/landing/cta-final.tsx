@@ -9,8 +9,8 @@ import { TerminalBadge } from './terminal-badge';
 const FOOTER_LINKS = [
   { label: 'Política de Privacidade', href: '/privacidade' },
   { label: 'Termos de Uso',           href: '/termos' },
-  { label: 'GitHub',                  href: 'https://github.com/devstech' },
-  { label: 'LinkedIn',                href: 'https://linkedin.com/company/devstech' },
+  { label: 'GitHub',                  href: 'https://github.com/SZDevs' },
+  { label: 'LinkedIn',                href: 'https://linkedin.com/company/SZDevs' },
 ];
 
 export function CtaFinal(): JSX.Element {
@@ -60,7 +60,7 @@ export function CtaFinal(): JSX.Element {
               Iniciar projeto
             </Link>
             <a
-              href="https://github.com/devstech"
+              href="https://github.com/SZDevs"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center rounded-md border border-acid/30 text-acid px-8 py-3.5 text-sm font-mono tracking-wider hover:bg-acid/5 hover:border-acid/60 transition-all"
@@ -84,7 +84,7 @@ export function CtaFinal(): JSX.Element {
                   <Code2 className="h-4 w-4 text-acid" />
                 </div>
                 <span className="font-display text-base font-semibold text-foreground tracking-tight">
-                  DevsTech
+                  SZDevs
                 </span>
               </Link>
               <p className="font-body text-xs text-ash max-w-xs leading-relaxed">
@@ -109,7 +109,7 @@ export function CtaFinal(): JSX.Element {
 
           <div className="mt-10 pt-8 border-t border-white/8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="font-mono text-xs text-ash">
-              © 2026 DevsTech. Todos os direitos reservados.
+              © 2026 SZDevs. Todos os direitos reservados.
             </p>
             <p className="font-mono text-xs text-ash">
               built with precision in Brazil 🇧🇷

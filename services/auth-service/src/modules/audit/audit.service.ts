@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { Prisma } from '@devtechs/database';
+import type { Prisma } from '@szdevs/database';
 
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -69,7 +69,7 @@ export class AuditService {
    * logged so that the caller's user-facing request isn't broken by a
    * DB hiccup on the audit path.
    *
-   * Call this from services, interceptors, or guards — anywhere you
+   * Call this from services, interceptors, or guards â€” anywhere you
    * have enough context to describe an action.
    */
   async log(input: AuditLogInput): Promise<void> {
@@ -84,6 +84,8 @@ export class AuditService {
           resourceId: input.resourceId ?? null,
           meta: (input.meta ?? {}) as Prisma.InputJsonValue,
           ipAddress: input.ipAddress ?? null,
+          userAgent: input.userAgent ?? null,
+          sessionId: input.sessionId ?? null,
         },
       });
     } catch (err) {
@@ -127,16 +129,7 @@ export class AuditService {
       }),
     ]);
 
-    const items: AuditLogItem[] = rows.map((row) => ({
-      id: row.id,
-      userId: row.userId,
-      action: row.action,
-      module: row.module,
-      resourceId: row.resourceId,
-      meta: (row.meta ?? {}) as Record<string, unknown>,
-      ipAddress: row.ipAddress,
-      createdAt: row.createdAt.toISOString(),
-    }));
+    const items: AuditLogItem[] = rows.map((row) => this.toAuditItem(row));
 
     return {
       items,
@@ -167,7 +160,7 @@ export class AuditService {
   // on `id` (the PK), the seek stays O(log n) regardless of how deep
   // the user paginates. Compare with `skip: page * pageSize`, which
   // forces Postgres to scan and discard `page * pageSize` rows for
-  // every request — fine for page 1, prohibitive at page 5,000.
+  // every request â€” fine for page 1, prohibitive at page 5,000.
   // ---------------------------------------------------------------------
 
   async cursorQuery(q: AuditQueryDto): Promise<AuditCursorPage> {
@@ -215,7 +208,7 @@ export class AuditService {
   /**
    * Aggregate stats over the last 7 days. We use Prisma's `groupBy`
    * for the action/user/module rollups (one query per dimension) and
-   * a raw SQL date-trunc for the per-hour login series — Prisma's
+   * a raw SQL date-trunc for the per-hour login series â€” Prisma's
    * groupBy can't bucket by date_trunc('hour', ...) yet.
    */
   async stats(): Promise<AuditStats> {
@@ -283,7 +276,7 @@ export class AuditService {
   }
 
   /**
-   * Security report — surfaces three classes of risk:
+   * Security report â€” surfaces three classes of risk:
    *   1. IPs racking up failed-login attempts (potential brute force)
    *   2. Users hitting many forbidden routes (privilege probing)
    *   3. Sessions older than 30 days (stale tokens to revoke)
@@ -332,7 +325,7 @@ export class AuditService {
         take: 50,
       }),
       // 3. Sessions older than 30 days, still active (revokedAt is null).
-      // The Session model doesn't carry a `lastUsedAt` column today —
+      // The Session model doesn't carry a `lastUsedAt` column today â€”
       // when that gets added, surface it in `lastSeenAt` below.
       this.prisma.session.findMany({
         where: {
@@ -406,6 +399,8 @@ export class AuditService {
     resourceId: string | null;
     meta: unknown;
     ipAddress: string | null;
+    userAgent: string | null;
+    sessionId: string | null;
     createdAt: Date;
   }): AuditLogItem => ({
     id: row.id,
@@ -415,6 +410,8 @@ export class AuditService {
     resourceId: row.resourceId,
     meta: (row.meta ?? {}) as Record<string, unknown>,
     ipAddress: row.ipAddress,
+    userAgent: row.userAgent,
+    sessionId: row.sessionId,
     createdAt: row.createdAt.toISOString(),
   });
 }

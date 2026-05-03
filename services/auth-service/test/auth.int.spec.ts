@@ -10,17 +10,17 @@ import { bootTestApp } from './test-app';
  *   - Postgres up with migrations applied.
  *   - Redis up (otherwise the rate-limit guards short-circuit, which
  *     defeats half the assertions below).
- *   - The seed has admin@devtechs.com / Admin@DevTechs2026 active.
+ *   - The seed has admin@SZDevs.com / Admin@SZDevs2026 active.
  *
  * Style notes:
  *   - We always use `.expect(<status>)` rather than `.toBe(...)` on
  *     the status code, because supertest's failure message includes
- *     the response body when the status is wrong — much faster
+ *     the response body when the status is wrong â€” much faster
  *     to debug than `expected 401 received 200`.
  */
 
-const ADMIN_EMAIL = 'admin@devtechs.com';
-const ADMIN_PASSWORD = 'Admin@DevTechs2026';
+const ADMIN_EMAIL = 'admin@SZDevs.com';
+const ADMIN_PASSWORD = 'Admin@SZDevs2026';
 
 describe('auth-service /auth (integration)', () => {
   let app: INestApplication;
@@ -64,7 +64,7 @@ describe('auth-service /auth (integration)', () => {
     it('rejects an unknown email with 401, never 200', async () => {
       await request(app.getHttpServer())
         .post('/auth/login')
-        .send({ email: 'not-a-user@devtechs.test', password: 'Whatever@2026' })
+        .send({ email: 'not-a-user@SZDevs.test', password: 'Whatever@2026' })
         .expect(401);
     });
 
@@ -91,7 +91,7 @@ describe('auth-service /auth (integration)', () => {
   });
 
   // -------------------------------------------------------------------
-  // GET /auth/me — token-bearing routes
+  // GET /auth/me â€” token-bearing routes
   // -------------------------------------------------------------------
 
   describe('GET /auth/me', () => {
@@ -125,7 +125,7 @@ describe('auth-service /auth (integration)', () => {
   });
 
   // -------------------------------------------------------------------
-  // Permission gate — admin can hit /audit, no-perm session cannot.
+  // Permission gate â€” admin can hit /audit, no-perm session cannot.
   // -------------------------------------------------------------------
 
   describe('PermissionGuard on /audit/logs', () => {
@@ -138,7 +138,7 @@ describe('auth-service /auth (integration)', () => {
       adminToken = res.body.accessToken;
     });
 
-    it('admin (dev:logs:view) → 200', async () => {
+    it('admin (dev:logs:view) â†’ 200', async () => {
       const now = new Date();
       const from = new Date(now.getTime() - 60 * 60 * 1000);
       await request(app.getHttpServer())
@@ -149,14 +149,14 @@ describe('auth-service /auth (integration)', () => {
         .expect(200);
     });
 
-    it('missing dateFrom → 400 (DTO required)', async () => {
+    it('missing dateFrom â†’ 400 (DTO required)', async () => {
       await request(app.getHttpServer())
         .get('/audit/logs')
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(400);
     });
 
-    it('no token → 401', async () => {
+    it('no token â†’ 401', async () => {
       await request(app.getHttpServer())
         .get('/audit/logs?dateFrom=2026-01-01T00:00:00Z&dateTo=2026-12-31T00:00:00Z')
         .expect(401);

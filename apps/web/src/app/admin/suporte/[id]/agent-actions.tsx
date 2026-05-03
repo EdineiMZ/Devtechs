@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
-import { Button } from '@devtechs/ui';
+import { Button } from '@szdevs/ui';
 
 import {
   TICKET_STATUSES,

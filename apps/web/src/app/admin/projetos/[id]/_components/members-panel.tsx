@@ -1,8 +1,8 @@
-﻿'use client';
+'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { Button } from '@devtechs/ui';
+import { Button } from '@szdevs/ui';
 
 import { getAuthServiceUrl } from '@/lib/auth-service';
 import {

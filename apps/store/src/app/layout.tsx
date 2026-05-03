@@ -5,8 +5,8 @@ import { Providers } from '@/components/providers';
 import '@/styles/globals.css';
 
 export const metadata = {
-  title: 'DevTechs - Planos e Assinatura',
-  description: 'Gerencie sua assinatura DevTechs',
+  title: 'SZDevs - Planos e Assinatura',
+  description: 'Gerencie sua assinatura SZDevs',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -26,8 +26,8 @@ function record(name, ok, detail) {
   record('login form has email field', (await emailLocator.count()) > 0);
   record('login form has password field', (await passwordLocator.count()) > 0);
 
-  await emailLocator.first().fill('admin@devtechs.com');
-  await passwordLocator.first().fill('Admin@DevTechs2026');
+  await emailLocator.first().fill('admin@SZDevs.com');
+  await passwordLocator.first().fill('Admin@SZDevs2026');
 
   const callbackPromise = page.waitForResponse(
     (r) => r.url().includes('/api/auth/callback/credentials') && r.request().method() === 'POST',

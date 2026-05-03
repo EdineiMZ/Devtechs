@@ -10,14 +10,14 @@ import { ConfigService } from '@nestjs/config';
 
 /**
  * Symmetric-encryption helper used by the auth-service to protect
- * secrets at rest — specifically the TOTP seed stored in
+ * secrets at rest â€” specifically the TOTP seed stored in
  * `User.twoFactorSecret`. Uses AES-256-GCM (authenticated encryption)
  * so tampered ciphertext is rejected at decryption time.
  *
  * The encryption key is derived with scrypt from the `ENCRYPTION_KEY`
  * environment variable so that a short configured secret still produces
  * a full 32-byte AES key. The salt is domain-constant (the app name)
- * because we don't need per-record salts — GCM's random IV provides the
+ * because we don't need per-record salts â€” GCM's random IV provides the
  * uniqueness, and the input key is long-lived.
  *
  * Wire format of the returned string:
@@ -38,7 +38,7 @@ export class CryptoService {
         'ENCRYPTION_KEY is not configured (or is shorter than 16 characters)',
       );
     }
-    const salt = config.get<string>('ENCRYPTION_SALT') ?? 'devtechs.auth.v1';
+    const salt = config.get<string>('ENCRYPTION_SALT') ?? 'SZDevs.auth.v1';
     this.key = scryptSync(secret, salt, 32);
   }
 

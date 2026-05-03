@@ -7,7 +7,7 @@ import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swag
  * Why a per-service helper file (instead of a workspace package):
  * NestJS services compile their own TypeScript independently and don't
  * share a single `transpilePackages` boundary, so a workspace
- * `@devtechs/swagger` would need its own `tsc` step + dist publish to
+ * `@szdevs/swagger` would need its own `tsc` step + dist publish to
  * be consumable. A 30-line helper inlined in each service is cheaper
  * to maintain and lets each service tune its own tag set.
  *
@@ -16,7 +16,7 @@ import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swag
  *     `EXPOSE_SWAGGER_IN_PROD=true` is set explicitly. This keeps
  *     internal API shape from leaking from staging/prod into the
  *     wider internet.
- *   - The `/docs-json` JSON endpoint is gated by the same flag — it
+ *   - The `/docs-json` JSON endpoint is gated by the same flag â€” it
  *     leaks just as much as the HTML.
  *
  * Path convention:
@@ -33,7 +33,7 @@ export interface SwaggerConfig {
   title: string;
   /** Long description displayed under the title. */
   description: string;
-  /** Tag list — first entry is the default tag for untagged routes. */
+  /** Tag list â€” first entry is the default tag for untagged routes. */
   tags?: ReadonlyArray<{ name: string; description?: string }>;
   /** Override version; defaults to `process.env.npm_package_version`. */
   version?: string;
@@ -78,14 +78,14 @@ export function setupSwagger(
   // Mount under `/{service}/docs`; aliased to `/docs` so each
   // service is reachable on either path.
   SwaggerModule.setup(`${config.service}/docs`, app, document, {
-    customSiteTitle: `${config.title} — Swagger`,
+    customSiteTitle: `${config.title} â€” Swagger`,
     swaggerOptions: {
       persistAuthorization: true,
       docExpansion: 'list',
     },
   });
   SwaggerModule.setup('docs', app, document, {
-    customSiteTitle: `${config.title} — Swagger`,
+    customSiteTitle: `${config.title} â€” Swagger`,
     swaggerOptions: {
       persistAuthorization: true,
       docExpansion: 'list',

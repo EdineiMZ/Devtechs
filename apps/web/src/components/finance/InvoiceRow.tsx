@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { Button } from '@devtechs/ui';
+import { Button } from '@szdevs/ui';
 
 import type { Invoice } from '@/lib/finance-api';
 

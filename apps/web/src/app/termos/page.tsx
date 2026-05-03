@@ -8,7 +8,7 @@ import { LegalNavbar } from '@/components/landing/legal-navbar';
 export const metadata: Metadata = {
   title: 'Termos de Uso',
   description:
-    'Termos de Uso da DevTechs — condições gerais de contratação, direitos e obrigações das partes, uso aceitável da plataforma e responsabilidades.',
+    'Termos de Uso da SZDevs — condições gerais de contratação, direitos e obrigações das partes, uso aceitável da plataforma e responsabilidades.',
   robots: { index: true, follow: true },
 };
 
@@ -18,9 +18,9 @@ const VERSION = '1.0';
 export default async function TermosPage(): Promise<JSX.Element> {
   const company = await getPublicCompanySettings();
 
-  const name    = company?.name  ?? 'DevTechs Tecnologia Ltda.';
+  const name    = company?.name  ?? 'SZDevs Tecnologia Ltda.';
   const cnpj    = company?.cnpj  ?? '[CNPJ não cadastrado]';
-  const email   = company?.email ?? 'contato@devtechs.io';
+  const email   = company?.email ?? 'contato@SZDevs.io';
   const city    = company?.city  ?? null;
   const state   = company?.state ?? null;
   const address = formatAddress(company);
@@ -67,7 +67,7 @@ export default async function TermosPage(): Promise<JSX.Element> {
             {VERSION}
           </p>
           <div className="mt-5 rounded-xl border border-amber-500/20 bg-amber-500/8 p-4 font-body text-xs text-amber-300/80">
-            Ao criar uma conta ou utilizar qualquer funcionalidade da Plataforma DevTechs, o
+            Ao criar uma conta ou utilizar qualquer funcionalidade da Plataforma SZDevs, o
             Usuário declara ter lido, compreendido e concordado integralmente com estes Termos de
             Uso, com a{' '}
             <Link href="/privacidade" className="text-copper hover:underline">
@@ -93,7 +93,7 @@ export default async function TermosPage(): Promise<JSX.Element> {
             </dl>
             <p className="mt-4">
               O objeto destes Termos é a disponibilização da{' '}
-              <strong className="text-foreground">Plataforma DevTechs</strong> — conjunto de módulos
+              <strong className="text-foreground">Plataforma SZDevs</strong> — conjunto de módulos
               de software acessados via navegador web (SaaS), compreendendo, entre outros: gestão de
               projetos, recursos humanos, financeiro, DevOps, licenças, suporte e portal do cliente
               (<strong className="text-foreground">&quot;Plataforma&quot;</strong>).
@@ -518,12 +518,12 @@ export default async function TermosPage(): Promise<JSX.Element> {
           <section>
             <H2 n="15">Canais de Atendimento</H2>
             <dl className="mt-4 space-y-2 rounded-xl border border-white/8 bg-white/[0.02] p-5 font-mono text-xs">
-              <Row label="Suporte técnico"        value="suporte@devtechs.io" />
-              <Row label="Financeiro / cobrança"  value="financeiro@devtechs.io" />
-              <Row label="Cancelamento"           value="cancelamento@devtechs.io" />
-              <Row label="Segurança / incidentes" value="seguranca@devtechs.io" />
-              <Row label="Privacidade / LGPD (DPO)" value="privacidade@devtechs.io" />
-              <Row label="Jurídico"               value="juridico@devtechs.io" />
+              <Row label="Suporte técnico"        value="suporte@SZDevs.io" />
+              <Row label="Financeiro / cobrança"  value="financeiro@SZDevs.io" />
+              <Row label="Cancelamento"           value="cancelamento@SZDevs.io" />
+              <Row label="Segurança / incidentes" value="seguranca@SZDevs.io" />
+              <Row label="Privacidade / LGPD (DPO)" value="privacidade@SZDevs.io" />
+              <Row label="Jurídico"               value="juridico@SZDevs.io" />
               <Row label="Consumidor.gov"         value="A Prestadora está cadastrada no consumidor.gov.br" />
             </dl>
           </section>

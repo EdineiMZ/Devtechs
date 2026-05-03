@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { Button } from '@devtechs/ui';
+import { Button } from '@szdevs/ui';
 
 import { actionCreateProduct } from '../actions';
 
@@ -77,7 +77,7 @@ export function CreateProductDialog(): JSX.Element {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              placeholder="ex: DevTechs ERP"
+              placeholder="ex: SZDevs ERP"
               maxLength={120}
               className="rounded-lg border border-white/8 bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-sky-500"
             />
@@ -90,7 +90,7 @@ export function CreateProductDialog(): JSX.Element {
               value={appId}
               onChange={(e) => setAppId(e.target.value)}
               required
-              placeholder="ex: devtechs-erp"
+              placeholder="ex: SZDevs-erp"
               maxLength={80}
               pattern="[a-zA-Z0-9\-_]+"
               className="rounded-lg border border-white/8 bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-sky-500"

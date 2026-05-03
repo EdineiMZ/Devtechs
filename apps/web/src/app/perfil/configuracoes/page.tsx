@@ -1,4 +1,4 @@
-﻿import { redirect } from 'next/navigation';
+import { redirect } from 'next/navigation';
 
 import { auth } from '@/auth';
 import { ProfileForm } from '@/components/account/profile-form';

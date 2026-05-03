@@ -2,7 +2,7 @@ import type { LicenseVerificationResult, LicenseVerifyOptions } from './types';
 
 /** Configuration for the LicenseClient. */
 export interface LicenseClientOptions {
-  /** Base URL of the license-service API (e.g., "https://api.devtechs.com.br"). */
+  /** Base URL of the license-service API (e.g., "https://api.szdevs.com"). */
   baseUrl: string;
   /** Unique application identifier registered in the license-service. */
   appId: string;
@@ -11,16 +11,16 @@ export interface LicenseClientOptions {
 }
 
 /**
- * Client for verifying DevTechs license tokens.
+ * Client for verifying SZDevs license tokens.
  *
- * Calls `POST /tokens/verify` on the license-service — this endpoint
+ * Calls `POST /tokens/verify` on the license-service â€” this endpoint
  * is public (no auth required) so client applications can verify
  * license keys without exposing admin credentials.
  *
  * @example
  * ```ts
  * const client = new LicenseClient({
- *   baseUrl: 'https://api.devtechs.com.br',
+ *   baseUrl: 'https://api.szdevs.com',
  *   appId: 'my-saas-app',
  * });
  *

@@ -270,6 +270,12 @@ async function requestWithQuery<T>(
   return request<T>(qs ? `${path}?${qs}` : path, init);
 }
 
+export async function listInvoiceClients(
+  accessToken?: string,
+): Promise<ApiResult<InvoiceClient[]>> {
+  return request<InvoiceClient[]>('/invoices/clients', { accessToken });
+}
+
 export async function listInvoices(
   filter: ListInvoicesFilter = {},
   accessToken?: string,

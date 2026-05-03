@@ -581,7 +581,7 @@ export function ConfigPanel({
                       type="text"
                       value={smtpDraft.from}
                       onChange={(e) => setSmtpDraft((d) => ({ ...d, from: e.target.value }))}
-                      placeholder='DevTechs <no-reply@exemplo.com>'
+                      placeholder='SZDevs <no-reply@exemplo.com>'
                       className="w-full rounded-lg border border-white/8 bg-ink px-3 py-2 font-mono text-xs text-foreground placeholder-ash/30 focus:border-copper/40 focus:outline-none"
                     />
                   </div>

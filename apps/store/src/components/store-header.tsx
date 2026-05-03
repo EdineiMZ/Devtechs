@@ -13,7 +13,7 @@ export function StoreHeader() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600">
             <span className="text-sm font-bold text-white">D</span>
           </div>
-          <span className="text-lg font-bold text-foreground">DevTechs</span>
+          <span className="text-lg font-bold text-foreground">SZDevs</span>
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">

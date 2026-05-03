@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Entrar',
   description:
-    'Acesse a plataforma DevTechs. Use email e senha, Google ou GitHub.',
+    'Acesse a plataforma SZDevs. Use email e senha, Google ou GitHub.',
   alternates: { canonical: '/login' },
   robots: { index: false, follow: false },
 };
@@ -32,7 +32,7 @@ export default function LoginPage(): JSX.Element {
           Ainda não tem conta?{' '}
           <Link
             href="/register"
-            className="font-medium text-primary underline-offset-4 hover:underline"
+            className="font-medium text-copper underline-offset-4 hover:underline"
           >
             Criar conta
           </Link>

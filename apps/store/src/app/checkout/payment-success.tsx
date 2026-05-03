@@ -13,7 +13,7 @@ export function PaymentSuccess() {
         </div>
         <h2 className="text-2xl font-bold text-foreground">Pagamento confirmado!</h2>
         <p className="mt-2 text-muted-foreground">
-          Sua assinatura esta ativa. Bem-vindo ao DevTechs!
+          Sua assinatura esta ativa. Bem-vindo ao SZDevs!
         </p>
       </div>
 
@@ -22,7 +22,7 @@ export function PaymentSuccess() {
         <ul className="space-y-3 text-sm text-muted-foreground">
           <li className="flex items-start gap-2">
             <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">1</span>
-            Acesse o painel em app.devtechs.com.br
+            Acesse o painel em app.szdevs.com
           </li>
           <li className="flex items-start gap-2">
             <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">2</span>

@@ -1,7 +1,7 @@
-# DevTechs — Guia de Desenvolvimento
+# SZDevs — Guia de Desenvolvimento
 
 Este guia concentra os comandos necessários para subir a plataforma
-DevTechs em ambiente de **desenvolvimento** e **produção**. A stack
+SZDevs em ambiente de **desenvolvimento** e **produção**. A stack
 é um monorepo pnpm + Turborepo com vários apps Next.js, diversos
 microserviços NestJS e pacotes compartilhados.
 
@@ -33,7 +33,7 @@ pnpm bootstrap
 Isso executa, em ordem:
 
 1. `pnpm install` — resolve e instala todas as dependências do workspace.
-2. `pnpm build:packages` — compila os pacotes compartilhados (`@devtechs/database`, `@devtechs/storage`, etc.).
+2. `pnpm build:packages` — compila os pacotes compartilhados (`@szdevs/database`, `@szdevs/storage`, etc.).
 3. `pnpm db:generate` — regenera o Prisma Client.
 4. `pnpm db:migrate:deploy` — aplica todas as migrações do Postgres.
 5. `pnpm db:seed` — popula roles, permissões e dados iniciais.
@@ -81,13 +81,13 @@ pnpm dev:apps
 ### Subir **um serviço específico**
 
 ```bash
-pnpm --filter @devtechs/auth-service dev
-pnpm --filter @devtechs/support-service dev
-pnpm --filter @devtechs/finance-service dev
-pnpm --filter @devtechs/rh-service dev
-pnpm --filter @devtechs/projects-service dev
-pnpm --filter @devtechs/devops-service dev
-pnpm --filter @devtechs/notification-service dev
+pnpm --filter @szdevs/auth-service dev
+pnpm --filter @szdevs/support-service dev
+pnpm --filter @szdevs/finance-service dev
+pnpm --filter @szdevs/rh-service dev
+pnpm --filter @szdevs/projects-service dev
+pnpm --filter @szdevs/devops-service dev
+pnpm --filter @szdevs/notification-service dev
 # ... etc
 ```
 
@@ -173,7 +173,7 @@ Após preencher as credenciais:
 
 ```bash
 # Reiniciar apenas o frontend
-pnpm --filter @devtechs/web dev
+pnpm --filter @szdevs/web dev
 ```
 
 Fluxo esperado para cada provedor:
@@ -230,11 +230,11 @@ executa o bundle compilado:
 
 ```bash
 # Subir o frontend em produção
-pnpm --filter @devtechs/web start
+pnpm --filter @szdevs/web start
 
 # Subir um serviço NestJS em produção
-pnpm --filter @devtechs/auth-service start
-pnpm --filter @devtechs/support-service start
+pnpm --filter @szdevs/auth-service start
+pnpm --filter @szdevs/support-service start
 # ... etc
 ```
 
@@ -267,7 +267,7 @@ docker compose down
 
 ```
 NODE_ENV=production
-DATABASE_URL=postgresql://user:pass@host:5432/devtechs
+DATABASE_URL=postgresql://user:pass@host:5432/SZDevs
 REDIS_URL=redis://host:6379
 
 JWT_SECRET=<secret-forte-256-bits>
@@ -282,9 +282,9 @@ GITHUB_WEBHOOK_SECRET=<hmac-secret>          # devops
 GITHUB_API_TOKEN=ghp_xxx                     # devops outbound
 
 AUTH_SERVICE_URL=http://auth-service:3001    # URL interna (docker DNS)
-NEXT_PUBLIC_AUTH_SERVICE_URL=https://api.devtechs.com.br
+NEXT_PUBLIC_AUTH_SERVICE_URL=https://api.SZDevs.com.br
 
-CORS_ORIGINS=https://devtechs.com.br,https://app.devtechs.com.br
+CORS_ORIGINS=https://SZDevs.com.br,https://app.SZDevs.com.br
 ```
 
 ### Deploy contínuo (GitHub Actions)
@@ -342,7 +342,7 @@ específico de login (5 tentativas/15min). Em dev, reiniciar o
 ### NextAuth reclama que `session.user.email` é nullable
 
 Já resolvido — `apps/web/src/auth.ts` faz cast com `unknown` na
-callback `session` porque o schema do DevTechs permite emails null
+callback `session` porque o schema do SZDevs permite emails null
 em contas OAuth não-verificadas.
 
 ---
@@ -350,7 +350,7 @@ em contas OAuth não-verificadas.
 ## 📂 Estrutura do monorepo
 
 ```
-devtechs/
+SZDevs/
 ├── apps/                  # Apps Next.js (um por módulo de UI)
 │   ├── web/               # Portal principal + landing + dashboards
 │   ├── rh/                # Stub — futuro microfrontend de RH

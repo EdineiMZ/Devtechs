@@ -1,4 +1,4 @@
 /**
- * @devtechs/auth - shared package entrypoint.
+ * @szdevs/auth - shared package entrypoint.
  */
-export const PACKAGE_NAME = '@devtechs/auth';
+export const PACKAGE_NAME = '@szdevs/auth';

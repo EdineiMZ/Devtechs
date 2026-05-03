@@ -2,7 +2,7 @@
 
 Financial transactions, invoices, accounts, DRE.
 
-Part of the [DevTechs](../../README.md) monorepo. NestJS 10 + Prisma + Postgres + Redis. Tokens issued/validated against [auth-service](../auth-service/README.md).
+Part of the [SZDevs](../../README.md) monorepo. NestJS 10 + Prisma + Postgres + Redis. Tokens issued/validated against [auth-service](../auth-service/README.md).
 
 ## Environment
 
@@ -11,9 +11,9 @@ Copy `.env.example` at the repo root and set the keys below. The service exits w
 | Var | Default | Notes |
 | --- | --- | --- |
 | `FINANCE_SERVICE_PORT` / `PORT` | `3003` | TCP port to bind. |
-| `DATABASE_URL` | — | Postgres connection string. Schema in [packages/database](../../packages/database). |
-| `REDIS_URL` | — | Used by rate-limit + cache. Dev-tolerated when offline. |
-| `AUTH_INTERNAL_SECRET` | — | bearer-token validation |
+| `DATABASE_URL` | â€” | Postgres connection string. Schema in [packages/database](../../packages/database). |
+| `REDIS_URL` | â€” | Used by rate-limit + cache. Dev-tolerated when offline. |
+| `AUTH_INTERNAL_SECRET` | â€” | bearer-token validation |
 
 ## Run locally
 
@@ -25,31 +25,31 @@ docker compose -f infra/docker-compose.yml up -d
 pnpm db:migrate && pnpm db:seed
 
 # 3. Start the service in watch mode.
-pnpm --filter @devtechs/finance-service dev
+pnpm --filter @szdevs/finance-service dev
 
 # 4. Production-style start (after pnpm build).
-pnpm --filter @devtechs/finance-service start
+pnpm --filter @szdevs/finance-service start
 ```
 
 Swagger UI is mounted at `http://localhost:3003/finance/docs` (disabled when `NODE_ENV=production` unless `EXPOSE_SWAGGER_IN_PROD=true`).
 
 ## Endpoints
 
-- GET POST /transactions — list/create (`finance:transactions:view|create`)
-- GET POST PATCH /invoices — invoice management
-- POST /invoices/:id/pay — generate payment link
-- GET /invoices/:id/pdf — stream PDF
-- GET /accounts — chart of accounts
-- GET /dre — income statement (`finance:dre:view`)
+- GET POST /transactions â€” list/create (`finance:transactions:view|create`)
+- GET POST PATCH /invoices â€” invoice management
+- POST /invoices/:id/pay â€” generate payment link
+- GET /invoices/:id/pdf â€” stream PDF
+- GET /accounts â€” chart of accounts
+- GET /dre â€” income statement (`finance:dre:view`)
 
 Full reference (request/response shapes, examples) lives at `/docs` (Redoc, unified across all services) or `/finance/docs` (this service's Swagger UI).
 
 ## Tests
 
 ```bash
-pnpm --filter @devtechs/finance-service typecheck   # tsc --noEmit
-pnpm --filter @devtechs/finance-service lint        # eslint
-pnpm --filter @devtechs/finance-service test        # jest unit suite
+pnpm --filter @szdevs/finance-service typecheck   # tsc --noEmit
+pnpm --filter @szdevs/finance-service lint        # eslint
+pnpm --filter @szdevs/finance-service test        # jest unit suite
 ```
 
 E2E tests at the repo root cover the full HTTP surface against a running service stack. See [playwright.config.ts](../../playwright.config.ts).

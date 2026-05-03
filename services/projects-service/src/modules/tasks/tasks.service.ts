@@ -4,7 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@devtechs/database';
+import type { Prisma } from '@szdevs/database';
 
 import { AuditClientService } from '../../common/audit/audit-client.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -124,7 +124,7 @@ export class TasksService {
   }
 
   // ===================================================================
-  // Update (general — also handles column changes)
+  // Update (general â€” also handles column changes)
   // ===================================================================
 
   async update(id: string, dto: UpdateTaskDto): Promise<TaskDetail> {
@@ -274,7 +274,7 @@ export class TasksService {
           });
         }
         if (clampedNewOrder < task.order) {
-          // Moved up — increment everything in [newOrder, oldOrder)
+          // Moved up â€” increment everything in [newOrder, oldOrder)
           await tx.task.updateMany({
             where: {
               columnId: task.columnId,
@@ -284,7 +284,7 @@ export class TasksService {
             data: { order: { increment: 1 } },
           });
         } else {
-          // Moved down — decrement everything in (oldOrder, newOrder]
+          // Moved down â€” decrement everything in (oldOrder, newOrder]
           await tx.task.updateMany({
             where: {
               columnId: task.columnId,
@@ -334,7 +334,7 @@ export class TasksService {
     if (!updated) throw new NotFoundException('Task not found after move');
 
     this.logger.log(
-      `Moved task ${taskId}: ${task.columnId}@${task.order} → ${dto.targetColumnId}@${clampedNewOrder}`,
+      `Moved task ${taskId}: ${task.columnId}@${task.order} â†’ ${dto.targetColumnId}@${clampedNewOrder}`,
     );
     void this.audit.log({
       action: 'TASK_MOVED',
@@ -422,7 +422,7 @@ export class TasksService {
       return column.id;
     }
 
-    // No column specified — default to the first column of the
+    // No column specified â€” default to the first column of the
     // project's primary board.
     const firstColumn = await this.prisma.column.findFirst({
       where: { board: { projectId } },
@@ -431,7 +431,7 @@ export class TasksService {
     });
     if (!firstColumn) {
       throw new BadRequestException(
-        'Project has no board columns — create a board first',
+        'Project has no board columns â€” create a board first',
       );
     }
     return firstColumn.id;

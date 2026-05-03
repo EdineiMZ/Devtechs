@@ -1,12 +1,12 @@
 version: "3.9"
 
 # -----------------------------------------------------------------------------
-# DevTechs - docker-compose base
+# SZDevs - docker-compose base
 #
 # Profiles
 # --------
 #   (none)        postgres + redis + (optional) dev tooling. This is the
-#                 stack you want when developing — the apps and services
+#                 stack you want when developing â€” the apps and services
 #                 themselves run natively on the host with `pnpm dev`,
 #                 talking to containerized infra on localhost ports.
 #   prod          The full production topology: nginx + every service +
@@ -20,7 +20,7 @@ version: "3.9"
 #   docker compose --profile prod up -d      # full prod-shaped stack
 #   docker compose --profile dev-tools up -d # tooling only
 #
-# All services share the `devtechs` network and read secrets from the
+# All services share the `SZDevs` network and read secrets from the
 # root `.env` file (copy `.env.example` to `.env` and fill in real
 # values).
 # -----------------------------------------------------------------------------
@@ -30,7 +30,7 @@ x-service-defaults: &service-defaults
   env_file:
     - ../.env
   networks:
-    - devtechs
+    - SZDevs
   depends_on:
     postgres:
       condition: service_healthy
@@ -45,20 +45,20 @@ services:
   # ---------------------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
-    container_name: devtechs-postgres
+    container_name: SZDevs-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-devtechs}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devtechs}
-      POSTGRES_DB: ${POSTGRES_DB:-devtechs}
+      POSTGRES_USER: ${POSTGRES_USER:-SZDevs}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SZDevs}
+      POSTGRES_DB: ${POSTGRES_DB:-SZDevs}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - devtechs
+      - SZDevs
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-devtechs} -d ${POSTGRES_DB:-devtechs}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-SZDevs} -d ${POSTGRES_DB:-SZDevs}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -66,7 +66,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: devtechs-redis
+    container_name: SZDevs-redis
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     ports:
@@ -74,7 +74,7 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - devtechs
+      - SZDevs
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -84,7 +84,7 @@ services:
 
   nginx:
     image: nginx:alpine
-    container_name: devtechs-nginx
+    container_name: SZDevs-nginx
     restart: unless-stopped
     profiles:
       - prod
@@ -99,7 +99,7 @@ services:
       # deploy. Read-only mount.
       - ../docs:/usr/share/nginx/html/docs:ro
     networks:
-      - devtechs
+      - SZDevs
     depends_on:
       - auth-service
       - rh-service
@@ -124,7 +124,7 @@ services:
   # ---------------------------------------------------------------------------
   auth-service:
     <<: *service-defaults
-    container_name: devtechs-auth-service
+    container_name: SZDevs-auth-service
     build:
       context: ..
       dockerfile: services/auth-service/Dockerfile
@@ -144,7 +144,7 @@ services:
 
   rh-service:
     <<: *service-defaults
-    container_name: devtechs-rh-service
+    container_name: SZDevs-rh-service
     build:
       context: ..
       dockerfile: services/rh-service/Dockerfile
@@ -163,7 +163,7 @@ services:
 
   finance-service:
     <<: *service-defaults
-    container_name: devtechs-finance-service
+    container_name: SZDevs-finance-service
     build:
       context: ..
       dockerfile: services/finance-service/Dockerfile
@@ -182,7 +182,7 @@ services:
 
   projects-service:
     <<: *service-defaults
-    container_name: devtechs-projects-service
+    container_name: SZDevs-projects-service
     build:
       context: ..
       dockerfile: services/projects-service/Dockerfile
@@ -201,7 +201,7 @@ services:
 
   devops-service:
     <<: *service-defaults
-    container_name: devtechs-devops-service
+    container_name: SZDevs-devops-service
     build:
       context: ..
       dockerfile: services/devops-service/Dockerfile
@@ -220,7 +220,7 @@ services:
 
   support-service:
     <<: *service-defaults
-    container_name: devtechs-support-service
+    container_name: SZDevs-support-service
     build:
       context: ..
       dockerfile: services/support-service/Dockerfile
@@ -239,7 +239,7 @@ services:
 
   payments-service:
     <<: *service-defaults
-    container_name: devtechs-payments-service
+    container_name: SZDevs-payments-service
     build:
       context: ..
       dockerfile: services/payments-service/Dockerfile
@@ -260,7 +260,7 @@ services:
 
   notification-service:
     <<: *service-defaults
-    container_name: devtechs-notification-service
+    container_name: SZDevs-notification-service
     build:
       context: ..
       dockerfile: services/notification-service/Dockerfile
@@ -283,7 +283,7 @@ services:
 
   license-service:
     <<: *service-defaults
-    container_name: devtechs-license-service
+    container_name: SZDevs-license-service
     build:
       context: ..
       dockerfile: services/license-service/Dockerfile
@@ -303,7 +303,7 @@ services:
 
   developer-service:
     <<: *service-defaults
-    container_name: devtechs-developer-service
+    container_name: SZDevs-developer-service
     build:
       context: ..
       dockerfile: services/developer-service/Dockerfile
@@ -320,7 +320,7 @@ services:
     # Mount the host Docker socket so dockerode can manage sibling
     # containers (start/stop/restart/logs). The developer-service
     # process must run as a user inside the host's `docker` group
-    # for this to work without root — see Dockerfile.
+    # for this to work without root â€” see Dockerfile.
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
@@ -335,7 +335,7 @@ services:
   # ---------------------------------------------------------------------------
   web:
     restart: unless-stopped
-    container_name: devtechs-web
+    container_name: SZDevs-web
     profiles:
       - prod
     build:
@@ -348,7 +348,7 @@ services:
     expose:
       - "4000"
     networks:
-      - devtechs
+      - SZDevs
     depends_on:
       auth-service:
         condition: service_healthy
@@ -358,7 +358,7 @@ services:
   # Only `web` and the public planos/checkout SaaS `store` remain.
   store:
     restart: unless-stopped
-    container_name: devtechs-store
+    container_name: SZDevs-store
     profiles:
       - prod
     build:
@@ -371,13 +371,13 @@ services:
     expose:
       - "4006"
     networks:
-      - devtechs
+      - SZDevs
     depends_on:
       payments-service:
         condition: service_healthy
 
 networks:
-  devtechs:
+  SZDevs:
     driver: bridge
 
 volumes:

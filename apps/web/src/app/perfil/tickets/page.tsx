@@ -1,8 +1,8 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 
-import { Button } from '@devtechs/ui';
+import { Button } from '@szdevs/ui';
 
 import { auth } from '@/auth';
 import { AppShell } from '@/components/app/app-shell';

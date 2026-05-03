@@ -1,4 +1,4 @@
-import { cn } from '@devtechs/ui';
+import { cn } from '@szdevs/ui';
 
 /**
  * StatCard — metric tile used on dashboards.

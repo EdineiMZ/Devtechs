@@ -1,16 +1,16 @@
 /**
- * Test 9: /perfil/configuracoes — auth-service self-service endpoints.
+ * Test 9: /perfil/configuracoes â€” auth-service self-service endpoints.
  *
  * Walks the admin user through the same operations the UI lets a
  * real user do, against the live auth-service:
  *
- *   1. Login → access token + session id
+ *   1. Login â†’ access token + session id
  *   2. PATCH /auth/me         (profile update; round-trips name/avatar)
  *   3. PATCH /auth/me {}      (empty body must 400)
  *   4. GET   /auth/me/sessions (lists; current=true on the active one)
- *   5. POST  /auth/me/password — wrong current → 401
- *   6. POST  /auth/me/password — same current/new → 400
- *   7. POST  /auth/me/password — happy path → 200, all OTHER sessions
+ *   5. POST  /auth/me/password â€” wrong current â†’ 401
+ *   6. POST  /auth/me/password â€” same current/new â†’ 400
+ *   7. POST  /auth/me/password â€” happy path â†’ 200, all OTHER sessions
  *      revoked, current still valid (sanity-checked via /auth/me),
  *      then ROLLED BACK to the original password so subsequent test
  *      runs / interactive logins still work.
@@ -18,9 +18,9 @@
  */
 
 const AUTH = 'http://127.0.0.1:4001';
-const ADMIN_EMAIL = 'admin@devtechs.com';
-const ADMIN_PWD = 'Admin@DevTechs2026';
-const TEMP_PWD = 'Temp@DevTechs2026!';
+const ADMIN_EMAIL = 'admin@SZDevs.com';
+const ADMIN_PWD = 'Admin@SZDevs2026';
+const TEMP_PWD = 'Temp@SZDevs2026!';
 
 const results = [];
 function record(name, ok, detail) {
@@ -65,11 +65,11 @@ async function login(password) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ name: 'Administrador DevTechs' }),
+    body: JSON.stringify({ name: 'Administrador SZDevs' }),
   });
   record(
     'PATCH /auth/me updates the user name',
-    res.status === 200 && res.body.name === 'Administrador DevTechs',
+    res.status === 200 && res.body.name === 'Administrador SZDevs',
     `status=${res.status} name=${res.body?.name}`,
   );
 
@@ -100,7 +100,7 @@ async function login(password) {
     `status=${res.status} sessions=${items.length} hasCurrent=${Boolean(currentRow?.current)}`,
   );
 
-  // -------- 5) POST /auth/me/password — wrong current --------
+  // -------- 5) POST /auth/me/password â€” wrong current --------
   res = await jsonFetch(`${AUTH}/auth/me/password`, {
     method: 'POST',
     headers: {
@@ -118,7 +118,7 @@ async function login(password) {
     `status=${res.status}`,
   );
 
-  // -------- 6) POST /auth/me/password — same current/new --------
+  // -------- 6) POST /auth/me/password â€” same current/new --------
   res = await jsonFetch(`${AUTH}/auth/me/password`, {
     method: 'POST',
     headers: {
@@ -136,7 +136,7 @@ async function login(password) {
     `status=${res.status}`,
   );
 
-  // -------- 7) POST /auth/me/password — happy path + rollback --------
+  // -------- 7) POST /auth/me/password â€” happy path + rollback --------
   res = await jsonFetch(`${AUTH}/auth/me/password`, {
     method: 'POST',
     headers: {
@@ -164,7 +164,7 @@ async function login(password) {
     `status=${res.status}`,
   );
 
-  // Login with the new password — proves the rotation took effect.
+  // Login with the new password â€” proves the rotation took effect.
   res = await login(TEMP_PWD);
   record(
     'login with NEW password succeeds',
@@ -186,7 +186,7 @@ async function login(password) {
     }),
   });
   record(
-    'password rotation rollback (TEMP → ADMIN) succeeded',
+    'password rotation rollback (TEMP â†’ ADMIN) succeeded',
     res.status === 200,
     `status=${res.status}`,
   );

@@ -1,6 +1,6 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 
-import { Card } from '@devtechs/ui';
+import { Card } from '@szdevs/ui';
 
 import type { TicketListItemDto } from '@/lib/support-api';
 

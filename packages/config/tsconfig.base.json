@@ -34,22 +34,22 @@
 
     "baseUrl": ".",
     "paths": {
-      "@devtechs/ui": ["../ui/src"],
-      "@devtechs/ui/*": ["../ui/src/*"],
-      "@devtechs/types": ["../types/src"],
-      "@devtechs/types/*": ["../types/src/*"],
-      "@devtechs/auth": ["../auth/src"],
-      "@devtechs/auth/*": ["../auth/src/*"],
-      "@devtechs/utils": ["../utils/src"],
-      "@devtechs/utils/*": ["../utils/src/*"],
-      "@devtechs/database": ["../database/src"],
-      "@devtechs/database/*": ["../database/src/*"],
-      "@devtechs/storage": ["../storage/src"],
-      "@devtechs/storage/*": ["../storage/src/*"],
-      "@devtechs/license-sdk": ["../license-sdk/src"],
-      "@devtechs/license-sdk/*": ["../license-sdk/src/*"],
-      "@devtechs/config": ["../config"],
-      "@devtechs/config/*": ["../config/*"]
+      "@szdevs/ui": ["../ui/src"],
+      "@szdevs/ui/*": ["../ui/src/*"],
+      "@szdevs/types": ["../types/src"],
+      "@szdevs/types/*": ["../types/src/*"],
+      "@szdevs/auth": ["../auth/src"],
+      "@szdevs/auth/*": ["../auth/src/*"],
+      "@szdevs/utils": ["../utils/src"],
+      "@szdevs/utils/*": ["../utils/src/*"],
+      "@szdevs/database": ["../database/src"],
+      "@szdevs/database/*": ["../database/src/*"],
+      "@szdevs/storage": ["../storage/src"],
+      "@szdevs/storage/*": ["../storage/src/*"],
+      "@szdevs/license-sdk": ["../license-sdk/src"],
+      "@szdevs/license-sdk/*": ["../license-sdk/src/*"],
+      "@szdevs/config": ["../config"],
+      "@szdevs/config/*": ["../config/*"]
     }
   },
   "exclude": ["node_modules", "dist", "build", ".next", ".turbo", "coverage"]

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import type { TypingEntry } from '@/lib/support-socket';
 

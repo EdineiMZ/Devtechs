@@ -1,12 +1,12 @@
-# MEGA-PROMPT TEMPLATE — DevsTech One-Shot Cinematic Landing Page (Video Scroll-Scrub)
+# MEGA-PROMPT TEMPLATE — SZDevs One-Shot Cinematic Landing Page (Video Scroll-Scrub)
 
-> Este é o prompt completo e definitivo para gerar a landing page da **DevsTech**. Preencha os `{{PLACEHOLDERS}}` restantes marcados como `[PERSONALIZAR]` e cole o documento inteiro em seu modelo gerador (Lovable, v0, Cursor, Claude) como UM ÚNICO PROMPT. Não divida. O modelo deve produzir um app Vite funcional em uma única geração.
+> Este é o prompt completo e definitivo para gerar a landing page da **SZDevs**. Preencha os `{{PLACEHOLDERS}}` restantes marcados como `[PERSONALIZAR]` e cole o documento inteiro em seu modelo gerador (Lovable, v0, Cursor, Claude) como UM ÚNICO PROMPT. Não divida. O modelo deve produzir um app Vite funcional em uma única geração.
 
 ---
 
 ## 0. BRIEF (leia primeiro, não pule)
 
-Você está construindo um site de marketing premium, single-page, para uma **agência de desenvolvimento fullstack e arquitetura de software**, a **DevsTech**. A inspiração visual é: Vercel's homepage + Linear.app + Stripe's landing — mas com identidade própria, brutal e técnica. A interação principal é um **vídeo scrubado via canvas de frames** no hero. O restante da página é editorial, técnica, com estética de terminal-meets-luxury.
+Você está construindo um site de marketing premium, single-page, para uma **agência de desenvolvimento fullstack e arquitetura de software**, a **SZDevs**. A inspiração visual é: Vercel's homepage + Linear.app + Stripe's landing — mas com identidade própria, brutal e técnica. A interação principal é um **vídeo scrubado via canvas de frames** no hero. O restante da página é editorial, técnica, com estética de terminal-meets-luxury.
 
 **Stack alvo — inegociável:**
 - Vite + React 18 + TypeScript
@@ -31,12 +31,12 @@ Você está construindo um site de marketing premium, single-page, para uma **ag
 
 ## 1. TABELA DE PLACEHOLDERS
 
-Todos os valores abaixo estão pré-definidos para a DevsTech. Entradas marcadas com `[PERSONALIZAR]` devem ser ajustadas antes de submeter.
+Todos os valores abaixo estão pré-definidos para a SZDevs. Entradas marcadas com `[PERSONALIZAR]` devem ser ajustadas antes de submeter.
 
 | Placeholder | Valor Definido |
 |---|---|
 | `{{LANG}}` | `pt-BR` |
-| `{{BRAND_NAME}}` | `DevsTech` |
+| `{{BRAND_NAME}}` | `SZDevs` |
 | `{{BRAND_TAGLINE}}` | `Código que escala. Produto que converte.` |
 | `{{LOGO_PATH}}` | `/logo.svg` |
 | `{{NAV_ITEMS}}` | `[{"label":"Serviços","href":"#servicos"},{"label":"Processo","href":"#processo"},{"label":"Cases","href":"#cases"},{"label":"FAQ","href":"#faq"},{"label":"Contato","href":"#cta"}]` |
@@ -47,7 +47,7 @@ Todos os valores abaixo estão pré-definidos para a DevsTech. Entradas marcadas
 | `{{FRAME_EXT}}` | `webp` |
 | `{{FPS}}` | `30` |
 | `{{HERO_HEADLINE}}` | `Software que move negócios.` |
-| `{{HERO_SUB}}` | `Da arquitetura ao deploy. A DevsTech constrói sistemas backend, APIs e produtos digitais que resistem à escala real.` |
+| `{{HERO_SUB}}` | `Da arquitetura ao deploy. A SZDevs constrói sistemas backend, APIs e produtos digitais que resistem à escala real.` |
 | `{{HERO_CTA_PRIMARY}}` | `Iniciar projeto` |
 | `{{HERO_CTA_SECONDARY}}` | `Ver como funciona` |
 | `{{PARTNERS}}` | `["PostgreSQL","Node.js","Next.js","Docker","AWS","TypeScript"]` |
@@ -61,8 +61,8 @@ Todos os valores abaixo estão pré-definidos para a DevsTech. Entradas marcadas
 | `{{CTA_BG_VIDEO}}` | `[PERSONALIZAR — URL HLS/MP4 de vídeo ambiente, ex: tela de terminal, compilação]` |
 | `{{CTA_HEADLINE}}` | `Pronto para construir algo real?` |
 | `{{CTA_SUB}}` | `Uma conversa. Um escopo. Um produto que funciona de verdade.` |
-| `{{FOOTER_LINKS}}` | `[{"label":"Política de Privacidade","href":"/privacidade"},{"label":"Termos de Uso","href":"/termos"},{"label":"GitHub","href":"https://github.com/devstech"},{"label":"LinkedIn","href":"https://linkedin.com/company/devstech"}]` |
-| `{{COPYRIGHT}}` | `© 2026 DevsTech. Todos os direitos reservados.` |
+| `{{FOOTER_LINKS}}` | `[{"label":"Política de Privacidade","href":"/privacidade"},{"label":"Termos de Uso","href":"/termos"},{"label":"GitHub","href":"https://github.com/SZDevs"},{"label":"LinkedIn","href":"https://linkedin.com/company/SZDevs"}]` |
+| `{{COPYRIGHT}}` | `© 2026 SZDevs. Todos os direitos reservados.` |
 | `{{COLOR_INK}}` | `220 14% 8%` |
 | `{{COLOR_CARBON}}` | `220 10% 13%` |
 | `{{COLOR_COPPER}}` | `28 72% 58%` |
@@ -87,7 +87,7 @@ O hero usa uma sequência de frames scrubada por scroll, não uma tag `<video>`.
 mkdir -p input public/frames
 
 # 2. Extraia os frames com ffmpeg (requer ffmpeg instalado localmente).
-# Recomendação para DevsTech: use um vídeo de código sendo digitado,
+# Recomendação para SZDevs: use um vídeo de código sendo digitado,
 # um terminal compilando, ou uma visualização abstrata de rede/dados.
 ffmpeg -i input/source.mp4 \
   -vf "fps=30,scale='min(1920,iw)':'-2':flags=lanczos" \
@@ -103,7 +103,7 @@ done
 ls public/frames | wc -l
 ```
 
-**Sugestões de vídeo para a DevsTech:**
+**Sugestões de vídeo para a SZDevs:**
 - Terminal com código TypeScript/SQL sendo compilado em tempo real
 - Visualização abstrata de requests/responses em uma API REST
 - Tela de monitoramento com métricas (CPU, latência, throughput) em movimento
@@ -150,7 +150,7 @@ src/
     Hero.tsx
     TechStack.tsx          # marquee de tecnologias (substitui Partners)
     ServicesBento.tsx      # grid editorial de serviços
-    WhyDevsTech.tsx        # 4 razões / diferenciais
+    WhySZDevs.tsx        # 4 razões / diferenciais
     Process.tsx            # processo de trabalho passo a passo
     Stats.tsx              # métricas com vídeo de fundo
     Testimonials.tsx       # depoimentos de clientes
@@ -698,7 +698,7 @@ export function TerminalBadge({ children, variant = "acid", dot = true }: Props)
 ```
 Comportamento:
 - Fundo transparente no topo → liquid-glass-strong após 60px de scroll
-- Logo à esquerda: logotipo SVG + texto "DevsTech" em font-display peso 600
+- Logo à esquerda: logotipo SVG + texto "SZDevs" em font-display peso 600
 - Itens de nav centralizados (hidden em mobile, visíveis em md+): Serviços | Processo | Cases | FAQ
 - CTA à direita: <Button variant="hero" size="sm">Iniciar projeto</Button>
 - Menu mobile: drawer lateral com os mesmos itens
@@ -707,7 +707,7 @@ Comportamento:
 Estética:
 - Altura: 64px
 - Fonte dos itens: font-body, text-sm, text-muted-foreground, hover:text-foreground
-- Logo: ícone de terminal ou chave (lucide: Terminal, Code2, Brackets) + "DevsTech" em letras
+- Logo: ícone de terminal ou chave (lucide: Terminal, Code2, Brackets) + "SZDevs" em letras
 - Sem border-bottom — a separação vem do backdrop-blur ao fazer scroll
 ```
 
@@ -726,7 +726,7 @@ Estrutura (de baixo para cima em z-index):
 Conteúdo sticky (posição: canto inferior esquerdo, alinhado à gutter):
 - TerminalBadge variant="acid": "// engenharia de produto"
 - BlurText como <h1>: "Software que move negócios." — font-display, clamp(52px,7vw,96px), font-weight 600, leading-none, tracking-tight
-- Parágrafo subtítulo: "Da arquitetura ao deploy. A DevsTech constrói sistemas backend, APIs e produtos digitais que resistem à escala real." — max-w-lg, text-muted-foreground
+- Parágrafo subtítulo: "Da arquitetura ao deploy. A SZDevs constrói sistemas backend, APIs e produtos digitais que resistem à escala real." — max-w-lg, text-muted-foreground
 - Botões: <Button variant="hero">Iniciar projeto</Button> + <Button variant="heroGlass">Ver como funciona</Button>
 - Indicador de scroll: seta animada descendo + texto "role para explorar" em font-mono text-xs text-ash
 
@@ -802,10 +802,10 @@ Estética dos cards:
 
 ---
 
-## 14. WHY DEVSTECH — src/components/WhyDevsTech.tsx
+## 14. WHY SZDevs — src/components/WhySZDevs.tsx
 
 ```
-Label de seção: TerminalBadge variant="copper" "// por que a DevsTech"
+Label de seção: TerminalBadge variant="copper" "// por que a SZDevs"
 Headline: BlurText "Engenharia sem verniz."
 Subtítulo: "Sem jargão vazio. Sem estimativas fantasiosas. Apenas código bem escrito e entregue no prazo."
 
@@ -929,7 +929,7 @@ Máscaras: gradient-fade-t e gradient-fade-b nas extremidades horizontais
 Os 6 depoimentos:
 [
   {
-    "quote": "A DevsTech foi a primeira agência que nos entregou uma API documentada de verdade. Conseguimos contratar um dev júnior e ele entendeu o sistema no primeiro dia.",
+    "quote": "A SZDevs foi a primeira agência que nos entregou uma API documentada de verdade. Conseguimos contratar um dev júnior e ele entendeu o sistema no primeiro dia.",
     "name": "Rafael Costa",
     "role": "CTO, Fintech Startup"
   },
@@ -1084,4 +1084,4 @@ O modelo **DEVE:**
 
 ---
 
-*Este prompt foi construído especificamente para a **DevsTech** — agência de desenvolvimento fullstack & arquitetura de software. Todos os valores de placeholder já refletem a identidade, stack, serviços e tom de comunicação da marca.*
+*Este prompt foi construído especificamente para a **SZDevs** — agência de desenvolvimento fullstack & arquitetura de software. Todos os valores de placeholder já refletem a identidade, stack, serviços e tom de comunicação da marca.*

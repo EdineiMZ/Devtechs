@@ -1,22 +1,22 @@
 /**
  * Business-hours arithmetic for SLA computation.
  *
- * Business window (DevTechs standard): Monday → Friday, 09:00–18:00
+ * Business window (SZDevs standard): Monday â†’ Friday, 09:00â€“18:00
  * local time, 9 hours per day. Weekends and any time outside the
  * window is skipped entirely.
  *
  * The algorithm walks day by day from the start timestamp,
- * subtracting hours from the target until it hits zero — then
+ * subtracting hours from the target until it hits zero â€” then
  * returns the exact wall-clock moment inside the final day. No
  * calendar magic, no libraries, deterministic on any JS runtime.
  *
  * We expose two helpers:
  *
- *   - addBusinessHours(from, hours)   — add N business hours to a
+ *   - addBusinessHours(from, hours)   â€” add N business hours to a
  *                                       Date, crossing weekends and
  *                                       the 18:00 cutoff as needed.
  *
- *   - businessHoursBetween(a, b)      — compute the number of
+ *   - businessHoursBetween(a, b)      â€” compute the number of
  *                                       business hours that elapsed
  *                                       between two Dates (a <= b).
  *                                       Drives SLA-breach reports.
@@ -31,7 +31,7 @@
 const BUSINESS_START_HOUR = 9;
 /** Business day ends at 18:00 (exclusive). */
 const BUSINESS_END_HOUR = 18;
-/** Length of one business day in hours (18 − 9 = 9). */
+/** Length of one business day in hours (18 âˆ’ 9 = 9). */
 const BUSINESS_DAY_HOURS = BUSINESS_END_HOUR - BUSINESS_START_HOUR;
 
 /** Sunday = 0, Monday = 1, ..., Saturday = 6 (matches Date.getDay). */
@@ -41,7 +41,7 @@ const SUNDAY = 0;
 /** Length of one hour in milliseconds. */
 const HOUR_MS = 60 * 60 * 1000;
 
-/** True if the given JS weekday index (0–6) is Monday–Friday. */
+/** True if the given JS weekday index (0â€“6) is Mondayâ€“Friday. */
 function isWeekday(weekday: number): boolean {
   return weekday !== SATURDAY && weekday !== SUNDAY;
 }
@@ -51,7 +51,7 @@ function isWeekday(weekday: number): boolean {
  * falls inside a business window, the same moment is returned. If
  * it's before 09:00, the same day's 09:00 is returned. If it's at
  * or after 18:00 (or on a weekend), the next weekday's 09:00 is
- * returned. Never runs more than 7 iterations — the outer loop
+ * returned. Never runs more than 7 iterations â€” the outer loop
  * always terminates within a week.
  */
 function clampToBusinessWindow(from: Date): Date {
@@ -79,8 +79,8 @@ function clampToBusinessWindow(from: Date): Date {
     return cursor;
   }
 
-  // Safety net — shouldn't ever trigger because any start date is
-  // ≤ 7 days from the next business window.
+  // Safety net â€” shouldn't ever trigger because any start date is
+  // â‰¤ 7 days from the next business window.
   throw new Error('Failed to clamp to a business window');
 }
 
@@ -101,7 +101,7 @@ export function addBusinessHours(from: Date, hoursToAdd: number): Date {
     const availableToday = BUSINESS_END_HOUR - hourInDay;
 
     if (availableToday >= remaining) {
-      // Deadline lands inside the current business day — advance
+      // Deadline lands inside the current business day â€” advance
       // cursor by `remaining` and return.
       return new Date(cursor.getTime() + remaining * HOUR_MS);
     }
@@ -127,7 +127,7 @@ export function addBusinessHours(from: Date, hoursToAdd: number): Date {
 }
 
 /**
- * Business hours elapsed between two Dates (a ≤ b). Used by the
+ * Business hours elapsed between two Dates (a â‰¤ b). Used by the
  * SLA-breach report to quantify how late each ticket is.
  */
 export function businessHoursBetween(a: Date, b: Date): number {
@@ -160,7 +160,7 @@ export function businessHoursBetween(a: Date, b: Date): number {
     );
   }
 
-  // Clamp tiny float drift — 9.0000000001 → 9.
+  // Clamp tiny float drift â€” 9.0000000001 â†’ 9.
   return Math.round(total * 1000) / 1000;
 }
 

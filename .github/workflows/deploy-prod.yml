@@ -1,4 +1,4 @@
-name: Deploy · Production
+name: Deploy Â· Production
 
 on:
   push:
@@ -22,7 +22,7 @@ env:
 
 jobs:
   # -------------------------------------------------------------------
-  # 1. detect-changes — same logic as deploy-staging.yml, but scoped
+  # 1. detect-changes â€” same logic as deploy-staging.yml, but scoped
   #    to the diff between origin/main's previous HEAD and the newly
   #    landed commit. Since every commit on main comes from a merged
   #    PR, HEAD^1 is always the previous release tip.
@@ -52,7 +52,7 @@ jobs:
           JSON=$(pnpm turbo run build --filter='...[HEAD^1]' --dry-run=json 2>/dev/null || echo '{"packages":[]}')
 
           SERVICES=$(echo "$JSON" | jq -c '[.packages[] | select(endswith("-service"))]')
-          APPS=$(echo "$JSON" | jq -c '[.packages[] | select(test("^@devtechs/(web|rh|financeiro|projetos|devops|suporte|store|developer)$"))]')
+          APPS=$(echo "$JSON" | jq -c '[.packages[] | select(test("^@szdevs/(web|rh|financeiro|projetos|devops|suporte|store|developer)$"))]')
 
           TOTAL=$(echo "$JSON" | jq '.packages | length')
           HAS="false"
@@ -63,11 +63,11 @@ jobs:
           echo "has-changes=$HAS" >> "$GITHUB_OUTPUT"
 
   # -------------------------------------------------------------------
-  # 2. version — compute the next semver tag from conventional-commits
+  # 2. version â€” compute the next semver tag from conventional-commits
   #    on main since the last tag. Runs BEFORE the build matrices so
   #    the resulting version can be used as a Docker tag alongside the
   #    sha. `dry_run: true` keeps this job from actually pushing the
-  #    tag — that happens after a successful deploy in the `release`
+  #    tag â€” that happens after a successful deploy in the `release`
   #    job below, so a failed deploy doesn't burn a version number.
   # -------------------------------------------------------------------
   version:
@@ -82,7 +82,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # full history — required to walk conventional commits
+          fetch-depth: 0  # full history â€” required to walk conventional commits
 
       - name: Preview next tag
         id: bump
@@ -98,7 +98,7 @@ jobs:
   # 3a. build-services
   # -------------------------------------------------------------------
   build-services:
-    name: Build service · ${{ matrix.package }}
+    name: Build service Â· ${{ matrix.package }}
     needs: [detect-changes, version]
     if: needs.detect-changes.outputs.services != '[]'
     runs-on: ubuntu-latest
@@ -115,7 +115,7 @@ jobs:
       - name: Resolve image name
         id: meta
         run: |
-          NAME=$(echo "${{ matrix.package }}" | sed 's|@devtechs/||')
+          NAME=$(echo "${{ matrix.package }}" | sed 's|@szdevs/||')
           SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "image=${{ env.IMAGE_PREFIX }}/$NAME" >> "$GITHUB_OUTPUT"
@@ -150,7 +150,7 @@ jobs:
   # 3b. build-apps
   # -------------------------------------------------------------------
   build-apps:
-    name: Build app · ${{ matrix.package }}
+    name: Build app Â· ${{ matrix.package }}
     needs: [detect-changes, version]
     if: needs.detect-changes.outputs.apps != '[]'
     runs-on: ubuntu-latest
@@ -167,7 +167,7 @@ jobs:
       - name: Resolve image name
         id: meta
         run: |
-          NAME=$(echo "${{ matrix.package }}" | sed 's|@devtechs/||')
+          NAME=$(echo "${{ matrix.package }}" | sed 's|@szdevs/||')
           SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "image=${{ env.IMAGE_PREFIX }}/$NAME" >> "$GITHUB_OUTPUT"
@@ -200,13 +200,13 @@ jobs:
           cache-to: type=gha,scope=${{ steps.meta.outputs.name }},mode=max
 
   # -------------------------------------------------------------------
-  # 4. deploy — gated by `environment: production` so GitHub's
+  # 4. deploy â€” gated by `environment: production` so GitHub's
   #    Environment Protection Rules (reviewers, wait timer, branch
   #    allow-list) apply before the job runs. Configure them in
-  #    Settings → Environments → production on the repo.
+  #    Settings â†’ Environments â†’ production on the repo.
   #
   #    Pre-deploy step: `pg_dumpall` inside the postgres container,
-  #    gzipped to /opt/devtechs/backups on the VPS. 30-day retention.
+  #    gzipped to /opt/SZDevs/backups on the VPS. 30-day retention.
   # -------------------------------------------------------------------
   deploy:
     name: Deploy to production
@@ -219,7 +219,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: https://devtechs.io
+      url: https://SZDevs.io
     steps:
       - name: Backup Postgres
         uses: appleboy/ssh-action@v1
@@ -230,14 +230,14 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
-            mkdir -p /opt/devtechs/backups
+            mkdir -p /opt/SZDevs/backups
             TS=$(date -u +%Y%m%d_%H%M%SZ)
-            OUT="/opt/devtechs/backups/db_${TS}.sql.gz"
-            docker exec devtechs-postgres pg_dumpall -U "${POSTGRES_USER:-devtechs}" \
+            OUT="/opt/SZDevs/backups/db_${TS}.sql.gz"
+            docker exec SZDevs-postgres pg_dumpall -U "${POSTGRES_USER:-SZDevs}" \
               | gzip > "$OUT"
             echo "Backup written: $OUT ($(du -h "$OUT" | cut -f1))"
             # Retention: keep 30 days of backups.
-            find /opt/devtechs/backups -maxdepth 1 -name 'db_*.sql.gz' -mtime +30 -delete
+            find /opt/SZDevs/backups -maxdepth 1 -name 'db_*.sql.gz' -mtime +30 -delete
 
       - name: Pull + restart containers
         uses: appleboy/ssh-action@v1
@@ -248,7 +248,7 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
-            cd /opt/devtechs
+            cd /opt/SZDevs
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker compose pull
             docker compose up -d --remove-orphans
@@ -275,7 +275,7 @@ jobs:
             OK="false"
             for i in $(seq 1 60); do
               if curl -fsS --max-time 3 "$URL" > /dev/null 2>&1; then
-                echo "✓ healthy after ${i}s"
+                echo "âœ“ healthy after ${i}s"
                 OK="true"
                 break
               fi
@@ -283,13 +283,13 @@ jobs:
             done
             echo "::endgroup::"
             if [ "$OK" != "true" ]; then
-              echo "::error::$URL did not respond within 60s — consider rollback"
+              echo "::error::$URL did not respond within 60s â€” consider rollback"
               exit 1
             fi
           done
 
   # -------------------------------------------------------------------
-  # 5. release — tag the commit, push the tag, create a GitHub Release
+  # 5. release â€” tag the commit, push the tag, create a GitHub Release
   #    with the conventional-commits changelog. Runs ONLY when deploy
   #    succeeded so we never burn a version number on a rollback.
   # -------------------------------------------------------------------
@@ -324,7 +324,7 @@ jobs:
           generate_release_notes: true
 
   # -------------------------------------------------------------------
-  # 6. notify — runs after everything else with `if: always()` so
+  # 6. notify â€” runs after everything else with `if: always()` so
   #    Slack gets a message for success AND failure paths.
   # -------------------------------------------------------------------
   notify:
@@ -338,7 +338,7 @@ jobs:
         with:
           payload: |
             {
-              "text": "Production deploy *${{ needs.deploy.result }}* — ${{ needs.release.outputs.new-tag || github.sha }}",
+              "text": "Production deploy *${{ needs.deploy.result }}* â€” ${{ needs.release.outputs.new-tag || github.sha }}",
               "blocks": [
                 {
                   "type": "section",

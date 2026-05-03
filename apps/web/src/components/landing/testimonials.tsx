@@ -5,7 +5,7 @@ import { TerminalBadge } from './terminal-badge';
 
 const TESTIMONIALS = [
   {
-    quote: 'A DevsTech foi a primeira agência que nos entregou uma API documentada de verdade. Conseguimos contratar um dev júnior e ele entendeu o sistema no primeiro dia.',
+    quote: 'A SZDevs foi a primeira agência que nos entregou uma API documentada de verdade. Conseguimos contratar um dev júnior e ele entendeu o sistema no primeiro dia.',
     name: 'Rafael Costa',
     role: 'CTO, Fintech Startup',
   },

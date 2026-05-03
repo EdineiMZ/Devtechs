@@ -1,5 +1,5 @@
 -- =============================================================================
--- DevTechs - init_auth_schema
+-- SZDevs - init_auth_schema
 --
 -- Creates the authentication and permissions domain tables.
 -- =============================================================================

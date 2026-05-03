@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { ADMIN, CLIENT } from '../fixtures/users';
 
 /**
- * Security test suite for the DevTechs web application.
+ * Security test suite for the SZDevs web application.
  *
  * Covers OWASP Top 10 and common web security issues:
  *   - Authentication & authorization
@@ -16,7 +16,7 @@ import { ADMIN, CLIENT } from '../fixtures/users';
  *   - Sensitive data exposure
  */
 
-// ─── Helper ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const XSS_PAYLOADS = [
   '<script>alert("xss")</script>',
   '"><img src=x onerror=alert(1)>',
@@ -25,7 +25,7 @@ const XSS_PAYLOADS = [
   'javascript:alert(1)',
 ];
 
-// ─── 1. Secure Cookie Attributes ──────────────────────────────────────────
+// â”€â”€â”€ 1. Secure Cookie Attributes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 test.describe('security/cookies', () => {
   test('session cookie is HttpOnly (not readable by JS)', async ({ page }) => {
     await page.goto('/login');
@@ -85,7 +85,7 @@ test.describe('security/cookies', () => {
   });
 });
 
-// ─── 2. Security Headers ──────────────────────────────────────────────────
+// â”€â”€â”€ 2. Security Headers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 test.describe('security/headers', () => {
   test('login page has X-Frame-Options or CSP frame-ancestors (clickjacking protection)', async ({
     request,
@@ -122,7 +122,7 @@ test.describe('security/headers', () => {
   });
 });
 
-// ─── 3. Authentication Security ───────────────────────────────────────────
+// â”€â”€â”€ 3. Authentication Security â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 test.describe('security/authentication', () => {
   test('wrong password does not leak user existence (consistent error)', async ({ browser }) => {
     // Use separate pages so each attempt starts fresh (avoids stale alert state).
@@ -154,27 +154,27 @@ test.describe('security/authentication', () => {
     ).toBe(normalizeMsg(errorTextUnknown || ''));
   });
 
-  test('unauthenticated access to /admin → redirected to /login', async ({ page }) => {
+  test('unauthenticated access to /admin â†’ redirected to /login', async ({ page }) => {
     await page.goto('/admin');
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test('unauthenticated access to /admin/rh → redirected to /login', async ({ page }) => {
+  test('unauthenticated access to /admin/rh â†’ redirected to /login', async ({ page }) => {
     await page.goto('/admin/rh');
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test('unauthenticated access to /admin/financeiro → redirected to /login', async ({ page }) => {
+  test('unauthenticated access to /admin/financeiro â†’ redirected to /login', async ({ page }) => {
     await page.goto('/admin/financeiro');
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test('unauthenticated access to /perfil → redirected to /login', async ({ page }) => {
+  test('unauthenticated access to /perfil â†’ redirected to /login', async ({ page }) => {
     await page.goto('/perfil');
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test('client cannot access admin routes → redirected to /perfil', async ({ page }) => {
+  test('client cannot access admin routes â†’ redirected to /perfil', async ({ page }) => {
     // Login as client
     await page.goto('/login');
     await page.locator('input[type="email"]').fill(CLIENT.email);
@@ -193,7 +193,7 @@ test.describe('security/authentication', () => {
   });
 });
 
-// ─── 4. Open Redirect ─────────────────────────────────────────────────────
+// â”€â”€â”€ 4. Open Redirect â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 test.describe('security/open-redirect', () => {
   test('callbackUrl does not redirect to external domain', async ({ page }) => {
     const externalUrl = 'https://evil.example.com';
@@ -226,7 +226,7 @@ test.describe('security/open-redirect', () => {
   });
 });
 
-// ─── 5. XSS – Reflected / Stored ──────────────────────────────────────────
+// â”€â”€â”€ 5. XSS â€“ Reflected / Stored â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 test.describe('security/xss', () => {
   for (const payload of XSS_PAYLOADS) {
     test(`XSS payload in login email field is not executed: ${payload.substring(0, 30)}`, async ({
@@ -293,7 +293,7 @@ test.describe('security/xss', () => {
   });
 });
 
-// ─── 6. Input Validation & Injection ────────────────────────────────────
+// â”€â”€â”€ 6. Input Validation & Injection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 test.describe('security/input-validation', () => {
   test('SQL injection in login email does not crash the app', async ({ page }) => {
     const sqlPayloads = ["' OR '1'='1", "admin'--", "' UNION SELECT 1,2,3--"];
@@ -314,7 +314,7 @@ test.describe('security/input-validation', () => {
 
   test('path traversal in URL is handled gracefully', async ({ page }) => {
     const resp = await page.goto('/../../../etc/passwd');
-    // Should return 404 or redirect to root/login — never serve file contents.
+    // Should return 404 or redirect to root/login â€” never serve file contents.
     expect(resp?.status()).not.toBe(200);
   });
 
@@ -331,7 +331,7 @@ test.describe('security/input-validation', () => {
   });
 });
 
-// ─── 7. Session Management ─────────────────────────────────────────────────
+// â”€â”€â”€ 7. Session Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 test.describe('security/session', () => {
   test('logout invalidates session (protected route inaccessible after logout)', async ({
     page,
@@ -361,7 +361,7 @@ test.describe('security/session', () => {
   });
 
   test('CSRF: signout requires a form POST (GET does not log out)', async ({ page, request }) => {
-    // GET to signout should not log the user out — it should only show a confirmation form.
+    // GET to signout should not log the user out â€” it should only show a confirmation form.
     const resp = await request.get('/api/auth/signout', { maxRedirects: 0 });
     // NextAuth returns 200 with the signout HTML form on GET (not a redirect that clears cookies).
     // This verifies it doesn't auto-logout on a GET request (CSRF vector if it did).
@@ -372,7 +372,7 @@ test.describe('security/session', () => {
   });
 });
 
-// ─── 8. Password Field Security ───────────────────────────────────────────
+// â”€â”€â”€ 8. Password Field Security â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 test.describe('security/password-fields', () => {
   test('password input type is "password" (masked)', async ({ page }) => {
     await page.goto('/login');
@@ -405,7 +405,7 @@ test.describe('security/password-fields', () => {
   });
 });
 
-// ─── 9. Sensitive Route Enumeration ──────────────────────────────────────
+// â”€â”€â”€ 9. Sensitive Route Enumeration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 test.describe('security/route-enumeration', () => {
   // Routes that exist in the Next.js web app and MUST require auth.
   const protectedGetRoutes = ['/api/admin/audit/logs'];
@@ -415,12 +415,12 @@ test.describe('security/route-enumeration', () => {
       const resp = await request.get(route, { maxRedirects: 0 });
       expect(
         [401, 403, 302, 307].includes(resp.status()),
-        `${route} returned ${resp.status()} — should require auth`,
+        `${route} returned ${resp.status()} â€” should require auth`,
       ).toBe(true);
     });
   }
 
-  // /api/admin/users lives on the auth-service, not Next.js → 404 is correct.
+  // /api/admin/users lives on the auth-service, not Next.js â†’ 404 is correct.
   test('/api/admin/users: not exposed as Next.js API route (404)', async ({ request }) => {
     const resp = await request.get('/api/admin/users', { maxRedirects: 0 });
     // 404 means the route is correctly not exposed in the web app.
@@ -431,10 +431,10 @@ test.describe('security/route-enumeration', () => {
     ).toBe(true);
   });
 
-  // Recovery codes endpoint is POST-only — GET returning 405 is correct behavior.
+  // Recovery codes endpoint is POST-only â€” GET returning 405 is correct behavior.
   test('/api/account/2fa/recovery-codes: POST-only (405 on GET = secured)', async ({ request }) => {
     const resp = await request.get('/api/account/2fa/recovery-codes', { maxRedirects: 0 });
-    // 405 (Method Not Allowed) means GET is blocked — the data is not exposed.
+    // 405 (Method Not Allowed) means GET is blocked â€” the data is not exposed.
     // 401/403 also acceptable. 200 would be a security issue.
     expect(
       [401, 403, 404, 405, 302, 307].includes(resp.status()),

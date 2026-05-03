@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
@@ -7,7 +7,7 @@ import { signIn } from 'next-auth/react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { Button, Input } from '@devtechs/ui';
+import { Button, Input } from '@szdevs/ui';
 
 import { AUTH_ERRORS } from '@/auth';
 import { OAuthButtons } from '@/components/auth/oauth-buttons';
@@ -413,6 +413,7 @@ export function LoginForm(): JSX.Element {
 
               <Button
                 type="button"
+                variant="copper"
                 size="lg"
                 className="w-full"
                 loading={otpLoading}
@@ -437,6 +438,7 @@ export function LoginForm(): JSX.Element {
           ) : (
             <Button
               type="button"
+              variant="copper"
               size="lg"
               className="w-full"
               loading={otpLoading}
@@ -549,7 +551,7 @@ export function LoginForm(): JSX.Element {
             </label>
             <Link
               href="/forgot-password"
-              className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+              className="text-xs font-medium text-copper/80 underline-offset-4 hover:text-copper"
             >
               Esqueci minha senha
             </Link>
@@ -571,7 +573,7 @@ export function LoginForm(): JSX.Element {
           />
         ) : null}
 
-        <Button type="submit" size="lg" className="w-full" loading={loading}>
+        <Button type="submit" variant="copper" size="lg" className="w-full" loading={loading}>
           {phase === 'two-factor'
             ? loading ? 'Verificando…' : 'Verificar código'
             : loading ? 'Entrando…' : 'Entrar'}

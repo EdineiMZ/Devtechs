@@ -1,4 +1,4 @@
-name: Deploy · Staging
+name: Deploy Â· Staging
 
 on:
   push:
@@ -25,7 +25,7 @@ env:
 
 jobs:
   # -------------------------------------------------------------------
-  # 1. detect-changes — compute the set of packages affected by this
+  # 1. detect-changes â€” compute the set of packages affected by this
   #    push using `turbo run build --filter=...[HEAD^1] --dry-run=json`.
   #    The `...[HEAD^1]` filter includes every package changed in the
   #    last commit PLUS every package that depends on one of them.
@@ -65,7 +65,7 @@ jobs:
           # faster than a second pnpm ls round-trip, and the list
           # of app names is stable.
           SERVICES=$(echo "$JSON" | jq -c '[.packages[] | select(endswith("-service"))]')
-          APPS=$(echo "$JSON" | jq -c '[.packages[] | select(test("^@devtechs/(web|rh|financeiro|projetos|devops|suporte|store|developer)$"))]')
+          APPS=$(echo "$JSON" | jq -c '[.packages[] | select(test("^@szdevs/(web|rh|financeiro|projetos|devops|suporte|store|developer)$"))]')
 
           # Any changes at all? Used to skip the deploy job entirely
           # when nothing needs redeploying.
@@ -77,15 +77,15 @@ jobs:
           echo "apps=$APPS" >> "$GITHUB_OUTPUT"
           echo "has-changes=$HAS" >> "$GITHUB_OUTPUT"
 
-          echo "— affected services: $SERVICES"
-          echo "— affected apps:     $APPS"
+          echo "â€” affected services: $SERVICES"
+          echo "â€” affected apps:     $APPS"
 
   # -------------------------------------------------------------------
-  # 2a. build-services — matrix job, one runner per affected service.
+  # 2a. build-services â€” matrix job, one runner per affected service.
   #     Skipped entirely when the services array is empty.
   # -------------------------------------------------------------------
   build-services:
-    name: Build service · ${{ matrix.package }}
+    name: Build service Â· ${{ matrix.package }}
     needs: detect-changes
     if: needs.detect-changes.outputs.services != '[]'
     runs-on: ubuntu-latest
@@ -102,8 +102,8 @@ jobs:
       - name: Resolve image name
         id: meta
         run: |
-          # @devtechs/auth-service → auth-service
-          NAME=$(echo "${{ matrix.package }}" | sed 's|@devtechs/||')
+          # @szdevs/auth-service â†’ auth-service
+          NAME=$(echo "${{ matrix.package }}" | sed 's|@szdevs/||')
           SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "image=${{ env.IMAGE_PREFIX }}/$NAME" >> "$GITHUB_OUTPUT"
@@ -133,10 +133,10 @@ jobs:
           cache-to: type=gha,scope=${{ steps.meta.outputs.name }},mode=max
 
   # -------------------------------------------------------------------
-  # 2b. build-apps — same shape for Next.js apps.
+  # 2b. build-apps â€” same shape for Next.js apps.
   # -------------------------------------------------------------------
   build-apps:
-    name: Build app · ${{ matrix.package }}
+    name: Build app Â· ${{ matrix.package }}
     needs: detect-changes
     if: needs.detect-changes.outputs.apps != '[]'
     runs-on: ubuntu-latest
@@ -153,7 +153,7 @@ jobs:
       - name: Resolve image name
         id: meta
         run: |
-          NAME=$(echo "${{ matrix.package }}" | sed 's|@devtechs/||')
+          NAME=$(echo "${{ matrix.package }}" | sed 's|@szdevs/||')
           SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "image=${{ env.IMAGE_PREFIX }}/$NAME" >> "$GITHUB_OUTPUT"
@@ -184,7 +184,7 @@ jobs:
           cache-to: type=gha,scope=${{ steps.meta.outputs.name }},mode=max
 
   # -------------------------------------------------------------------
-  # 3. deploy — SSH into the staging VPS, pull the new images,
+  # 3. deploy â€” SSH into the staging VPS, pull the new images,
   #    restart the updated services, wait for health, notify Slack.
   #
   #    `environment: staging` binds the job to the Environments UI so
@@ -202,7 +202,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: staging
-      url: https://staging.devtechs.io
+      url: https://staging.SZDevs.io
     steps:
       - name: Pull + restart containers
         uses: appleboy/ssh-action@v1
@@ -213,7 +213,7 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
-            cd /opt/devtechs
+            cd /opt/SZDevs
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker compose pull
             docker compose up -d --remove-orphans
@@ -242,7 +242,7 @@ jobs:
             OK="false"
             for i in $(seq 1 60); do
               if curl -fsS --max-time 3 "$URL" > /dev/null 2>&1; then
-                echo "✓ healthy after ${i}s"
+                echo "âœ“ healthy after ${i}s"
                 OK="true"
                 break
               fi
@@ -261,7 +261,7 @@ jobs:
         with:
           payload: |
             {
-              "text": "Staging deploy *${{ job.status }}* — `${{ github.sha }}`",
+              "text": "Staging deploy *${{ job.status }}* â€” `${{ github.sha }}`",
               "blocks": [
                 {
                   "type": "section",

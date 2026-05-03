@@ -25,7 +25,7 @@ async function bootstrap(): Promise<void> {
     bodyParser: false,
   });
 
-  // Raw-body capture — only for the Mercado Pago webhook route.
+  // Raw-body capture â€” only for the Mercado Pago webhook route.
   app.use(
     '/webhooks/mercadopago',
     json({
@@ -67,14 +67,14 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   const port = Number(
-    process.env.PAYMENTS_SERVICE_PORT ?? process.env.PORT ?? 3007,
+    process.env.PAYMENTS_SERVICE_PORT ?? process.env.PORT ?? 4006,
   );
   // -----------------------------------------------------------------------
   // Swagger / OpenAPI
   // -----------------------------------------------------------------------
   const document = setupSwagger(app, {
     service: "payments",
-    title: "DevTechs — Payments Service API",
+    title: "SZDevs â€” Payments Service API",
     description: "Subscriptions, payments, plans, coupons, MP webhooks.",
     tags: [
       { name: "subscriptions" },

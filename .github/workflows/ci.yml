@@ -17,7 +17,7 @@ concurrency:
 # them to the shared cache; later jobs (and later runs, and local
 # developer machines) hit the cache instead of rebuilding.
 #
-# FORCE_COLOR keeps the logs readable — GitHub's runners strip colors
+# FORCE_COLOR keeps the logs readable â€” GitHub's runners strip colors
 # without it.
 env:
   NODE_VERSION: '20'
@@ -57,7 +57,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           pnpm-version: ${{ env.PNPM_VERSION }}
       - name: Generate Prisma client
-        run: pnpm --filter @devtechs/database prisma:generate
+        run: pnpm --filter @szdevs/database prisma:generate
       - name: pnpm turbo run typecheck
         run: pnpm turbo run typecheck
 
@@ -71,7 +71,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           pnpm-version: ${{ env.PNPM_VERSION }}
       - name: Generate Prisma client
-        run: pnpm --filter @devtechs/database prisma:generate
+        run: pnpm --filter @szdevs/database prisma:generate
       - name: pnpm turbo run test
         run: pnpm turbo run test
 
@@ -85,6 +85,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           pnpm-version: ${{ env.PNPM_VERSION }}
       - name: Generate Prisma client
-        run: pnpm --filter @devtechs/database prisma:generate
+        run: pnpm --filter @szdevs/database prisma:generate
       - name: pnpm turbo run build
         run: pnpm turbo run build

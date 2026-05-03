@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { Button } from '@devtechs/ui';
+import { Button } from '@szdevs/ui';
 
 import { authServiceFetch, extractErrorMessage } from '@/lib/auth-service';
 

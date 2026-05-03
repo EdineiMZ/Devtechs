@@ -1,8 +1,8 @@
 {
-  "name": "@devtechs/database",
+  "name": "@szdevs/database",
   "version": "0.1.0",
   "private": true,
-  "description": "DevTechs - shared Prisma client and schema",
+  "description": "SZDevs - shared Prisma client and schema",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
@@ -19,11 +19,11 @@
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@devtechs/types": "workspace:*",
+    "@szdevs/types": "workspace:*",
     "@prisma/client": "^5.15.0"
   },
   "devDependencies": {
-    "@devtechs/config": "workspace:*",
+    "@szdevs/config": "workspace:*",
     "prisma": "^5.15.0",
     "tsx": "^4.11.0",
     "typescript": "^5.4.0"

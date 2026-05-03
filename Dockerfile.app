@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.6
 #
 # =============================================================================
-# DevTechs — Next.js app image
+# SZDevs — Next.js app image
 #
 # Multi-stage build for any workspace under `apps/*`, using Next's
 # `output: 'standalone'` mode. The standalone build produces a minimal
@@ -10,7 +10,7 @@
 #
 #   docker build \
 #     --file Dockerfile.app \
-#     --build-arg PACKAGE_NAME=@devtechs/web \
+#     --build-arg PACKAGE_NAME=@szdevs/web \
 #     --build-arg APP_NAME=web \
 #     --tag ghcr.io/org/web:sha \
 #     .
@@ -19,7 +19,7 @@
 #   output: 'standalone',
 #   outputFileTracingRoot: path.join(__dirname, '../../'),
 # so that Next's trace walker follows `transpilePackages` out of the app
-# folder and into the @devtechs/ui / @devtechs/types workspace packages.
+# folder and into the @szdevs/ui / @szdevs/types workspace packages.
 # Without that second flag, standalone output produces a broken tree in
 # a monorepo.
 # =============================================================================
@@ -56,9 +56,9 @@ COPY . .
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile --ignore-scripts
 
-# Prisma client is needed by any app that imports @devtechs/database.
+# Prisma client is needed by any app that imports @szdevs/database.
 # Harmless on apps that don't touch it.
-RUN pnpm --filter @devtechs/database prisma:generate
+RUN pnpm --filter @szdevs/database prisma:generate
 
 # Build the target app (and its workspace deps). Standalone output lands
 # under apps/<name>/.next/standalone and the static chunks under

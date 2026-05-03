@@ -4,8 +4,8 @@ import Link from 'next/link';
 const FOOTER_LINKS = [
   { label: 'Política de Privacidade', href: '/privacidade' },
   { label: 'Termos de Uso',           href: '/termos' },
-  { label: 'GitHub',                  href: 'https://github.com/devstech' },
-  { label: 'LinkedIn',                href: 'https://linkedin.com/company/devstech' },
+  { label: 'GitHub',                  href: 'https://github.com/SZDevs' },
+  { label: 'LinkedIn',                href: 'https://linkedin.com/company/SZDevs' },
 ];
 
 export function Footer(): JSX.Element {
@@ -20,7 +20,7 @@ export function Footer(): JSX.Element {
                 <Code2 className="h-4 w-4 text-acid" />
               </div>
               <span className="font-display text-base font-semibold text-foreground tracking-tight">
-                DevsTech
+                SZDevs
               </span>
             </Link>
             <p className="font-body text-xs text-ash max-w-xs leading-relaxed">
@@ -45,7 +45,7 @@ export function Footer(): JSX.Element {
 
         <div className="mt-10 pt-8 border-t border-white/8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="font-mono text-xs text-ash">
-            © {new Date().getFullYear()} DevsTech. Todos os direitos reservados.
+            © {new Date().getFullYear()} SZDevs. Todos os direitos reservados.
           </p>
           <p className="font-mono text-xs text-ash">
             built with precision in Brazil 🇧🇷

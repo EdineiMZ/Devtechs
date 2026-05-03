@@ -61,6 +61,17 @@ export const registerSchema = z
       .regex(/(?=.*[A-Z])/, 'A senha deve conter uma letra maiúscula')
       .regex(/(?=.*\d)/, 'A senha deve conter um número'),
     confirmPassword: z.string({ required_error: 'Confirmação de senha é obrigatória' }),
+    /**
+     * LGPD art. 7º, I — o titular deve manifestar consentimento
+     * de forma livre, informada e inequívoca antes do tratamento.
+     * A simples exibição de texto não é suficiente; exige-se
+     * clique afirmativo (checkbox marcado).
+     */
+    termsAccepted: z.literal(true, {
+      errorMap: () => ({
+        message: 'Você deve aceitar os termos de uso e a política de privacidade',
+      }),
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'As senhas não conferem',

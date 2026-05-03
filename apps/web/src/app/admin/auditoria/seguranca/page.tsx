@@ -1,7 +1,7 @@
-﻿import { redirect } from 'next/navigation';
+import { redirect } from 'next/navigation';
 
 import { auth } from '@/auth';
-import { Badge, Card, CardContent, CardHeader, CardTitle, cn } from '@devtechs/ui';
+import { Badge, Card, CardContent, CardHeader, CardTitle, cn } from '@szdevs/ui';
 import { AppShell } from '@/components/app/app-shell';
 import { ADMIN_NAV_ITEMS } from '@/components/app/nav-config';
 import { type SecurityReport, getSecurityReport } from '@/lib/audit-api';

@@ -5,7 +5,7 @@ import { StoreHeader } from '@/components/store-header';
 import { StoreFooter } from '@/components/store-footer';
 import { SubscriptionDashboard } from './subscription-dashboard';
 
-export const metadata = { title: 'Minha Assinatura - DevTechs' };
+export const metadata = { title: 'Minha Assinatura - SZDevs' };
 export const dynamic = 'force-dynamic';
 
 export default async function AssinaturaPage() {

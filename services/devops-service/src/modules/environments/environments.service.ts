@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import type { Prisma } from '@devtechs/database';
+import type { Prisma } from '@szdevs/database';
 
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -155,7 +155,7 @@ export class EnvironmentsService {
   }
 
   /**
-   * Return every environment that's still "tracked" — i.e. has
+   * Return every environment that's still "tracked" â€” i.e. has
    * a URL. The health-check job iterates over this list on every
    * sweep. Selecting minimal columns keeps the list query index-only.
    */

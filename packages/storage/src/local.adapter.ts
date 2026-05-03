@@ -37,7 +37,7 @@ export class LocalAdapter implements StorageAdapter {
     }
     this.basePath = resolve(config.basePath);
     this.publicBaseUrl = config.publicBaseUrl.replace(/\/+$/, '');
-    this.signingSecret = config.signingSecret ?? 'devtechs-local-dev';
+    this.signingSecret = config.signingSecret ?? 'SZDevs-local-dev';
   }
 
   async upload(key: string, buffer: Buffer, _mimeType: string): Promise<UploadResult> {

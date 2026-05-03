@@ -18,9 +18,9 @@ const inter = Inter({
   display: 'swap',
 });
 
-const SITE_NAME = 'DevTechs';
-const SITE_URL = process.env.NEXT_PUBLIC_WEB_URL ?? 'https://devtechs.io';
-const SITE_TITLE = 'DevTechs — Tecnologia sob medida para o seu negócio';
+const SITE_NAME = 'SZDevs';
+const SITE_URL = process.env.NEXT_PUBLIC_WEB_URL ?? 'https://SZDevs.io';
+const SITE_TITLE = 'SZDevs — Tecnologia sob medida para o seu negócio';
 const SITE_DESCRIPTION =
   'Desenvolvimento de sistemas customizados, plataforma DevOps, suporte técnico especializado e consultoria em infraestrutura cloud. Entregas rápidas, tecnologia de ponta e atendimento dedicado.';
 
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     'infraestrutura cloud',
     'consultoria em TI',
     'software sob medida',
-    'devtechs',
+    'SZDevs',
   ],
   alternates: {
     canonical: '/',
@@ -68,7 +68,7 @@ export const metadata: Metadata = {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
     images: ['/og-image.png'],
-    creator: '@devtechs',
+    creator: '@SZDevs',
   },
   robots: {
     index: true,

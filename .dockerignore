@@ -1,5 +1,5 @@
 # =============================================================================
-# DevTechs .dockerignore
+# SZDevs .dockerignore
 #
 # Scoped to the *repo root* since both Dockerfile.service and Dockerfile.app
 # use the root as build context. Everything in here is EXCLUDED from the

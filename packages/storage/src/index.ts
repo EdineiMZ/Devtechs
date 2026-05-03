@@ -1,14 +1,14 @@
 /**
- * @devtechs/storage — adapter-pattern storage layer.
+ * @szdevs/storage â€” adapter-pattern storage layer.
  *
  * Public surface:
  *
- *   - `StorageAdapter` — the interface every adapter implements.
- *   - `R2Adapter` — Cloudflare R2 (S3-compatible) implementation.
- *   - `LocalAdapter` — filesystem implementation for dev / tests.
- *   - `StorageFactory` — picks the right adapter from env vars.
- *   - `StorageModule` + `STORAGE` — NestJS dynamic module + injection token.
- *   - `generateKey(folder, filename)` — canonical key builder.
+ *   - `StorageAdapter` â€” the interface every adapter implements.
+ *   - `R2Adapter` â€” Cloudflare R2 (S3-compatible) implementation.
+ *   - `LocalAdapter` â€” filesystem implementation for dev / tests.
+ *   - `StorageFactory` â€” picks the right adapter from env vars.
+ *   - `StorageModule` + `STORAGE` â€” NestJS dynamic module + injection token.
+ *   - `generateKey(folder, filename)` â€” canonical key builder.
  *
  * Typical NestJS wiring:
  *
@@ -23,7 +23,7 @@
  * Typical consumer:
  *
  *   import { Inject, Injectable } from '@nestjs/common';
- *   import { STORAGE, generateKey, type StorageAdapter } from '@devtechs/storage';
+ *   import { STORAGE, generateKey, type StorageAdapter } from '@szdevs/storage';
  *
  *   @Injectable()
  *   export class AvatarService {

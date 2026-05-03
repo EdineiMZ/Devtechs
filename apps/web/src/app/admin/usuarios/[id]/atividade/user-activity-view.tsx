@@ -1,8 +1,8 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, cn } from '@devtechs/ui';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, cn } from '@szdevs/ui';
 
 import type { AuditLogItem } from '@/lib/audit-api';
 

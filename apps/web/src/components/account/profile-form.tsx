@@ -1,11 +1,11 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import { Button, Input } from '@devtechs/ui';
+import { Button, Input } from '@szdevs/ui';
 
 import {
   profileSchema,

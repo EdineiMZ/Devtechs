@@ -1,11 +1,11 @@
-﻿'use client';
+'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { Button, Input } from '@devtechs/ui';
+import { Button, Input } from '@szdevs/ui';
 
 import { registerSchema, type RegisterInput } from '@/lib/auth-schemas';
 import { authServiceFetch, extractErrorMessage } from '@/lib/auth-service';
@@ -15,16 +15,9 @@ import { RegisterSuccessView } from './register-success-view';
 /**
  * Register form → "check your email" success view.
  *
- * We call auth-service `/auth/register` directly rather than going
- * through a Next.js route handler because this flow has no secrets
- * to protect — the backend is already rate-limited by IP and the
- * response body is public-safe. Keeping it direct removes one hop
- * and one file.
- *
- * After a successful register we swap the form out for a dedicated
- * success view (same file, sibling component). The success view
- * carries the email address so it can offer a "voltar para login"
- * link pre-filled with context.
+ * Includes an explicit opt-in checkbox required by LGPD art. 7º, I:
+ * "manifestação livre, informada e inequívoca" do titular antes do
+ * tratamento dos dados. O simples texto passivo não é suficiente.
  */
 
 type SubmitStatus =
@@ -48,6 +41,7 @@ export function RegisterForm(): JSX.Element {
       email: '',
       password: '',
       confirmPassword: '',
+      // termsAccepted starts as undefined (falsy) — checkbox unchecked
     },
   });
 
@@ -131,28 +125,55 @@ export function RegisterForm(): JSX.Element {
           {...register('confirmPassword')}
         />
 
-        <Button type="submit" size="lg" className="w-full" loading={loading}>
+        {/* ── Consentimento explícito — LGPD art. 7º, I ─────────────── */}
+        <div className="space-y-1">
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              disabled={loading}
+              className={[
+                'mt-0.5 h-4 w-4 shrink-0 rounded border appearance-none',
+                'bg-white/[0.03] border-white/20',
+                'checked:bg-copper checked:border-copper',
+                'focus:outline-none focus:ring-1 focus:ring-copper/40',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                'transition-colors cursor-pointer',
+              ].join(' ')}
+              aria-required="true"
+              {...register('termsAccepted')}
+            />
+            <span className="text-xs text-ash leading-relaxed group-has-[:disabled]:opacity-50">
+              Li e aceito os{' '}
+              <Link
+                href="/termos"
+                target="_blank"
+                className="font-medium text-copper/80 underline-offset-4 hover:text-copper"
+              >
+                termos de uso
+              </Link>{' '}
+              e a{' '}
+              <Link
+                href="/privacidade"
+                target="_blank"
+                className="font-medium text-copper/80 underline-offset-4 hover:text-copper"
+              >
+                política de privacidade
+              </Link>
+              , incluindo o tratamento dos meus dados pessoais conforme descrito.
+            </span>
+          </label>
+
+          {errors.termsAccepted ? (
+            <p role="alert" className="text-xs text-red-400 pl-7">
+              {errors.termsAccepted.message}
+            </p>
+          ) : null}
+        </div>
+
+        <Button type="submit" variant="copper" size="lg" className="w-full" loading={loading}>
           {loading ? 'Criando conta…' : 'Criar conta'}
         </Button>
       </form>
-
-      <p className="text-center text-xs text-ash">
-        Ao criar uma conta você concorda com os{' '}
-        <Link
-          href="/termos"
-          className="font-medium text-primary underline-offset-4 hover:underline"
-        >
-          termos de uso
-        </Link>{' '}
-        e a{' '}
-        <Link
-          href="/privacidade"
-          className="font-medium text-primary underline-offset-4 hover:underline"
-        >
-          política de privacidade
-        </Link>
-        .
-      </p>
     </div>
   );
 }

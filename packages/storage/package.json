@@ -1,8 +1,8 @@
 {
-  "name": "@devtechs/storage",
+  "name": "@szdevs/storage",
   "version": "0.1.0",
   "private": true,
-  "description": "DevTechs - storage adapter pattern (Cloudflare R2 + local filesystem)",
+  "description": "SZDevs - storage adapter pattern (Cloudflare R2 + local filesystem)",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
@@ -24,7 +24,7 @@
     "@nestjs/config": { "optional": true }
   },
   "devDependencies": {
-    "@devtechs/config": "workspace:*",
+    "@szdevs/config": "workspace:*",
     "@nestjs/common": "^10.3.0",
     "@nestjs/config": "^3.2.0",
     "@types/node": "^20.12.0",

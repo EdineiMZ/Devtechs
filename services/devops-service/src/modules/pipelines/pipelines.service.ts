@@ -4,7 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@devtechs/database';
+import type { Prisma } from '@szdevs/database';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { GithubService } from '../github/github.service';
@@ -15,16 +15,16 @@ import type {
 } from './dto/pipeline.dto';
 
 /**
- * PipelinesService — read API, webhook-driven upsert, and the
+ * PipelinesService â€” read API, webhook-driven upsert, and the
  * outbound trigger call to GitHub. Status transitions come from
  * two paths:
  *
- *   - REST caller on `POST /pipelines/trigger` → we create a
+ *   - REST caller on `POST /pipelines/trigger` â†’ we create a
  *     QUEUED row locally and call `github.triggerWorkflow`.
  *     The row is later updated by the webhook handler when
  *     GitHub reports RUNNING / SUCCESS / FAILED.
  *
- *   - GitHub webhook on `workflow_run` → upsert keyed on
+ *   - GitHub webhook on `workflow_run` â†’ upsert keyed on
  *     `(provider, externalId)` so retries and re-deliveries
  *     never create duplicates.
  */
@@ -158,7 +158,7 @@ export class PipelinesService {
         name: `${dto.owner}/${dto.repo}/${dto.workflowId}`,
         projectId: dto.projectId,
         provider: 'GITHUB_ACTIONS',
-        // Placeholder externalId — the webhook upsert will
+        // Placeholder externalId â€” the webhook upsert will
         // collapse this row into the real run_id one when the
         // first workflow_run event arrives.
         externalId: `pending-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -188,17 +188,17 @@ export class PipelinesService {
    * Upsert a pipeline row from a GitHub `workflow_run` event.
    *
    * GitHub payload fields used:
-   *   - `action`                       → "requested" / "in_progress" / "completed"
-   *   - `workflow_run.id`              → externalId
-   *   - `workflow_run.name`            → display name
-   *   - `workflow_run.head_branch`     → branch
-   *   - `workflow_run.head_sha`        → commitSha
-   *   - `workflow_run.head_commit.message` → commitMessage
-   *   - `workflow_run.run_started_at`  → startedAt
-   *   - `workflow_run.updated_at`      → finishedAt (on completed)
-   *   - `workflow_run.status`          → "queued" / "in_progress" / "completed"
-   *   - `workflow_run.conclusion`      → "success" / "failure" / "cancelled"
-   *   - `repository.full_name`         → owner/repo for display
+   *   - `action`                       â†’ "requested" / "in_progress" / "completed"
+   *   - `workflow_run.id`              â†’ externalId
+   *   - `workflow_run.name`            â†’ display name
+   *   - `workflow_run.head_branch`     â†’ branch
+   *   - `workflow_run.head_sha`        â†’ commitSha
+   *   - `workflow_run.head_commit.message` â†’ commitMessage
+   *   - `workflow_run.run_started_at`  â†’ startedAt
+   *   - `workflow_run.updated_at`      â†’ finishedAt (on completed)
+   *   - `workflow_run.status`          â†’ "queued" / "in_progress" / "completed"
+   *   - `workflow_run.conclusion`      â†’ "success" / "failure" / "cancelled"
+   *   - `repository.full_name`         â†’ owner/repo for display
    */
   async upsertFromWebhook(payload: {
     action: string;
@@ -224,8 +224,8 @@ export class PipelinesService {
     // Attempt to resolve a project from the repo's full_name
     // stored in a previously-triggered pipeline. If we've never
     // seen this repo we park the pipeline on the first project
-    // the service knows about — a future enhancement can wire a
-    // GitHub repo → project mapping table.
+    // the service knows about â€” a future enhancement can wire a
+    // GitHub repo â†’ project mapping table.
     const project = await this.resolveProjectForRepo(payload.repository?.full_name);
 
     const startedAt = run.run_started_at ? new Date(run.run_started_at) : null;
@@ -255,7 +255,7 @@ export class PipelinesService {
     };
 
     if (!project) {
-      // Can't upsert without a project — log and skip rather
+      // Can't upsert without a project â€” log and skip rather
       // than blowing up the webhook handler. Ops can retry
       // once the mapping exists.
       this.logger.warn(
@@ -284,7 +284,7 @@ export class PipelinesService {
       select: { id: true, status: true },
     });
     this.logger.log(
-      `Pipeline webhook upsert: ${row.id} → ${row.status} (${externalId})`,
+      `Pipeline webhook upsert: ${row.id} â†’ ${row.status} (${externalId})`,
     );
     return row;
   }

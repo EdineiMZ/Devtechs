@@ -1,12 +1,12 @@
 import { Code2 } from 'lucide-react';
 import Link from 'next/link';
 
-import { Avatar, AvatarFallback, Button } from '@devtechs/ui';
+import { Avatar, AvatarFallback, Button } from '@szdevs/ui';
 
 import { auth, signOut } from '@/auth';
 
 /**
- * Authenticated app header — copper/acid aesthetic.
+ * Authenticated app header â€” copper/acid aesthetic.
  * Server component so the session read happens on the Node side.
  */
 export async function AppHeader(): Promise<JSX.Element> {
@@ -24,7 +24,7 @@ export async function AppHeader(): Promise<JSX.Element> {
             <Code2 className="h-4 w-4 text-acid" />
           </div>
           <span className="font-display text-base font-semibold text-foreground tracking-tight">
-            DevsTech
+            SZDevs
           </span>
         </Link>
 

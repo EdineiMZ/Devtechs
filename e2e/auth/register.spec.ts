@@ -10,7 +10,7 @@ import { expect, test } from '@playwright/test';
 function uniqueEmail(): string {
   // Avoid collisions across reruns; keep a stable domain so the seed
   // isn't polluted with random subdomains.
-  return `e2e-${Date.now()}-${Math.floor(Math.random() * 1000)}@devtechs.test`;
+  return `e2e-${Date.now()}-${Math.floor(Math.random() * 1000)}@SZDevs.test`;
 }
 
 test.describe('auth/register', () => {
@@ -65,7 +65,7 @@ test.describe('auth/register', () => {
   test('duplicate email → server-side error', async ({ page }) => {
     await page.goto('/register');
     await page.locator('input[name="nome"], input[name="name"]').first().fill('Admin Dup');
-    await page.locator('input[type="email"]').fill('admin@devtechs.com');
+    await page.locator('input[type="email"]').fill('admin@SZDevs.com');
     await page.locator('input[name="password"]').first().fill('Strong@Pwd2026');
     await page.locator('input[name="confirmPassword"]').first().fill('Strong@Pwd2026');
     await page.locator('button[type="submit"]').click();

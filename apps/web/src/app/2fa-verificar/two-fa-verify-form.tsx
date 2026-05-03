@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
-import { Button, Input } from '@devtechs/ui';
+import { Button, Input } from '@szdevs/ui';
 
 import { verifyTwoFaSession } from './actions';
 

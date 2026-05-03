@@ -50,14 +50,14 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   const port = Number(
-    process.env.PROJECTS_SERVICE_PORT ?? process.env.PORT ?? 3004,
+    process.env.PROJECTS_SERVICE_PORT ?? process.env.PORT ?? 4003,
   );
   // -----------------------------------------------------------------------
   // Swagger / OpenAPI
   // -----------------------------------------------------------------------
   const document = setupSwagger(app, {
     service: "projects",
-    title: "DevTechs — Projects Service API",
+    title: "SZDevs â€” Projects Service API",
     description: "Projects, tasks, sprints, time tracking.",
     tags: [
       { name: "projects" },

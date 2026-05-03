@@ -28,8 +28,8 @@ const NAV_ROUTES = [
 
   // login first
   await page.goto(`${BASE}/login`);
-  await page.locator('input[type="email"]').first().fill('admin@devtechs.com');
-  await page.locator('input[type="password"]').first().fill('Admin@DevTechs2026');
+  await page.locator('input[type="email"]').first().fill('admin@SZDevs.com');
+  await page.locator('input[type="password"]').first().fill('Admin@SZDevs2026');
   await page.locator('button[type="submit"]').first().click();
   await page.waitForURL((u) => !String(u).includes('/login'), { timeout: 10000 });
 

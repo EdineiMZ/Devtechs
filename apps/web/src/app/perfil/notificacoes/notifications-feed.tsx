@@ -1,8 +1,8 @@
-﻿'use client';
+'use client';
 
 import { useMemo, useState } from 'react';
 
-import { Button } from '@devtechs/ui';
+import { Button } from '@szdevs/ui';
 
 import { NotificationItem } from '@/components/notifications/notification-item';
 import { useNotificationsStream } from '@/hooks/use-notifications-stream';

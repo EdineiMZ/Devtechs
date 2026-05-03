@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { Badge, cn } from '@devtechs/ui';
+import { Badge, cn } from '@szdevs/ui';
 
 /**
  * ModuleCard — hoverable platform module tile for the admin dashboard.

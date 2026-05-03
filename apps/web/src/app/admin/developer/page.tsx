@@ -63,6 +63,20 @@ const QUICK_ACTIONS = [
     ),
     accent: 'border-white/10 hover:border-white/20 hover:bg-white/[0.03] group-hover:text-foreground',
   },
+  {
+    href: '/admin/developer/servicos',
+    label: 'Monitor de Serviços',
+    desc: 'Status, controle e logs em tempo real',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-5 w-5">
+        <rect x="2" y="3" width="20" height="14" rx="2" />
+        <line x1="8" y1="21" x2="16" y2="21" />
+        <line x1="12" y1="17" x2="12" y2="21" />
+        <circle cx="12" cy="10" r="3" />
+      </svg>
+    ),
+    accent: 'border-emerald-500/20 hover:border-emerald-500/40 hover:bg-emerald-500/5 group-hover:text-emerald-400',
+  },
 ] as const;
 
 export default async function DeveloperServicesPage(): Promise<JSX.Element> {

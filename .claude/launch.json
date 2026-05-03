@@ -1,113 +1,113 @@
-{
+﻿{
   "version": "0.0.1",
   "configurations": [
     {
       "name": "web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/web", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/web", "dev"],
       "port": 3000,
       "autoPort": false
     },
     {
       "name": "rh",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/rh", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/rh", "dev"],
       "port": 3001
     },
     {
       "name": "financeiro",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/financeiro", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/financeiro", "dev"],
       "port": 3002
     },
     {
       "name": "projetos",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/projetos", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/projetos", "dev"],
       "port": 3003
     },
     {
       "name": "devops",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/devops", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/devops", "dev"],
       "port": 3004
     },
     {
       "name": "suporte",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/suporte", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/suporte", "dev"],
       "port": 3005
     },
     {
       "name": "store",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/store", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/store", "dev"],
       "port": 3006
     },
     {
       "name": "developer",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/developer", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/developer", "dev"],
       "port": 3007
     },
     {
       "name": "auth-service",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/auth-service", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/auth-service", "dev"],
       "port": 3001
     },
     {
       "name": "rh-service",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/rh-service", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/rh-service", "dev"],
       "port": 3002
     },
     {
       "name": "finance-service",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/finance-service", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/finance-service", "dev"],
       "port": 3003
     },
     {
       "name": "projects-service",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/projects-service", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/projects-service", "dev"],
       "port": 3004
     },
     {
       "name": "devops-service",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/devops-service", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/devops-service", "dev"],
       "port": 3005
     },
     {
       "name": "support-service",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/support-service", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/support-service", "dev"],
       "port": 3006
     },
     {
       "name": "payments-service",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/payments-service", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/payments-service", "dev"],
       "port": 3007
     },
     {
       "name": "notification-service",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/notification-service", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/notification-service", "dev"],
       "port": 3008
     },
     {
       "name": "license-service",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/license-service", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/license-service", "dev"],
       "port": 3009
     },
     {
       "name": "developer-service",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@devtechs/developer-service", "dev"],
+      "runtimeArgs": ["--filter", "@szdevs/developer-service", "dev"],
       "port": 3010
     }
   ]

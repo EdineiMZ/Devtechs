@@ -1,4 +1,4 @@
-import { Badge } from '@devtechs/ui';
+import { Badge } from '@szdevs/ui';
 
 import type { UiInvoiceStatus } from '@/lib/finance-api';
 

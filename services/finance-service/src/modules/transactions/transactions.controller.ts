@@ -78,14 +78,18 @@ export class TransactionsController {
   update(
     @Param('id') id: string,
     @Body() dto: UpdateTransactionDto,
+    @CurrentUser() user: CurrentUserPayload,
   ): Promise<unknown> {
-    return this.transactions.update(id, dto);
+    return this.transactions.update(id, dto, user.id);
   }
 
   @Put(':id/pay')
   @HttpCode(HttpStatus.OK)
   @RequirePermission('finance:accounts:edit')
-  markPaid(@Param('id') id: string): Promise<unknown> {
-    return this.transactions.markPaid(id);
+  markPaid(
+    @Param('id') id: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ): Promise<unknown> {
+    return this.transactions.markPaid(id, user.id);
   }
 }

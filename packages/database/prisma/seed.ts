@@ -1,12 +1,12 @@
 /**
- * DevTechs — database seed.
+ * SZDevs — database seed.
  *
  * Idempotent: safe to run repeatedly. Uses `upsert` so re-running only
  * syncs definitions (name/description/module changes) and never
  * deletes rows that are no longer in this file — that's a manual
  * migration step to avoid surprising a running system.
  *
- * Execute with: `pnpm --filter @devtechs/database db:seed`
+ * Execute with: `pnpm --filter @szdevs/database db:seed`
  */
 import { PrismaClient, PermissionModule } from '@prisma/client';
 

@@ -1,5 +1,5 @@
 /**
- * @devtechs/ui - DevTechs shared design system.
+ * @szdevs/ui - SZDevs shared design system.
  *
  * Re-exports every public component, layout and hook.
  */

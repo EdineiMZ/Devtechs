@@ -13,20 +13,20 @@ export const revalidate = false;
 export const metadata: Metadata = {
   title: 'Contato',
   description:
-    'Fale com o time DevsTech. Conte sobre o seu projeto, desafio ou oportunidade — respondemos em até 24 horas.',
+    'Fale com o time SZDevs. Conte sobre o seu projeto, desafio ou oportunidade — respondemos em até 24 horas.',
   alternates: { canonical: '/contato' },
   openGraph: {
-    title: 'Contato | DevsTech',
+    title: 'Contato | SZDevs',
     description:
-      'Fale com o time DevsTech. Conte sobre o seu projeto, desafio ou oportunidade.',
+      'Fale com o time SZDevs. Conte sobre o seu projeto, desafio ou oportunidade.',
     type: 'website',
     locale: 'pt_BR',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Contato | DevsTech',
+    title: 'Contato | SZDevs',
     description:
-      'Fale com o time DevsTech. Conte sobre o seu projeto, desafio ou oportunidade.',
+      'Fale com o time SZDevs. Conte sobre o seu projeto, desafio ou oportunidade.',
   },
 };
 
@@ -95,11 +95,24 @@ export default function ContatoPage(): JSX.Element {
             <p className="animate-fade-up-delay-2 mt-6 text-center font-mono text-xs text-ash">
               Prefere email direto?{' '}
               <a
-                href="mailto:contato@devstech.com.br"
+                href="mailto:contato@szdevs.com"
                 className="text-copper hover:text-copper/80 transition-colors underline-offset-4 hover:underline"
               >
-                contato@devstech.com.br
+                contato@szdevs.com
               </a>
+            </p>
+
+            {/* DPO contact note */}
+            <p className="animate-fade-up-delay-2 mt-3 text-center font-mono text-xs text-ash/50">
+              Para solicitações de privacidade e LGPD, selecione{' '}
+              <span className="text-ash">🔒 Privacidade / DPO</span> no assunto — ou envie direto para{' '}
+              <a
+                href="mailto:privacidade@szdevs.com?subject=[LGPD] Direito do Titular"
+                className="text-copper/70 hover:text-copper transition-colors underline-offset-4 hover:underline"
+              >
+                privacidade@szdevs.com
+              </a>
+              . Respondemos em até 15 dias úteis (art. 19, §3º LGPD).
             </p>
           </div>
         </section>

@@ -72,7 +72,7 @@ export class EmailVerificationService {
     });
 
     if (!user) {
-      // Shouldn't happen behind JwtAuthGuard — defensive.
+      // Shouldn't happen behind JwtAuthGuard â€” defensive.
       throw new NotFoundException('User not found');
     }
     if (user.status !== 'ACTIVE') {
@@ -115,7 +115,7 @@ export class EmailVerificationService {
 
     await this.redis.publish(EVENT_CHANNEL_EMAIL, {
       to: user.email,
-      subject: 'Confirme seu email - DevTechs',
+      subject: 'Confirme seu email - SZDevs',
       template: EMAIL_TEMPLATE_VERIFICATION,
       data: {
         name: user.name,

@@ -66,7 +66,7 @@ export class EmailOtpService {
 
     await this.redis.publish(EVENT_CHANNEL_EMAIL, {
       to: user.email,
-      subject: 'Seu código de acesso - DevTechs',
+      subject: 'Seu código de acesso - SZDevs',
       template: 'login-otp',
       data: {
         name: user.name,

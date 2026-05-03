@@ -93,7 +93,7 @@ export class TwoFactorService {
     }
 
     const secret = authenticator.generateSecret();
-    const issuer = this.config.get<string>('APP_NAME') ?? 'DevTechs';
+    const issuer = this.config.get<string>('APP_NAME') ?? 'SZDevs';
     const otpauthUrl = authenticator.keyuri(user.email, issuer, secret);
     const qrCode = await QRCode.toDataURL(otpauthUrl);
 
@@ -423,7 +423,7 @@ export class TwoFactorService {
 
     await this.redis.publish('notifications:email', {
       to: user.email,
-      subject: 'Código para desativar 2FA - DevTechs',
+      subject: 'Código para desativar 2FA - SZDevs',
       template: 'login-otp',
       data: {
         name: user.name,

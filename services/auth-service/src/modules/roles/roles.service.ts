@@ -6,7 +6,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@devtechs/database';
+import type { Prisma } from '@szdevs/database';
 
 import { AuditAction } from '../../common/constants/audit-actions';
 import { PermissionCacheService } from '../../common/rbac/permission-cache.service';

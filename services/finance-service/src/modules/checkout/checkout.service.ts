@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
@@ -59,7 +60,7 @@ export class CheckoutService {
 
     const amount = Number(invoice.total);
     const payerEmail = dto.payerEmail ?? invoice.client.email;
-    const description = `Fatura DevTechs ${invoice.number}`;
+    const description = `Fatura SZDevs ${invoice.number}`;
 
     if (this.devMode) {
       // Stub response for development
@@ -99,7 +100,23 @@ export class CheckoutService {
       throw new BadRequestException('Card details required for card payment');
     }
 
-    const result = await this.payment.create({ body });
+    let result: Awaited<ReturnType<Payment['create']>>;
+    try {
+      result = await this.payment.create({ body });
+    } catch (err: unknown) {
+      const mpErr = err as Record<string, unknown>;
+      const mpMsg =
+        typeof mpErr?.message === 'string' ? mpErr.message : 'Falha ao processar pagamento';
+      const mpStatus =
+        typeof mpErr?.status === 'number' && mpErr.status >= 400 && mpErr.status < 600
+          ? mpErr.status
+          : 502;
+      if (mpStatus < 500) {
+        throw new BadRequestException(`Pagamento recusado: ${mpMsg}`);
+      }
+      this.logger.error(`MercadoPago error: ${JSON.stringify(err)}`);
+      throw new InternalServerErrorException(`Gateway de pagamento indisponível: ${mpMsg}`);
+    }
     const externalId = String(result.id ?? '');
     const status = result.status ?? 'pending';
 

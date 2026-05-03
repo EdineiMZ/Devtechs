@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-import { Button } from '@devtechs/ui';
+import { Button } from '@szdevs/ui';
 import { useEffect, useRef, useState } from 'react';
 
 import { uploadAttachment } from '@/lib/support-api';

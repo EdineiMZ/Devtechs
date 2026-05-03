@@ -2,14 +2,14 @@
  * Test 6: Verify support-service /support Socket.IO namespace accepts
  * authenticated connections.
  */
-import { io } from 'file:///E:/Devtechs/node_modules/.pnpm/socket.io-client@4.8.3/node_modules/socket.io-client/build/esm/index.js';
+import { io } from 'file:///E:/SZDevs/node_modules/.pnpm/socket.io-client@4.8.3/node_modules/socket.io-client/build/esm/index.js';
 
 (async () => {
   // Get a real access token via auth-service /auth/login
   const loginRes = await fetch('http://127.0.0.1:4001/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'admin@devtechs.com', password: 'Admin@DevTechs2026' }),
+    body: JSON.stringify({ email: 'admin@SZDevs.com', password: 'Admin@SZDevs2026' }),
   });
   const login = await loginRes.json();
   if (!login.accessToken) {

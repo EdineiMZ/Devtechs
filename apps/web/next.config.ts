@@ -6,7 +6,7 @@ import type { NextConfig } from 'next';
 /**
  * TypeScript flavor of the Next.js config. Native `next.config.ts`
  * support landed in Next.js 15. Until this repo upgrades, the
- * sibling `next.config.js` is the file Next actually loads — keep
+ * sibling `next.config.js` is the file Next actually loads â€” keep
  * both in lock-step. After upgrading to Next 15+, delete the `.js`
  * file and Next picks up this one.
  */
@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
 
-  transpilePackages: ['@devtechs/ui', '@devtechs/types'],
+  transpilePackages: ['@szdevs/ui', '@szdevs/types'],
 
   output: 'standalone',
   outputFileTracingRoot: path.join(__dirname, '../../'),

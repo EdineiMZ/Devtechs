@@ -57,7 +57,7 @@ export class NotificationConsumer extends WorkerHost {
   private async handleEmail(
     job: Job<SendEmailJob>,
   ): Promise<{ id: string | null }> {
-    const { to, subject, template, data, replyTo } = job.data;
+    const { to, subject, template, data, from, replyTo } = job.data;
     this.logger.log(
       `Processing send-email job ${job.id} (${template} → ${Array.isArray(to) ? to.join(', ') : to})`,
     );
@@ -66,6 +66,7 @@ export class NotificationConsumer extends WorkerHost {
       subject,
       template: template as EmailTemplate,
       data,
+      from,
       replyTo,
     });
   }

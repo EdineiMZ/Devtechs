@@ -4,7 +4,7 @@ import { forwardRef, type HTMLAttributes } from 'react';
 import { cn } from '../../lib/cn';
 
 /**
- * Operational status of a DevTechs service.
+ * Operational status of a SZDevs service.
  * - `online`      → service responding normally
  * - `degradado`   → service responding but with errors / latency
  * - `offline`     → service unreachable

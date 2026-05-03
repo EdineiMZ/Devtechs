@@ -16,7 +16,7 @@
 @tailwind utilities;
 
 /*
- * DevTechs design tokens — dark-first palette with electric-blue
+ * SZDevs design tokens — dark-first palette with electric-blue
  * primary. Defined on both `:root` and `.dark` so shadcn/ui components
  * (which check the `dark` class on <html>) render identically whether
  * or not a higher-level dark-mode toggle is added later.

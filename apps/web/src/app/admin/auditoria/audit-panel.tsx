@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import { useMemo, useState, useTransition } from 'react';
 
-import { Button, cn } from '@devtechs/ui';
+import { Button, cn } from '@szdevs/ui';
 
 import type { AuditCursorPage, AuditLogItem, AuditStats } from '@/lib/audit-api';
 

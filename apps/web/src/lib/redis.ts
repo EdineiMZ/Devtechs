@@ -11,22 +11,22 @@ import Redis from 'ioredis';
  *      instead of paying the handshake cost per request.
  *
  * Environment:
- *   - `REDIS_URL` (preferred) — full connection string, e.g.
+ *   - `REDIS_URL` (preferred) â€” full connection string, e.g.
  *     `redis://localhost:6379` or `rediss://user:pass@host:6379/0`.
  *   - Fallback: `REDIS_HOST` + `REDIS_PORT`, both optional.
  *
  * Dev tolerance: in development we use a no-retry strategy so a missing
  * local Redis doesn't log-spam the dev server on every request. The
  * connection is established eagerly so commands don't fail immediately
- * due to an uninitialized stream. Callers still try/catch — see `/api/contato`.
+ * due to an uninitialized stream. Callers still try/catch â€” see `/api/contato`.
  *
- * Production still uses the hard retry strategy — a missing Redis in
+ * Production still uses the hard retry strategy â€” a missing Redis in
  * prod is an ops alarm, not a soft failure.
  */
 
 interface GlobalWithRedis {
-  __devtechs_redis__?: Redis;
-  __devtechs_redis_warned__?: boolean;
+  __SZDevs_redis__?: Redis;
+  __SZDevs_redis_warned__?: boolean;
 }
 
 const globalForRedis = globalThis as unknown as GlobalWithRedis;
@@ -35,8 +35,8 @@ export const isDevRedis = (): boolean =>
   (process.env.NODE_ENV ?? 'development') !== 'production';
 
 export function getRedisClient(): Redis {
-  if (globalForRedis.__devtechs_redis__) {
-    return globalForRedis.__devtechs_redis__;
+  if (globalForRedis.__SZDevs_redis__) {
+    return globalForRedis.__SZDevs_redis__;
   }
 
   const dev = isDevRedis();
@@ -59,12 +59,12 @@ export function getRedisClient(): Redis {
     if (dev) {
       // Only log the first offline warning per process, so a dev box
       // without Redis doesn't drown the Next.js terminal.
-      if (!globalForRedis.__devtechs_redis_warned__) {
+      if (!globalForRedis.__SZDevs_redis_warned__) {
         // eslint-disable-next-line no-console
         console.warn(
-          `[redis] unavailable (${err.message}) — running in degraded dev mode.`,
+          `[redis] unavailable (${err.message}) â€” running in degraded dev mode.`,
         );
-        globalForRedis.__devtechs_redis_warned__ = true;
+        globalForRedis.__SZDevs_redis_warned__ = true;
       }
     } else {
       // eslint-disable-next-line no-console
@@ -72,6 +72,6 @@ export function getRedisClient(): Redis {
     }
   });
 
-  globalForRedis.__devtechs_redis__ = client;
+  globalForRedis.__SZDevs_redis__ = client;
   return client;
 }

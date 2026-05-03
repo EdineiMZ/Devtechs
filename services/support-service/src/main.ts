@@ -14,7 +14,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
  *
  * Listens on `SUPPORT_SERVICE_PORT` (default 3006). HTTP serves
  * the REST endpoints; the same port is upgraded to a Socket.io
- * WebSocket server by the SupportGateway — one port, two
+ * WebSocket server by the SupportGateway â€” one port, two
  * protocols. The gateway uses a Redis-backed adapter so room
  * broadcasts fan out across every support-service instance.
  */
@@ -58,14 +58,14 @@ async function bootstrap(): Promise<void> {
   app.useWebSocketAdapter(ioAdapter);
 
   const port = Number(
-    process.env.SUPPORT_SERVICE_PORT ?? process.env.PORT ?? 3006,
+    process.env.SUPPORT_SERVICE_PORT ?? process.env.PORT ?? 4008,
   );
   // -----------------------------------------------------------------------
   // Swagger / OpenAPI
   // -----------------------------------------------------------------------
   const document = setupSwagger(app, {
     service: "support",
-    title: "DevTechs — Support Service API",
+    title: "SZDevs â€” Support Service API",
     description: "Tickets, real-time chat (Socket.IO /support), KB, SLA.",
     tags: [
       { name: "tickets" },

@@ -63,7 +63,7 @@ async function bootstrap(): Promise<void> {
   // -----------------------------------------------------------------------
   const document = setupSwagger(app, {
     service: 'auth',
-    title: 'DevTechs — Auth Service API',
+    title: 'SZDevs â€” Auth Service API',
     description:
       'Authentication, authorization, sessions, 2FA, OAuth account linking, ' +
       'audit log query surface, and admin session management.',
@@ -92,7 +92,7 @@ async function bootstrap(): Promise<void> {
   // -----------------------------------------------------------------------
   // Listen
   // -----------------------------------------------------------------------
-  const port = Number(process.env.AUTH_SERVICE_PORT ?? process.env.PORT ?? 3001);
+  const port = Number(process.env.AUTH_SERVICE_PORT ?? process.env.PORT ?? 4001);
   await app.listen(port, '0.0.0.0');
   // eslint-disable-next-line no-console
   console.info(`[auth-service] listening on port ${port} (Swagger: /auth/docs)`);

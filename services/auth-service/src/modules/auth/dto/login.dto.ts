@@ -5,7 +5,7 @@ import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
 export class LoginDto {
   @ApiProperty({
     description: 'Email address used at sign-up. Trimmed and lowercased server-side.',
-    example: 'admin@devtechs.com',
+    example: 'admin@SZDevs.com',
     maxLength: 254,
     format: 'email',
   })
@@ -17,8 +17,8 @@ export class LoginDto {
   email!: string;
 
   @ApiProperty({
-    description: 'Plaintext password — must be 8-128 characters.',
-    example: 'Admin@DevTechs2026',
+    description: 'Plaintext password â€” must be 8-128 characters.',
+    example: 'Admin@SZDevs2026',
     minLength: 8,
     maxLength: 128,
     format: 'password',

@@ -65,6 +65,14 @@ export class InvoicesController {
     return this.invoices.list({ projectId, clientId });
   }
 
+  /** Minimal user list for populating the "client" dropdown when issuing an invoice. */
+  @Get('clients')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('finance:invoices:issue')
+  listClients(): Promise<{ id: string; name: string; email: string }[]> {
+    return this.invoices.listClients();
+  }
+
   /** Staff see any invoice; clients only see invoices belonging to them. */
   @Get(':id')
   @HttpCode(HttpStatus.OK)

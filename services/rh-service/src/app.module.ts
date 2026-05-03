@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { PassportModule } from '@nestjs/passport';
-import { StorageModule } from '@devtechs/storage';
+import { StorageModule } from '@szdevs/storage';
 
 import { AuthClientModule } from './auth-client/auth-client.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -20,16 +20,16 @@ import { RedisModule } from './redis/redis.module';
 /**
  * Request pipeline:
  *
- *   1. `JwtAuthGuard` (APP_GUARD) — validates the Bearer token,
+ *   1. `JwtAuthGuard` (APP_GUARD) â€” validates the Bearer token,
  *      populates `request.user`. Skipped on routes with `@Public()`
  *      (today: only /health).
  *
  *   2. `PermissionGuard` (per-route, applied via `@UseGuards` on the
- *      employees controller) — reads `@RequirePermission(...)`,
+ *      employees controller) â€” reads `@RequirePermission(...)`,
  *      fetches the user's effective permissions from auth-service,
  *      caches in Redis 5 min.
  *
- *   3. `StorageModule.forRoot()` — injects the @devtechs/storage
+ *   3. `StorageModule.forRoot()` â€” injects the @szdevs/storage
  *      adapter behind the `STORAGE` token. Uses `STORAGE_PROVIDER`
  *      env to pick R2 (prod) or local (dev).
  */

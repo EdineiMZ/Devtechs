@@ -15,12 +15,12 @@ import { ConfigService } from '@nestjs/config';
  * dispatch, cancel run).
  *
  * Secrets:
- *   - `GITHUB_WEBHOOK_SECRET`  → shared HMAC-SHA256 key GitHub
+ *   - `GITHUB_WEBHOOK_SECRET`  â†’ shared HMAC-SHA256 key GitHub
  *                                signs every delivery with. The
  *                                same string is configured on
  *                                each webhook in the GitHub UI
  *                                under "Secret".
- *   - `GITHUB_API_TOKEN`       → personal access token or GitHub
+ *   - `GITHUB_API_TOKEN`       â†’ personal access token or GitHub
  *                                App installation token used for
  *                                outbound REST calls.
  *
@@ -44,12 +44,12 @@ export class GithubService {
 
     if (!this.webhookSecret) {
       this.logger.warn(
-        'GITHUB_WEBHOOK_SECRET is not configured — webhook verification will refuse every delivery',
+        'GITHUB_WEBHOOK_SECRET is not configured â€” webhook verification will refuse every delivery',
       );
     }
     if (!this.apiToken) {
       this.logger.warn(
-        'GITHUB_API_TOKEN is not configured — outbound GitHub REST calls will fail',
+        'GITHUB_API_TOKEN is not configured â€” outbound GitHub REST calls will fail',
       );
     }
   }
@@ -68,7 +68,7 @@ export class GithubService {
    * comparison outcome through timing side-channels.
    *
    * IMPORTANT: the `rawBody` argument MUST be the exact bytes
-   * GitHub sent — not a re-stringified JSON. Express parses the
+   * GitHub sent â€” not a re-stringified JSON. Express parses the
    * body by default, which would mutate whitespace and break
    * HMAC. The controller uses a raw-body middleware to preserve
    * the original buffer.
@@ -104,7 +104,7 @@ export class GithubService {
     const provided = Buffer.from(providedHex, 'hex');
     const expected = Buffer.from(expectedHex, 'hex');
 
-    // timingSafeEqual needs equal-length buffers — guard first.
+    // timingSafeEqual needs equal-length buffers â€” guard first.
     if (provided.length !== expected.length) {
       return false;
     }
@@ -123,7 +123,7 @@ export class GithubService {
    */
   requireVerifiedSignature(rawBody: Buffer, signature: string | undefined): void {
     if (!this.verifyWebhookSignature(rawBody, signature)) {
-      this.logger.warn('Rejected GitHub webhook — invalid HMAC signature');
+      this.logger.warn('Rejected GitHub webhook â€” invalid HMAC signature');
       throw new UnauthorizedException('Invalid webhook signature');
     }
   }
@@ -226,7 +226,7 @@ export class GithubService {
     const headers: Record<string, string> = {
       Authorization: `token ${this.apiToken}`,
       Accept: 'application/vnd.github+json',
-      'User-Agent': 'DevTechs-devops-service',
+      'User-Agent': 'SZDevs-devops-service',
       'X-GitHub-Api-Version': '2022-11-28',
     };
     if (init.body) headers['Content-Type'] = 'application/json';

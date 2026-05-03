@@ -1,16 +1,16 @@
 /**
- * @devtechs/license-sdk
+ * @szdevs/license-sdk
  *
- * TypeScript SDK for verifying DevTechs license tokens.
+ * TypeScript SDK for verifying SZDevs license tokens.
  * Used by client applications to validate activation keys
  * against the license-service API.
  *
  * @example
  * ```ts
- * import { LicenseClient } from '@devtechs/license-sdk';
+ * import { LicenseClient } from '@szdevs/license-sdk';
  *
  * const client = new LicenseClient({
- *   baseUrl: 'https://api.devtechs.com.br',
+ *   baseUrl: 'https://api.szdevs.com',
  *   appId: 'my-saas-app',
  * });
  *

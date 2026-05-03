@@ -45,7 +45,7 @@ export function LandingNavbar() {
               <Code2 className="h-4 w-4 text-acid" />
             </div>
             <span className="font-display text-base font-semibold text-foreground tracking-tight">
-              DevsTech
+              SZDevs
             </span>
           </Link>
 

@@ -5,7 +5,7 @@ import 'next-auth/jwt';
  * Module augmentation for `next-auth`.
  *
  * NextAuth's default `User` / `Session` shapes only carry `name`,
- * `email`, `image`. Our app needs the full backend payload — roles,
+ * `email`, `image`. Our app needs the full backend payload â€” roles,
  * primary role, permissions, email-verification flag, and the
  * auth-service access + refresh tokens so calls to /auth/email/* etc.
  * can piggy-back on the existing session.
@@ -16,7 +16,7 @@ import 'next-auth/jwt';
  * the JWT object passed to callbacks.
  */
 
-interface DevTechsAuthFields {
+interface SZDevsAuthFields {
   id: string;
   roles: string[];
   mainRole: string | null;
@@ -48,14 +48,14 @@ declare module 'next-auth' {
     error?: 'RefreshAccessTokenError';
   }
 
-  interface User extends DevTechsAuthFields {
+  interface User extends SZDevsAuthFields {
     name: string | null;
     email: string | null;
   }
 }
 
 declare module 'next-auth/jwt' {
-  interface JWT extends DevTechsAuthFields {
+  interface JWT extends SZDevsAuthFields {
     name?: string | null;
     email?: string | null;
     picture?: string | null;

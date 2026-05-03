@@ -92,8 +92,8 @@ test.describe('admin/developer/licencas', () => {
     await expect(page.getByRole('heading', { name: 'Novo produto licenciado' })).toBeVisible();
 
     // Form fields with actual placeholders
-    await expect(page.getByPlaceholder('ex: DevTechs ERP')).toBeVisible();
-    await expect(page.getByPlaceholder('ex: devtechs-erp')).toBeVisible();
+    await expect(page.getByPlaceholder('ex: SZDevs ERP')).toBeVisible();
+    await expect(page.getByPlaceholder('ex: SZDevs-erp')).toBeVisible();
     await expect(page.getByPlaceholder('Descreva o produto brevemente')).toBeVisible();
 
     // Buttons
@@ -111,11 +111,11 @@ test.describe('admin/developer/licencas', () => {
     await gotoPage(page);
 
     await page.getByRole('button', { name: '+ Novo produto' }).click();
-    await expect(page.getByPlaceholder('ex: DevTechs ERP')).toBeVisible();
+    await expect(page.getByPlaceholder('ex: SZDevs ERP')).toBeVisible();
 
     // Fill name with spaces (passes browser `required` but fails trim() check in handler)
-    await page.getByPlaceholder('ex: DevTechs ERP').fill('   ');
-    await page.getByPlaceholder('ex: devtechs-erp').fill('test-app-id');
+    await page.getByPlaceholder('ex: SZDevs ERP').fill('   ');
+    await page.getByPlaceholder('ex: SZDevs-erp').fill('test-app-id');
     await page.getByRole('button', { name: 'Criar produto' }).click();
 
     await expect(page.getByText(/nome e app id são obrigatórios/i)).toBeVisible({ timeout: 3_000 });
@@ -134,8 +134,8 @@ test.describe('admin/developer/licencas', () => {
     await page.getByRole('button', { name: '+ Novo produto' }).click();
 
     const ts = Date.now();
-    await page.getByPlaceholder('ex: DevTechs ERP').fill(`E2E Prod ${ts}`);
-    await page.getByPlaceholder('ex: devtechs-erp').fill(`e2e-${ts}`);
+    await page.getByPlaceholder('ex: SZDevs ERP').fill(`E2E Prod ${ts}`);
+    await page.getByPlaceholder('ex: SZDevs-erp').fill(`e2e-${ts}`);
     await page.getByPlaceholder('Descreva o produto brevemente').fill('Created by E2E test');
 
     await page.getByRole('button', { name: 'Criar produto' }).click();

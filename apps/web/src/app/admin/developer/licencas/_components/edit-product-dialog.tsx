@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { Button } from '@devtechs/ui';
+import { Button } from '@szdevs/ui';
 
 import type { LicensedProduct } from '@/lib/license-api';
 
@@ -103,7 +103,7 @@ export function EditProductDialog({ product }: EditProductDialogProps): JSX.Elem
               onChange={(e) => setName(e.target.value)}
               required
               maxLength={120}
-              placeholder="ex: DevTechs ERP"
+              placeholder="ex: SZDevs ERP"
               className="rounded-lg border border-white/8 bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-sky-500"
             />
           </div>

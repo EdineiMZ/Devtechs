@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright configuration for the DevTechs monorepo.
+ * Playwright configuration for the SZDevs monorepo.
  *
  * Layout
  * ------
@@ -27,7 +27,7 @@ import { defineConfig, devices } from '@playwright/test';
  *
  * Retries
  * -------
- * `process.env.CI ? 2 : 0` — local runs don't retry so flaky tests show
+ * `process.env.CI ? 2 : 0` â€” local runs don't retry so flaky tests show
  * their flakiness on the first run. CI retries twice to absorb the
  * network/DNS hiccups that have nothing to do with the code under test.
  */
@@ -63,7 +63,7 @@ export default defineConfig({
 
   projects: [
     // -------------------------------------------------------------------
-    // 1) Auth setup — runs once, produces storage-state JSONs that the
+    // 1) Auth setup â€” runs once, produces storage-state JSONs that the
     //    rest of the suite consumes. No browser dependency, no auth.
     // -------------------------------------------------------------------
     {
@@ -73,7 +73,7 @@ export default defineConfig({
     },
 
     // -------------------------------------------------------------------
-    // 2) Anonymous tests — login, register, role-redirect (the parts
+    // 2) Anonymous tests â€” login, register, role-redirect (the parts
     //    that test the unauthenticated entry points). No storageState.
     // -------------------------------------------------------------------
     {
@@ -83,7 +83,7 @@ export default defineConfig({
     },
 
     // -------------------------------------------------------------------
-    // 2b) Security tests — run without storageState; tests that need
+    // 2b) Security tests â€” run without storageState; tests that need
     //     auth perform their own inline login.
     // -------------------------------------------------------------------
     {
@@ -119,7 +119,7 @@ export default defineConfig({
     },
 
     // -------------------------------------------------------------------
-    // 5) Authenticated as SUPPORT (agent role) — used by ticket-flow
+    // 5) Authenticated as SUPPORT (agent role) â€” used by ticket-flow
     //    tests when the implementation lands.
     // -------------------------------------------------------------------
     {

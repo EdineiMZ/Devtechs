@@ -1,5 +1,5 @@
 /**
- * Shared Prettier configuration for the DevTechs monorepo.
+ * Shared Prettier configuration for the SZDevs monorepo.
  */
 /** @type {import("prettier").Config} */
 module.exports = {

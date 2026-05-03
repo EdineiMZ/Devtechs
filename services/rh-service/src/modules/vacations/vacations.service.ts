@@ -6,7 +6,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@devtechs/database';
+import type { Prisma } from '@szdevs/database';
 
 import { PermissionResolverService } from '../../common/permissions/permission-resolver.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -122,7 +122,7 @@ export class VacationsService {
   }
 
   // ===================================================================
-  // Create — the core of the module
+  // Create â€” the core of the module
   // ===================================================================
 
   async create(
@@ -364,7 +364,7 @@ export class VacationsService {
   /**
    * Reject a new request whose [startDate, endDate] window intersects
    * an existing PENDING or APPROVED request for the same employee.
-   * REJECTED / CANCELLED requests are ignored — they don't hold the
+   * REJECTED / CANCELLED requests are ignored â€” they don't hold the
    * employee's calendar hostage.
    */
   private async ensureNoOverlap(
@@ -440,7 +440,7 @@ export class VacationsService {
   /**
    * Map the authenticated user (via their User.id) to the Employee row
    * whose `userId` matches. Returns `null` if no employee record is
-   * linked — in that case the reviewer still gets to act, their
+   * linked â€” in that case the reviewer still gets to act, their
    * identity is just not stamped on the row.
    */
   private async resolveReviewer(

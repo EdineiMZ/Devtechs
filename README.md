@@ -1,6 +1,6 @@
-# DevTechs monorepo
+# SZDevs monorepo
 
-Turborepo + pnpm workspaces hosting every DevTechs app, service, and
+Turborepo + pnpm workspaces hosting every SZDevs app, service, and
 shared package under a single source tree.
 
 ```
@@ -16,7 +16,7 @@ infra/         # docker-compose, nginx gateway, deploy scaffolding
 
 ## Frontend architecture: one app, two surfaces
 
-Earlier iterations of DevTechs shipped one Next.js app per business
+Earlier iterations of SZDevs shipped one Next.js app per business
 module (`apps/rh`, `apps/financeiro`, `apps/projetos`, `apps/devops`,
 `apps/suporte`, `apps/developer`) running on ports 3001-3007. That
 fan-out had two problems:
@@ -34,30 +34,30 @@ module into the main `apps/web` app:
 
 ```
 apps/web/src/app/
-├── page.tsx                    ← public institutional landing
-├── login / register / ...      ← auth pages
-├── perfil/                     ← client portal (protected)
-│   ├── page.tsx
-│   ├── tickets/...
-│   └── faturas / notificacoes / configuracoes
-└── admin/                      ← admin / agent portal (protected)
-    ├── page.tsx
-    ├── rh / financeiro / projetos / devops / configuracoes
-    ├── suporte/                ← ticket queue + agent detail
-    └── developer/              ← container ops + logs + queues
-        ├── page.tsx
-        ├── logs / config / queues
-        └── api/proxy           ← server-side bridge to developer-service
+â”œâ”€â”€ page.tsx                    â† public institutional landing
+â”œâ”€â”€ login / register / ...      â† auth pages
+â”œâ”€â”€ perfil/                     â† client portal (protected)
+â”‚   â”œâ”€â”€ page.tsx
+â”‚   â”œâ”€â”€ tickets/...
+â”‚   â””â”€â”€ faturas / notificacoes / configuracoes
+â””â”€â”€ admin/                      â† admin / agent portal (protected)
+    â”œâ”€â”€ page.tsx
+    â”œâ”€â”€ rh / financeiro / projetos / devops / configuracoes
+    â”œâ”€â”€ suporte/                â† ticket queue + agent detail
+    â””â”€â”€ developer/              â† container ops + logs + queues
+        â”œâ”€â”€ page.tsx
+        â”œâ”€â”€ logs / config / queues
+        â””â”€â”€ api/proxy           â† server-side bridge to developer-service
 ```
 
 Everything under `/admin/*` and `/perfil/*` is gated by
 `apps/web/src/middleware.ts`:
 
-- Anonymous user hitting any protected prefix → bounced to
+- Anonymous user hitting any protected prefix â†’ bounced to
   `/login?callbackUrl=<original-path>`
-- Authenticated user with **unverified email** → bounced to
+- Authenticated user with **unverified email** â†’ bounced to
   `/verificar-email`
-- Already-authenticated user hitting `/login` or `/register` →
+- Already-authenticated user hitting `/login` or `/register` â†’
   bounced to `/perfil` (or `/verificar-email`)
 
 `apps/store` stays separate because it's a public SaaS surface
@@ -67,7 +67,7 @@ own NextAuth gate.
 
 Permission-level access control happens server-side inside each page
 (via `session.user.permissions.includes(...)` + `redirect('/perfil')`)
-— the middleware only enforces session + email-verified.
+â€” the middleware only enforces session + email-verified.
 
 ---
 
@@ -75,12 +75,12 @@ Permission-level access control happens server-side inside each page
 
 ```bash
 pnpm install
-pnpm --filter @devtechs/database prisma:generate
+pnpm --filter @szdevs/database prisma:generate
 pnpm dev                        # turbo-fans out all dev servers
-pnpm --filter @devtechs/web dev # or run a single app
+pnpm --filter @szdevs/web dev # or run a single app
 ```
 
-Requirements: **Node.js ≥ 18.17**, **pnpm ≥ 9**.
+Requirements: **Node.js â‰¥ 18.17**, **pnpm â‰¥ 9**.
 
 ---
 
@@ -99,17 +99,17 @@ installs pnpm, Node, and the lockfile-hashed `node_modules` cache.
 
 ### Required secrets
 
-Configure these in **Settings → Secrets and variables → Actions**.
+Configure these in **Settings â†’ Secrets and variables â†’ Actions**.
 Deploy-specific secrets live under their respective environments
-(**Settings → Environments → staging / production**) so production
+(**Settings â†’ Environments â†’ staging / production**) so production
 credentials are never reachable from the staging workflow.
 
 | Secret | Scope | Used by | Purpose |
 |---|---|---|---|
 | `TURBO_TOKEN` | Repository | All workflows | Bearer token for the Turborepo remote cache. Generate via `pnpm dlx turbo login` or copy from Vercel's Turbo dashboard. |
-| `TURBO_TEAM` | Repository | All workflows | Turbo team slug — identifies which remote cache namespace to read/write. |
-| `GHCR_TOKEN` | Repository | `deploy-*` | Classic PAT with `write:packages` scope. The workflows login to `ghcr.io` as `${{ github.actor }}` with this token to push images. (Alternatively use `GITHUB_TOKEN` if the repo permissions allow it — `GHCR_TOKEN` is here so private-package orgs have an override.) |
-| `STAGING_HOST` | `staging` environment | `deploy-staging` | DNS name or IP of the staging VPS (e.g. `staging.devtechs.io`). |
+| `TURBO_TEAM` | Repository | All workflows | Turbo team slug â€” identifies which remote cache namespace to read/write. |
+| `GHCR_TOKEN` | Repository | `deploy-*` | Classic PAT with `write:packages` scope. The workflows login to `ghcr.io` as `${{ github.actor }}` with this token to push images. (Alternatively use `GITHUB_TOKEN` if the repo permissions allow it â€” `GHCR_TOKEN` is here so private-package orgs have an override.) |
+| `STAGING_HOST` | `staging` environment | `deploy-staging` | DNS name or IP of the staging VPS (e.g. `staging.SZDevs.io`). |
 | `STAGING_SSH_KEY` | `staging` environment | `deploy-staging` | PEM-encoded private key for the `deploy` user on the staging VPS. Corresponding public key must be in `/home/deploy/.ssh/authorized_keys`. |
 | `PROD_HOST` | `production` environment | `deploy-prod` | DNS name or IP of the production VPS. |
 | `PROD_SSH_KEY` | `production` environment | `deploy-prod` | PEM-encoded private key for the `deploy` user on production. Keep this tightly-scoped; rotate on every operator offboarding. |
@@ -118,17 +118,17 @@ credentials are never reachable from the staging workflow.
 ### Production environment protection
 
 `deploy-prod.yml` declares `environment: production` on its `deploy`
-job. Configure the protection rules in **Settings → Environments →
+job. Configure the protection rules in **Settings â†’ Environments â†’
 production**:
 
-1. **Required reviewers** — at least one release manager must approve
+1. **Required reviewers** â€” at least one release manager must approve
    before the job starts running.
-2. **Wait timer** — optional cool-down (e.g. 5 min) between approval
+2. **Wait timer** â€” optional cool-down (e.g. 5 min) between approval
    and execution so the approver can still cancel.
-3. **Deployment branches** — restrict to `main` only.
+3. **Deployment branches** â€” restrict to `main` only.
 
 Without these, a force-push to `main` would deploy without human
-oversight. The workflow file itself doesn't — and can't — enforce
+oversight. The workflow file itself doesn't â€” and can't â€” enforce
 them; they are a repo-level setting.
 
 ### How the deploy workflow decides what to build
@@ -143,8 +143,8 @@ The `...[HEAD^1]` filter resolves to "every package changed in the
 latest commit, PLUS every package that depends on one of them". The
 JSON output is then jq-split into two arrays:
 
-- `services` — any package whose name ends in `-service`
-- `apps` — any package matching the fixed list of Next.js apps (web,
+- `services` â€” any package whose name ends in `-service`
+- `apps` â€” any package matching the fixed list of Next.js apps (web,
   rh, financeiro, projetos, devops, suporte, store, developer)
 
 Both arrays feed a `strategy.matrix` on the subsequent `build-services`
@@ -159,9 +159,9 @@ spins up one builder.
 to walk the conventional-commit history since the last tag and compute
 the next semver version:
 
-- `fix: …` → **patch** bump
-- `feat: …` → **minor** bump
-- `feat!: …` or `BREAKING CHANGE:` → **major** bump
+- `fix: â€¦` â†’ **patch** bump
+- `feat: â€¦` â†’ **minor** bump
+- `feat!: â€¦` or `BREAKING CHANGE:` â†’ **major** bump
 
 The tag is computed in a `version` job before builds run (so Docker
 images can be tagged with the upcoming version), but only pushed after
@@ -174,29 +174,29 @@ the deploy job succeeds. A failed deploy never burns a version number.
 Two multi-stage Dockerfiles live at the repo root. Both use the repo
 root as build context and select the target workspace via build args:
 
-### `Dockerfile.service` — NestJS services
+### `Dockerfile.service` â€” NestJS services
 
 ```bash
 docker build \
   --file Dockerfile.service \
-  --build-arg PACKAGE_NAME=@devtechs/auth-service \
+  --build-arg PACKAGE_NAME=@szdevs/auth-service \
   --tag ghcr.io/your-org/auth-service:local \
   .
 ```
 
-Multi-stage: `base` → `builder` (pnpm install + prisma generate +
-`turbo build` + `pnpm --prod deploy /app`) → `runtime` (alpine + `node`
+Multi-stage: `base` â†’ `builder` (pnpm install + prisma generate +
+`turbo build` + `pnpm --prod deploy /app`) â†’ `runtime` (alpine + `node`
 user + `dumb-init`). The `pnpm deploy` step produces a self-contained
-prod-only directory — workspace `workspace:*` links are resolved into
+prod-only directory â€” workspace `workspace:*` links are resolved into
 real files, dev dependencies are stripped, and the final runtime image
 copies just that directory.
 
-### `Dockerfile.app` — Next.js apps
+### `Dockerfile.app` â€” Next.js apps
 
 ```bash
 docker build \
   --file Dockerfile.app \
-  --build-arg PACKAGE_NAME=@devtechs/web \
+  --build-arg PACKAGE_NAME=@szdevs/web \
   --build-arg APP_NAME=web \
   --tag ghcr.io/your-org/web:local \
   .
@@ -217,7 +217,7 @@ outputFileTracingRoot: path.join(__dirname, '../../'),
 
 The second flag is what makes standalone output follow
 `transpilePackages` out of the app folder and into `packages/*`
-workspaces — without it, the trace walker stops at the app boundary
+workspaces â€” without it, the trace walker stops at the app boundary
 and produces a broken image.
 
 ---
@@ -228,15 +228,15 @@ Every command is `pnpm turbo run <task>` at the root, which fans out to
 the matching script in every workspace that defines one. Tasks defined
 in `turbo.json`:
 
-- `dev` — start all dev servers
-- `build` — production build
-- `lint` — ESLint
-- `typecheck` — `tsc --noEmit`
-- `test` — Jest
+- `dev` â€” start all dev servers
+- `build` â€” production build
+- `lint` â€” ESLint
+- `typecheck` â€” `tsc --noEmit`
+- `test` â€” Jest
 
 Filter to a single workspace with `--filter`:
 
 ```bash
-pnpm turbo run build --filter=@devtechs/auth-service
-pnpm turbo run dev   --filter=@devtechs/web
+pnpm turbo run build --filter=@szdevs/auth-service
+pnpm turbo run dev   --filter=@szdevs/web
 ```

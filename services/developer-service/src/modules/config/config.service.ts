@@ -2,13 +2,13 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 
 import { RedisService } from '../../redis/redis.service';
 
-const STORAGE_KEY          = 'devtechs:config:storage_provider';
-const FEATURE_FLAGS_KEY    = 'devtechs:config:feature_flags';
-const EMAIL_PROVIDER_KEY   = 'devtechs:config:email_provider';
-const GMAIL_CREDS_KEY      = 'devtechs:config:gmail_creds';
-const SMTP_CREDS_KEY       = 'devtechs:config:smtp_creds';
-const API_KEYS_KEY         = 'devtechs:config:api_keys';
-const PAYMENT_PROVIDER_KEY = 'devtechs:config:payment_provider';
+const STORAGE_KEY          = 'SZDevs:config:storage_provider';
+const FEATURE_FLAGS_KEY    = 'SZDevs:config:feature_flags';
+const EMAIL_PROVIDER_KEY   = 'SZDevs:config:email_provider';
+const GMAIL_CREDS_KEY      = 'SZDevs:config:gmail_creds';
+const SMTP_CREDS_KEY       = 'SZDevs:config:smtp_creds';
+const API_KEYS_KEY         = 'SZDevs:config:api_keys';
+const PAYMENT_PROVIDER_KEY = 'SZDevs:config:payment_provider';
 
 interface ApiKeyDef {
   key:    string;
@@ -167,7 +167,7 @@ export class DeveloperConfigService {
 
   async setPaymentProvider(provider: 'mercadopago' | 'stripe'): Promise<{ provider: string }> {
     await this.redis.set(PAYMENT_PROVIDER_KEY, provider);
-    await this.redis.publish('devtechs:config:payment:changed', JSON.stringify({ provider }));
+    await this.redis.publish('SZDevs:config:payment:changed', JSON.stringify({ provider }));
     this.logger.log(`Payment provider switched to ${provider}`);
     return { provider };
   }
@@ -177,7 +177,7 @@ export class DeveloperConfigService {
       throw new BadRequestException('provider must be "r2" or "local"');
     }
     await this.redis.set(STORAGE_KEY, provider);
-    await this.redis.publish('devtechs:config:storage:changed', JSON.stringify({ provider }));
+    await this.redis.publish('SZDevs:config:storage:changed', JSON.stringify({ provider }));
     this.logger.log(`Storage provider switched to ${provider}`);
     return { provider };
   }
@@ -187,7 +187,7 @@ export class DeveloperConfigService {
       ? flag.toUpperCase()
       : `FEATURE_${flag.toUpperCase()}`;
     await this.redis.hset(FEATURE_FLAGS_KEY, normalized, enabled ? 'true' : 'false');
-    await this.redis.publish('devtechs:config:feature-flag:changed', JSON.stringify({ flag: normalized, enabled }));
+    await this.redis.publish('SZDevs:config:feature-flag:changed', JSON.stringify({ flag: normalized, enabled }));
     this.logger.log(`Feature flag ${normalized} = ${enabled}`);
     return { flag: normalized, enabled };
   }
@@ -221,7 +221,7 @@ export class DeveloperConfigService {
     } else {
       await this.redis.getClient().hdel(API_KEYS_KEY, key);
     }
-    await this.redis.publish('devtechs:config:api-key:changed', JSON.stringify({ key }));
+    await this.redis.publish('SZDevs:config:api-key:changed', JSON.stringify({ key }));
     this.logger.log(`API key ${key} updated`);
     return { key };
   }
@@ -265,7 +265,7 @@ export class DeveloperConfigService {
 
   async setEmailProvider(provider: 'resend' | 'gmail' | 'smtp'): Promise<{ provider: string }> {
     await this.redis.set(EMAIL_PROVIDER_KEY, provider);
-    await this.redis.publish('devtechs:config:email-provider:changed', JSON.stringify({ provider }));
+    await this.redis.publish('SZDevs:config:email-provider:changed', JSON.stringify({ provider }));
     this.logger.log(`Email provider switched to ${provider}`);
     return { provider };
   }
@@ -281,7 +281,7 @@ export class DeveloperConfigService {
       'pass', creds.pass,
       'from', creds.from,
     );
-    await this.redis.publish('devtechs:config:smtp-creds:changed', JSON.stringify({ user: creds.user }));
+    await this.redis.publish('SZDevs:config:smtp-creds:changed', JSON.stringify({ user: creds.user }));
     this.logger.log(`SMTP credentials saved for ${creds.user}`);
   }
 
@@ -293,7 +293,7 @@ export class DeveloperConfigService {
       'clientSecret',  creds.clientSecret,
       'refreshToken',  creds.refreshToken,
     );
-    await this.redis.publish('devtechs:config:gmail-creds:changed', JSON.stringify({ user: creds.user }));
+    await this.redis.publish('SZDevs:config:gmail-creds:changed', JSON.stringify({ user: creds.user }));
     this.logger.log(`Gmail credentials saved for ${creds.user}`);
   }
 

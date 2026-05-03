@@ -81,14 +81,14 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   const port = Number(
-    process.env.FINANCE_SERVICE_PORT ?? process.env.PORT ?? 3005,
+    process.env.FINANCE_SERVICE_PORT ?? process.env.PORT ?? 4004,
   );
   // -----------------------------------------------------------------------
   // Swagger / OpenAPI
   // -----------------------------------------------------------------------
   const document = setupSwagger(app, {
     service: "finance",
-    title: "DevTechs — Finance Service API",
+    title: "SZDevs â€” Finance Service API",
     description: "Transactions, invoices, accounts, DRE reports.",
     tags: [
       { name: "transactions" },

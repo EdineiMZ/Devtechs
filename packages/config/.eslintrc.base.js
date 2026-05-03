@@ -1,5 +1,5 @@
 /**
- * Base ESLint configuration for the DevTechs monorepo.
+ * Base ESLint configuration for the SZDevs monorepo.
  *
  * Apps (Next.js) and services (NestJS) should extend from this file
  * and add their own overrides for framework-specific rules.

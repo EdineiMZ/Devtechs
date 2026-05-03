@@ -1,0 +1,6 @@
+# Registros reais de incidentes são CONFIDENCIAIS e não devem ser versionados no Git.
+# Mantenha os arquivos INC-YYYY-NNN.md em armazenamento seguro e separado
+# (ex.: Google Drive criptografado, Notion privado, pasta de rede restrita).
+
+# Ignora todos os arquivos de incidente reais — mantém apenas o template
+INC-*.md

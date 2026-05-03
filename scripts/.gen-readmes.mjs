@@ -12,7 +12,7 @@ for (const [svc, m] of Object.entries(cfg)) {
   lines.push(m.tagline);
   lines.push('');
   lines.push(
-    'Part of the [DevTechs](../../README.md) monorepo. NestJS 10 + Prisma + Postgres + Redis. ' +
+    'Part of the [SZDevs](../../README.md) monorepo. NestJS 10 + Prisma + Postgres + Redis. ' +
       'Tokens issued/validated against [auth-service](../auth-service/README.md).',
   );
   lines.push('');
@@ -25,14 +25,14 @@ for (const [svc, m] of Object.entries(cfg)) {
   lines.push('| Var | Default | Notes |');
   lines.push('| --- | --- | --- |');
   lines.push(`| \`${m.envPort}\` / \`PORT\` | \`${m.port}\` | TCP port to bind. |`);
-  lines.push('| `DATABASE_URL` | — | Postgres connection string. Schema in [packages/database](../../packages/database). |');
-  lines.push('| `REDIS_URL` | — | Used by rate-limit + cache. Dev-tolerated when offline. |');
+  lines.push('| `DATABASE_URL` | â€” | Postgres connection string. Schema in [packages/database](../../packages/database). |');
+  lines.push('| `REDIS_URL` | â€” | Used by rate-limit + cache. Dev-tolerated when offline. |');
   for (const e of m.extraEnv) {
-    const idx = e.indexOf(' — ');
+    const idx = e.indexOf(' â€” ');
     if (idx > 0) {
-      lines.push(`| \`${e.slice(0, idx)}\` | — | ${e.slice(idx + 3)} |`);
+      lines.push(`| \`${e.slice(0, idx)}\` | â€” | ${e.slice(idx + 3)} |`);
     } else {
-      lines.push(`| \`${e}\` | — | |`);
+      lines.push(`| \`${e}\` | â€” | |`);
     }
   }
   lines.push('');
@@ -46,10 +46,10 @@ for (const [svc, m] of Object.entries(cfg)) {
   lines.push('pnpm db:migrate && pnpm db:seed');
   lines.push('');
   lines.push('# 3. Start the service in watch mode.');
-  lines.push(`pnpm --filter @devtechs/${svc} dev`);
+  lines.push(`pnpm --filter @szdevs/${svc} dev`);
   lines.push('');
   lines.push('# 4. Production-style start (after pnpm build).');
-  lines.push(`pnpm --filter @devtechs/${svc} start`);
+  lines.push(`pnpm --filter @szdevs/${svc} start`);
   lines.push('```');
   lines.push('');
   lines.push(
@@ -68,12 +68,12 @@ for (const [svc, m] of Object.entries(cfg)) {
   lines.push('## Tests');
   lines.push('');
   lines.push('```bash');
-  lines.push(`pnpm --filter @devtechs/${svc} typecheck   # tsc --noEmit`);
-  lines.push(`pnpm --filter @devtechs/${svc} lint        # eslint`);
-  lines.push(`pnpm --filter @devtechs/${svc} test        # jest unit suite`);
+  lines.push(`pnpm --filter @szdevs/${svc} typecheck   # tsc --noEmit`);
+  lines.push(`pnpm --filter @szdevs/${svc} lint        # eslint`);
+  lines.push(`pnpm --filter @szdevs/${svc} test        # jest unit suite`);
   if (svc === 'auth-service') {
     lines.push(
-      `pnpm --filter @devtechs/${svc} test:int    # supertest integration suite (needs Postgres + Redis up)`,
+      `pnpm --filter @szdevs/${svc} test:int    # supertest integration suite (needs Postgres + Redis up)`,
     );
   }
   lines.push('```');

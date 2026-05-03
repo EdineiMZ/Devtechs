@@ -37,7 +37,7 @@ function TerminalAnimation() {
         <span className="w-3 h-3 rounded-full bg-[#ff5f57]" />
         <span className="w-3 h-3 rounded-full bg-[#febc2e]" />
         <span className="w-3 h-3 rounded-full bg-[#28c840]" />
-        <span className="ml-3 text-ash text-[10px] font-mono">~/devstechs — bash</span>
+        <span className="ml-3 text-ash text-[10px] font-mono">~/SZDevss — bash</span>
       </div>
       {CODE_LINES.map((line, i) => (
         <div
@@ -133,7 +133,7 @@ export function Hero(): JSX.Element {
               transition={{ duration: 0.6, delay: 0.5 }}
               className="max-w-lg text-base text-ash leading-relaxed font-body"
             >
-              Da arquitetura ao deploy. A DevsTech constrói sistemas backend, APIs e produtos
+              Da arquitetura ao deploy. A SZDevs constrói sistemas backend, APIs e produtos
               digitais que resistem à escala real.
             </motion.p>
 

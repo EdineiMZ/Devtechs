@@ -15,9 +15,9 @@ const bcrypt = require(bcryptPath);
 
 const prisma = new PrismaClient();
 
-const ADMIN_EMAIL = 'admin@devtechs.com';
-const ADMIN_PASSWORD = 'Admin@DevTechs2026';
-const ADMIN_NAME = 'Administrador DevTechs';
+const ADMIN_EMAIL = 'admin@SZDevs.com';
+const ADMIN_PASSWORD = 'Admin@SZDevs2026';
+const ADMIN_NAME = 'Administrador SZDevs';
 
 const ALL_PERMISSIONS = [
   // AUTH

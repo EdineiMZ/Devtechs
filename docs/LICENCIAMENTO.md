@@ -1,18 +1,18 @@
-# Sistema de Licenciamento DevTechs
+# Sistema de Licenciamento SZDevs
 
 ## Visao Geral
 
-O license-service gerencia tokens de ativacao para produtos DevTechs. Cada token e um UUID v4 com hash SHA-256 armazenado para verificacao offline.
+O license-service gerencia tokens de ativacao para produtos SZDevs. Cada token e um UUID v4 com hash SHA-256 armazenado para verificacao offline.
 
 ## Fluxo
 
 ```
-Admin cria produto → Admin vincula cliente → Admin gera token
-                                              ↓
+Admin cria produto â†’ Admin vincula cliente â†’ Admin gera token
+                                              â†“
                                     Entrega key + hash ao cliente
-                                              ↓
+                                              â†“
                             Produto do cliente chama POST /tokens/verify
-                                              ↓
+                                              â†“
                               license-service valida e registra ativacao
 ```
 
@@ -68,7 +68,7 @@ Resposta:
 
 ## Verificando um Token (POST /tokens/verify)
 
-Endpoint publico — chamado pelo produto do cliente, sem Bearer token.
+Endpoint publico â€” chamado pelo produto do cliente, sem Bearer token.
 
 ```bash
 curl -X POST http://localhost:3008/tokens/verify \
@@ -139,7 +139,7 @@ function hashKey(key: string): string {
 Para ambientes sem internet (air-gapped), armazene o `hash` retornado na geracao do token. O produto pode verificar a autenticidade da key sem chamar a API:
 
 ```ts
-import { verifyOffline } from '@devtechs/license-sdk';
+import { verifyOffline } from '@szdevs/license-sdk';
 
 // savedHash foi armazenado durante a ativacao inicial
 const isAuthentic = verifyOffline(userProvidedKey, savedHash);
@@ -168,23 +168,23 @@ Use verificacao offline apenas como fallback quando o servico esta inacessivel. 
      - Considera valido por ate 24h sem verificacao online
 ```
 
-## Usando o SDK (@devtechs/license-sdk)
+## Usando o SDK (@szdevs/license-sdk)
 
 ### Instalacao
 
 ```bash
-npm install @devtechs/license-sdk
+npm install @szdevs/license-sdk
 # ou
-pnpm add @devtechs/license-sdk
+pnpm add @szdevs/license-sdk
 ```
 
 ### Verificacao online
 
 ```ts
-import { LicenseClient } from '@devtechs/license-sdk';
+import { LicenseClient } from '@szdevs/license-sdk';
 
 const client = new LicenseClient({
-  baseUrl: 'https://api.devtechs.com.br',
+  baseUrl: 'https://api.SZDevs.com.br',
   appId: 'my-saas-app',
   timeout: 10000, // opcional, default 10s
 });
@@ -209,7 +209,7 @@ async function checkLicense(key: string) {
 ### Verificacao offline (fallback)
 
 ```ts
-import { hashKey, verifyOffline } from '@devtechs/license-sdk';
+import { hashKey, verifyOffline } from '@szdevs/license-sdk';
 
 // Gerar hash para armazenar
 const hash = hashKey('550e8400-e29b-41d4-a716-446655440000');

@@ -10,10 +10,10 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@devtechs/ui": ["../../packages/ui/src"],
-      "@devtechs/ui/*": ["../../packages/ui/src/*"],
-      "@devtechs/types": ["../../packages/types/src"],
-      "@devtechs/types/*": ["../../packages/types/src/*"]
+      "@szdevs/ui": ["../../packages/ui/src"],
+      "@szdevs/ui/*": ["../../packages/ui/src/*"],
+      "@szdevs/types": ["../../packages/types/src"],
+      "@szdevs/types/*": ["../../packages/types/src/*"]
     }
   },
   "include": ["next-env.d.ts", "src/**/*.ts", "src/**/*.tsx", ".next/types/**/*.ts"],

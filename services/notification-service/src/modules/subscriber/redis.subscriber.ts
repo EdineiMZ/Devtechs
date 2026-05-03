@@ -34,6 +34,8 @@ interface EmailEventPayload {
   subject: string;
   template: string;
   data: Record<string, unknown>;
+  /** Sender override — any address on the verified domain. Falls back to RESEND_FROM env. */
+  from?: string;
   replyTo?: string;
 }
 
@@ -184,8 +186,9 @@ export class RedisSubscriber implements OnModuleInit, OnModuleDestroy {
   ): Promise<void> {
     await this.enqueueEmail({
       to: payload.employee.email,
-      subject: 'Suas férias foram aprovadas — DevTechs',
+      subject: 'Suas férias foram aprovadas — SZDevs',
       template: 'vacation-approved',
+      from: 'RH SZDevs <rh@szdevs.com>',
       data: {
         name: payload.employee.name,
         type: payload.type,
@@ -209,8 +212,9 @@ export class RedisSubscriber implements OnModuleInit, OnModuleDestroy {
   ): Promise<void> {
     await this.enqueueEmail({
       to: payload.employee.email,
-      subject: 'Sua solicitação de férias não foi aprovada — DevTechs',
+      subject: 'Sua solicitação de férias não foi aprovada — SZDevs',
       template: 'vacation-rejected',
+      from: 'RH SZDevs <rh@szdevs.com>',
       data: {
         name: payload.employee.name,
         startDate: payload.startDate,

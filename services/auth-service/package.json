@@ -1,5 +1,5 @@
 {
-  "name": "@devtechs/auth-service",
+  "name": "@szdevs/auth-service",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -12,9 +12,9 @@
     "test:int": "jest --config jest.int.config.cjs --runInBand"
   },
   "dependencies": {
-    "@devtechs/auth": "workspace:*",
-    "@devtechs/database": "workspace:*",
-    "@devtechs/types": "workspace:*",
+    "@szdevs/auth": "workspace:*",
+    "@szdevs/database": "workspace:*",
+    "@szdevs/types": "workspace:*",
     "@nest-lab/throttler-storage-redis": "^1.0.0",
     "@nestjs/common": "^10.3.0",
     "@nestjs/config": "^3.2.0",
@@ -37,7 +37,7 @@
     "swagger-ui-express": "^5.0.0"
   },
   "devDependencies": {
-    "@devtechs/config": "workspace:*",
+    "@szdevs/config": "workspace:*",
     "@nestjs/cli": "^10.3.0",
     "@nestjs/testing": "^10.3.0",
     "@swc/cli": "^0.5.2",

@@ -1,10 +1,10 @@
-﻿'use client';
+'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
-import { Button, Input, cn } from '@devtechs/ui';
+import { Button, Input, cn } from '@szdevs/ui';
 
 import {
   CONTACT_SUBJECTS,
@@ -30,7 +30,7 @@ type SubmitState =
 /**
  * Classes shared between our local `<textarea>` and `<select>` so
  * they match the styling of the shared-UI `<Input>` without having
- * to re-export anything from `@devtechs/ui`.
+ * to re-export anything from `@szdevs/ui`.
  */
 const fieldBaseClasses =
   'flex w-full rounded-md border bg-background text-sm ring-offset-background transition-colors placeholder:text-ash focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { Avatar, AvatarFallback, Button } from '@devtechs/ui';
+import { Avatar, AvatarFallback, Button } from '@szdevs/ui';
 
 import { auth, signOut } from '@/auth';
 import { NotificationsBell } from '@/components/app/notifications-bell';

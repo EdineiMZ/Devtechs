@@ -14,7 +14,7 @@ import { chromium } from 'playwright';
     const r = await fetch('http://127.0.0.1:4001/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@devtechs.com', password: 'Admin@DevTechs2026' }),
+      body: JSON.stringify({ email: 'admin@SZDevs.com', password: 'Admin@SZDevs2026' }),
     });
     return { status: r.status, body: await r.json().catch(() => null) };
   });
@@ -34,8 +34,8 @@ import { chromium } from 'playwright';
   const callback = await page.evaluate(async (csrfToken) => {
     const form = new URLSearchParams();
     form.set('csrfToken', csrfToken);
-    form.set('email', 'admin@devtechs.com');
-    form.set('password', 'Admin@DevTechs2026');
+    form.set('email', 'admin@SZDevs.com');
+    form.set('password', 'Admin@SZDevs2026');
     form.set('callbackUrl', '/perfil');
     form.set('json', 'true');
     const r = await fetch('/api/auth/callback/credentials', {

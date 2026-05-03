@@ -15,7 +15,7 @@ export class AuthClientService {
 
   constructor(config: ConfigService) {
     this.baseUrl = (
-      config.get<string>('AUTH_SERVICE_URL') ?? 'http://auth-service:3001'
+      config.get<string>('AUTH_SERVICE_URL') ?? 'http://localhost:4001'
     ).replace(/\/+$/, '');
     this.internalSecret = config.get<string>('AUTH_INTERNAL_SECRET') ?? '';
     if (!this.internalSecret) {

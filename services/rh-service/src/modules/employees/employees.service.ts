@@ -6,12 +6,12 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@devtechs/database';
+import type { Prisma } from '@szdevs/database';
 import {
   STORAGE,
   generateKey,
   type StorageAdapter,
-} from '@devtechs/storage';
+} from '@szdevs/storage';
 
 import { AuditClientService } from '../../common/audit/audit-client.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -174,7 +174,7 @@ export class EmployeesService {
     });
     if (!existing) throw new NotFoundException('Employee not found');
 
-    // Uniqueness check — only if the caller is actually changing
+    // Uniqueness check â€” only if the caller is actually changing
     // one of the unique fields, and only against OTHER rows.
     if (dto.email && dto.email !== existing.email) {
       await this.assertUniqueEmailExcept(id, dto.email);
@@ -190,7 +190,7 @@ export class EmployeesService {
       managerId: dto.managerId,
     });
 
-    // Guard against pointing `managerId` at self — that creates a
+    // Guard against pointing `managerId` at self â€” that creates a
     // cycle at depth 1 and breaks hierarchy traversal downstream.
     if (dto.managerId && dto.managerId === id) {
       throw new BadRequestException('An employee cannot be their own manager');
@@ -234,7 +234,7 @@ export class EmployeesService {
   }
 
   // ===================================================================
-  // Soft delete — mark as DISMISSED, set dismissDate.
+  // Soft delete â€” mark as DISMISSED, set dismissDate.
   // ===================================================================
 
   async remove(id: string): Promise<{ message: string; id: string }> {
@@ -327,7 +327,7 @@ export class EmployeesService {
     }
     if (doc.employeeId !== employeeId) {
       // Refuse to delete a document that belongs to a different
-      // employee — prevents accidental cross-tenant deletes via
+      // employee â€” prevents accidental cross-tenant deletes via
       // mis-quoted IDs in the URL.
       throw new BadRequestException(
         'Document does not belong to the given employee',
@@ -343,7 +343,7 @@ export class EmployeesService {
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
       this.logger.warn(
-        `Orphaned storage object for deleted document ${documentId}: ${doc.fileKey} — ${reason}`,
+        `Orphaned storage object for deleted document ${documentId}: ${doc.fileKey} â€” ${reason}`,
       );
     }
 

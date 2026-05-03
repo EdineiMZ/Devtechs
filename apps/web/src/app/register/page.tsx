@@ -11,7 +11,7 @@ export const revalidate = false;
 export const metadata: Metadata = {
   title: 'Criar conta',
   description:
-    'Crie sua conta DevTechs e comece a usar nossa plataforma de projetos, DevOps e suporte.',
+    'Crie sua conta SZDevs e comece a usar nossa plataforma de projetos, DevOps e suporte.',
   alternates: { canonical: '/register' },
   robots: { index: false, follow: false },
 };
@@ -26,7 +26,7 @@ export default function RegisterPage(): JSX.Element {
           Já tem conta?{' '}
           <Link
             href="/login"
-            className="font-medium text-primary underline-offset-4 hover:underline"
+            className="font-medium text-copper underline-offset-4 hover:underline"
           >
             Entrar
           </Link>

@@ -1,15 +1,15 @@
 # syntax=docker/dockerfile:1.6
 #
 # =============================================================================
-# DevTechs — NestJS service image
+# SZDevs — NestJS service image
 #
 # Multi-stage build that produces a minimal, node-user production image for
 # any workspace under `services/*`. The target package is selected at build
-# time via --build-arg PACKAGE_NAME=@devtechs/<service-name>.
+# time via --build-arg PACKAGE_NAME=@szdevs/<service-name>.
 #
 #   docker build \
 #     --file Dockerfile.service \
-#     --build-arg PACKAGE_NAME=@devtechs/auth-service \
+#     --build-arg PACKAGE_NAME=@szdevs/auth-service \
 #     --tag ghcr.io/org/auth-service:sha \
 #     .
 #
@@ -59,8 +59,8 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 
 # Prisma client generation is a post-install-ish step that's skipped by
 # `--ignore-scripts` above. Run it explicitly here — every NestJS service
-# that touches the database imports from @devtechs/database.
-RUN pnpm --filter @devtechs/database prisma:generate
+# that touches the database imports from @szdevs/database.
+RUN pnpm --filter @szdevs/database prisma:generate
 
 # Build the target package AND everything it depends on (`^...` = deps,
 # not dependents). This is scoped so a change in an unrelated service

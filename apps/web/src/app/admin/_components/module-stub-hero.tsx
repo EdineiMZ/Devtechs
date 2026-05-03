@@ -1,6 +1,6 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 
-import { Badge } from '@devtechs/ui';
+import { Badge } from '@szdevs/ui';
 
 /**
  * Friendly placeholder for module pages whose UI hasn't shipped yet.

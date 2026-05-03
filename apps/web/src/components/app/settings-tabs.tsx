@@ -11,6 +11,7 @@ const TABS: Array<{ href: string; label: string }> = [
   { href: '/perfil/configuracoes/seguranca', label: 'Segurança' },
   { href: '/perfil/configuracoes/2fa', label: 'Autenticação 2FA' },
   { href: '/perfil/configuracoes/notificacoes', label: 'Notificações' },
+  { href: '/perfil/configuracoes/privacidade', label: 'Privacidade & LGPD' },
 ];
 
 export function SettingsTabs(): JSX.Element {

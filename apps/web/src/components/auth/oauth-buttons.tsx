@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 
 import { signIn } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 
-import { Button } from '@devtechs/ui';
+import { Button } from '@szdevs/ui';
 
 /**
  * Renders Google and/or GitHub sign-in buttons depending on which OAuth

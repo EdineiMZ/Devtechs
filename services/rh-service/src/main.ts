@@ -51,13 +51,13 @@ async function bootstrap(): Promise<void> {
   app.getHttpAdapter().getInstance().disable('x-powered-by');
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  const port = Number(process.env.RH_SERVICE_PORT ?? process.env.PORT ?? 3002);
+  const port = Number(process.env.RH_SERVICE_PORT ?? process.env.PORT ?? 4002);
   // -----------------------------------------------------------------------
   // Swagger / OpenAPI
   // -----------------------------------------------------------------------
   const document = setupSwagger(app, {
     service: "rh",
-    title: "DevTechs — RH Service API",
+    title: "SZDevs â€” RH Service API",
     description: "Employees, vacations, schedules, departments, payroll documents.",
     tags: [
       { name: "employees" },

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-import { Badge } from '@devtechs/ui';
+import { Badge } from '@szdevs/ui';
 
 import { auth } from '@/auth';
 import { AppShell } from '@/components/app/app-shell';
@@ -229,7 +229,7 @@ export default async function AdminPage(): Promise<JSX.Element> {
               </span>
             </h1>
             <p className="mt-3 max-w-2xl font-body text-sm text-ash">
-              Painel unificado de todos os módulos da plataforma DevsTech. Você
+              Painel unificado de todos os módulos da plataforma SZDevs. Você
               tem {user.permissions.length} permissões ativas e acesso completo
               aos microserviços NestJS.
             </p>

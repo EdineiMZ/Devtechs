@@ -26,24 +26,37 @@ export interface SendEmailInput {
   subject: string;
   template: EmailTemplate | string;
   data: Record<string, unknown>;
+  /**
+   * Override the sender address for this specific email.
+   * When omitted, falls back to the global `RESEND_FROM` env var.
+   *
+   * Use to give each department its own identity:
+   *   - 'Suporte SZDevs <suporte@szdevs.com>'
+   *   - 'RH SZDevs <rh@szdevs.com>'
+   *   - 'Financeiro SZDevs <financeiro@szdevs.com>'
+   *
+   * Works with any address on the verified Resend domain — no extra
+   * configuration needed in Resend itself.
+   */
+  from?: string;
   /** Optional Reply-To header. */
   replyTo?: string;
 }
 
 export type EmailProviderName = 'resend' | 'gmail';
 
-const REDIS_PROVIDER_KEY    = 'devtechs:config:email_provider';
-const REDIS_GMAIL_CREDS_KEY = 'devtechs:config:gmail_creds';
+const REDIS_PROVIDER_KEY    = 'SZDevs:config:email_provider';
+const REDIS_GMAIL_CREDS_KEY = 'SZDevs:config:gmail_creds';
 
 /**
- * EmailService — templated email delivery.
+ * EmailService â€” templated email delivery.
  *
  * Supports two providers, switchable at runtime via Redis:
- *   - `resend`  (default) — Resend HTTP API
- *   - `gmail`   — Gmail via Nodemailer + OAuth2
+ *   - `resend`  (default) â€” Resend HTTP API
+ *   - `gmail`   â€” Gmail via Nodemailer + OAuth2
  *
  * Templates live in `./templates/*.html` and are cached in memory.
- * Placeholder syntax: `{{name}}` — always HTML-escaped.
+ * Placeholder syntax: `{{name}}` â€” always HTML-escaped.
  */
 @Injectable()
 export class EmailService implements OnModuleInit {
@@ -66,7 +79,7 @@ export class EmailService implements OnModuleInit {
     private readonly redis: RedisService,
   ) {
     this.devMode     = (process.env.NODE_ENV ?? 'development') !== 'production';
-    this.fromAddress = this.config.get<string>('RESEND_FROM') ?? 'DevTechs <no-reply@devtechs.com.br>';
+    this.fromAddress = this.config.get<string>('RESEND_FROM') ?? 'SZDevs <no-reply@SZDevs.com.br>';
     this.templatesDir = join(__dirname, 'templates');
   }
 
@@ -78,7 +91,7 @@ export class EmailService implements OnModuleInit {
     } else if (!this.devMode) {
       throw new Error('RESEND_API_KEY is required in production');
     } else {
-      this.logger.warn('RESEND_API_KEY not set — Resend disabled (dev mode)');
+      this.logger.warn('RESEND_API_KEY not set â€” Resend disabled (dev mode)');
     }
 
     // --- Boot Gmail if credentials exist in Redis ---
@@ -93,9 +106,9 @@ export class EmailService implements OnModuleInit {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Public API
-  // ─────────────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   async send(input: SendEmailInput): Promise<{ id: string | null }> {
     const html     = await this.renderTemplate(input.template, input.data);
@@ -149,13 +162,13 @@ export class EmailService implements OnModuleInit {
     return {
       user:           creds.user  ?? null,
       hasRefreshToken: Boolean(creds.refreshToken),
-      clientIdHint:  creds.clientId ? `${creds.clientId.slice(0, 12)}…` : null,
+      clientIdHint:  creds.clientId ? `${creds.clientId.slice(0, 12)}â€¦` : null,
     };
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Private helpers
-  // ─────────────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private async sendViaResend(
     input: SendEmailInput,
@@ -168,7 +181,7 @@ export class EmailService implements OnModuleInit {
       return { id: null };
     }
     const result = await this.resend.emails.send({
-      from: this.fromAddress,
+      from: input.from ?? this.fromAddress,
       to: input.to,
       subject: input.subject,
       html,
@@ -187,11 +200,11 @@ export class EmailService implements OnModuleInit {
     html: string,
   ): Promise<{ id: string | null }> {
     if (!this.gmailTransporter || !this.gmailUser) {
-      this.logger.warn('Gmail provider selected but transporter not ready — falling back to Resend');
+      this.logger.warn('Gmail provider selected but transporter not ready â€” falling back to Resend');
       return this.sendViaResend(input, html);
     }
     const info = await this.gmailTransporter.sendMail({
-      from: this.gmailUser,
+      from: input.from ?? this.gmailUser,
       to: Array.isArray(input.to) ? input.to.join(', ') : input.to,
       subject: input.subject,
       html,
@@ -223,7 +236,7 @@ export class EmailService implements OnModuleInit {
   }
 }
 
-// ─── Utilities ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function recipients(to: string | string[]): string {
   return Array.isArray(to) ? to.join(', ') : to;

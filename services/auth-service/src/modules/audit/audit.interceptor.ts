@@ -64,6 +64,8 @@ export class AuditInterceptor implements NestInterceptor {
     const req = http.getRequest<RequestWithUser>();
     const user = req.user;
     const ipAddress = req.ip ?? null;
+    const userAgent = (req.headers['user-agent'] as string | undefined) ?? null;
+    const sessionId = user?.sessionId ?? null;
     const method = req.method;
     const path = req.originalUrl;
     const startedAt = Date.now();
@@ -82,6 +84,8 @@ export class AuditInterceptor implements NestInterceptor {
               userEmail: user?.email,
             },
             ipAddress,
+            userAgent,
+            sessionId,
           });
         },
         error: (err: unknown) => {
@@ -98,6 +102,8 @@ export class AuditInterceptor implements NestInterceptor {
               reason,
             },
             ipAddress,
+            userAgent,
+            sessionId,
           });
         },
       }),

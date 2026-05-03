@@ -1,8 +1,8 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { PrismaClient } from '@devtechs/database';
+import { PrismaClient } from '@szdevs/database';
 
 /**
- * Thin wrapper around the shared `@devtechs/database` PrismaClient that
+ * Thin wrapper around the shared `@szdevs/database` PrismaClient that
  * hooks into NestJS's lifecycle events so the connection pool is cleanly
  * closed on shutdown.
  */

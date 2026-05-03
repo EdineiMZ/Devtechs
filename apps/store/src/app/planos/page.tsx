@@ -4,7 +4,7 @@ import { PlanGrid } from './plan-grid';
 import { PlanComparison } from './plan-comparison';
 import { fetchPlans, type Plan } from '@/lib/api';
 
-export const metadata = { title: 'Planos - DevTechs' };
+export const metadata = { title: 'Planos - SZDevs' };
 export const dynamic = 'force-dynamic';
 
 async function getPlans(): Promise<Plan[]> {

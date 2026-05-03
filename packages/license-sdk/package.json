@@ -1,5 +1,5 @@
 {
-  "name": "@devtechs/license-sdk",
+  "name": "@szdevs/license-sdk",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",
@@ -11,10 +11,10 @@
     "test": "jest --passWithNoTests"
   },
   "dependencies": {
-    "@devtechs/types": "workspace:*"
+    "@szdevs/types": "workspace:*"
   },
   "devDependencies": {
-    "@devtechs/config": "workspace:*",
+    "@szdevs/config": "workspace:*",
     "@types/node": "^25.6.0",
     "typescript": "^5.4.0"
   }

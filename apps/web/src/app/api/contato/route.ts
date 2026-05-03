@@ -21,7 +21,7 @@ import { getRedisClient, isDevRedis } from '@/lib/redis';
  *      is a zod error on our side and a hint that the client bundle
  *      got stale.
  *   4. Publish two events to Redis `notifications:email`:
- *        - one to `contato@devtechs.com.br` for the ops inbox
+ *        - one to `contato@szdevs.com` for the ops inbox
  *        - one to the user's own email as a confirmation receipt
  *      Both go through the same channel notification-service listens on.
  *   5. Return `{ success: true }` on the happy path, or a structured
@@ -36,7 +36,9 @@ export const dynamic = 'force-dynamic';
 
 const RATE_LIMIT_MAX = 3;
 const RATE_LIMIT_WINDOW_SECONDS = 60 * 60; // 1 hour
-const OPS_EMAIL = 'contato@devtechs.com.br';
+const OPS_EMAIL = 'contato@szdevs.com';
+/** LGPD — mensagens com assunto lgpd_dpo são roteadas diretamente ao encarregado. */
+const DPO_EMAIL = 'privacidade@szdevs.com';
 
 const EVENT_CHANNEL = 'notifications:email';
 const TEMPLATE_OPS = 'contact-form';
@@ -124,6 +126,12 @@ export async function POST(request: Request): Promise<Response> {
   const subjectLabel = CONTACT_SUBJECT_LABELS[data.assunto];
   const submittedAt = new Date().toISOString();
 
+  // DPO requests go to the privacy/DPO inbox; everything else to ops.
+  const destinationEmail = data.assunto === 'lgpd_dpo' ? DPO_EMAIL : OPS_EMAIL;
+  const emailSubjectPrefix = data.assunto === 'lgpd_dpo'
+    ? `[LGPD] Solicitação DPO:`
+    : 'Novo contato:';
+
   // ---------------------------------------------------------------
   // 4. Publish both events to Redis
   // ---------------------------------------------------------------
@@ -131,9 +139,10 @@ export async function POST(request: Request): Promise<Response> {
     const redis = getRedisClient();
 
     const opsMessage = buildEvent({
-      to: OPS_EMAIL,
-      subject: `Novo contato: ${subjectLabel}`,
+      to: destinationEmail,
+      subject: `${emailSubjectPrefix} ${subjectLabel}`,
       template: TEMPLATE_OPS,
+      from: 'Contato SZDevs <contato@szdevs.com>',
       data: {
         nome: data.nome,
         email: data.email,
@@ -148,8 +157,10 @@ export async function POST(request: Request): Promise<Response> {
 
     const confirmationMessage = buildEvent({
       to: data.email,
-      subject: 'Recebemos sua mensagem — DevTechs',
+      subject: 'Recebemos sua mensagem — SZDevs',
       template: TEMPLATE_CONFIRMATION,
+      from: 'Contato SZDevs <contato@szdevs.com>',
+      replyTo: destinationEmail,
       data: {
         nome: data.nome,
         assunto: subjectLabel,
@@ -224,6 +235,8 @@ interface EventInput {
   subject: string;
   template: string;
   data: Record<string, unknown>;
+  from?: string;
+  replyTo?: string;
 }
 
 /**

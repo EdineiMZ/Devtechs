@@ -1,7 +1,7 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
-import { Button } from '@devtechs/ui';
+import { Button } from '@szdevs/ui';
 import { createInvoice } from '@/lib/finance-api';
 
 interface Project {

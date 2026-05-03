@@ -38,10 +38,10 @@ importers:
 
   apps/store:
     dependencies:
-      '@devtechs/types':
+      '@szdevs/types':
         specifier: workspace:*
         version: link:../../packages/types
-      '@devtechs/ui':
+      '@szdevs/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       next:
@@ -63,7 +63,7 @@ importers:
         specifier: ^2.4.1
         version: 2.4.1(react@18.3.1)
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@types/node':
@@ -90,10 +90,10 @@ importers:
 
   apps/web:
     dependencies:
-      '@devtechs/types':
+      '@szdevs/types':
         specifier: workspace:*
         version: link:../../packages/types
-      '@devtechs/ui':
+      '@szdevs/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       '@dnd-kit/core':
@@ -151,7 +151,7 @@ importers:
         specifier: ^3.23.0
         version: 3.25.76
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@next/bundle-analyzer':
@@ -199,11 +199,11 @@ importers:
 
   packages/auth:
     dependencies:
-      '@devtechs/types':
+      '@szdevs/types':
         specifier: workspace:*
         version: link:../types
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../config
       typescript:
@@ -236,14 +236,14 @@ importers:
 
   packages/database:
     dependencies:
-      '@devtechs/types':
+      '@szdevs/types':
         specifier: workspace:*
         version: link:../types
       '@prisma/client':
         specifier: ^5.15.0
         version: 5.22.0(prisma@5.22.0)
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../config
       prisma:
@@ -258,11 +258,11 @@ importers:
 
   packages/license-sdk:
     dependencies:
-      '@devtechs/types':
+      '@szdevs/types':
         specifier: workspace:*
         version: link:../types
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../config
       '@types/node':
@@ -281,7 +281,7 @@ importers:
         specifier: ^3.600.0
         version: 3.1030.0
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../config
       '@nestjs/common':
@@ -299,7 +299,7 @@ importers:
 
   packages/types:
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../config
       typescript:
@@ -336,7 +336,7 @@ importers:
         specifier: ^2.3.0
         version: 2.6.1
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../config
       '@types/react':
@@ -360,7 +360,7 @@ importers:
 
   packages/utils:
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../config
       typescript:
@@ -369,13 +369,13 @@ importers:
 
   services/auth-service:
     dependencies:
-      '@devtechs/auth':
+      '@szdevs/auth':
         specifier: workspace:*
         version: link:../../packages/auth
-      '@devtechs/database':
+      '@szdevs/database':
         specifier: workspace:*
         version: link:../../packages/database
-      '@devtechs/types':
+      '@szdevs/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@nest-lab/throttler-storage-redis':
@@ -439,7 +439,7 @@ importers:
         specifier: ^5.0.0
         version: 5.0.1(express@5.2.1)
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@nestjs/cli':
@@ -493,10 +493,10 @@ importers:
 
   services/developer-service:
     dependencies:
-      '@devtechs/database':
+      '@szdevs/database':
         specifier: workspace:*
         version: link:../../packages/database
-      '@devtechs/types':
+      '@szdevs/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@nestjs/bullmq':
@@ -569,7 +569,7 @@ importers:
         specifier: ^5.0.0
         version: 5.0.1(express@5.2.1)
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@nestjs/cli':
@@ -605,10 +605,10 @@ importers:
 
   services/devops-service:
     dependencies:
-      '@devtechs/database':
+      '@szdevs/database':
         specifier: workspace:*
         version: link:../../packages/database
-      '@devtechs/types':
+      '@szdevs/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@nestjs/bullmq':
@@ -672,7 +672,7 @@ importers:
         specifier: ^4.7.5
         version: 4.8.3
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@nestjs/cli':
@@ -705,10 +705,10 @@ importers:
 
   services/finance-service:
     dependencies:
-      '@devtechs/database':
+      '@szdevs/database':
         specifier: workspace:*
         version: link:../../packages/database
-      '@devtechs/types':
+      '@szdevs/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@nestjs/bullmq':
@@ -769,7 +769,7 @@ importers:
         specifier: ^5.0.0
         version: 5.0.1(express@5.2.1)
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@nestjs/cli':
@@ -799,13 +799,13 @@ importers:
 
   services/license-service:
     dependencies:
-      '@devtechs/database':
+      '@szdevs/database':
         specifier: workspace:*
         version: link:../../packages/database
-      '@devtechs/license-sdk':
+      '@szdevs/license-sdk':
         specifier: workspace:*
         version: link:../../packages/license-sdk
-      '@devtechs/types':
+      '@szdevs/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@nestjs/common':
@@ -854,7 +854,7 @@ importers:
         specifier: ^5.0.0
         version: 5.0.1(express@5.2.1)
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@nestjs/cli':
@@ -884,10 +884,10 @@ importers:
 
   services/notification-service:
     dependencies:
-      '@devtechs/database':
+      '@szdevs/database':
         specifier: workspace:*
         version: link:../../packages/database
-      '@devtechs/types':
+      '@szdevs/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@nestjs/bullmq':
@@ -957,7 +957,7 @@ importers:
         specifier: ^5.0.0
         version: 5.0.1(express@5.2.1)
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@nestjs/cli':
@@ -993,10 +993,10 @@ importers:
 
   services/payments-service:
     dependencies:
-      '@devtechs/database':
+      '@szdevs/database':
         specifier: workspace:*
         version: link:../../packages/database
-      '@devtechs/types':
+      '@szdevs/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@nestjs/common':
@@ -1048,7 +1048,7 @@ importers:
         specifier: ^5.0.0
         version: 5.0.1(express@5.2.1)
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@nestjs/cli':
@@ -1078,10 +1078,10 @@ importers:
 
   services/projects-service:
     dependencies:
-      '@devtechs/database':
+      '@szdevs/database':
         specifier: workspace:*
         version: link:../../packages/database
-      '@devtechs/types':
+      '@szdevs/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@nestjs/common':
@@ -1127,7 +1127,7 @@ importers:
         specifier: ^5.0.0
         version: 5.0.1(express@5.2.1)
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@nestjs/cli':
@@ -1157,13 +1157,13 @@ importers:
 
   services/rh-service:
     dependencies:
-      '@devtechs/database':
+      '@szdevs/database':
         specifier: workspace:*
         version: link:../../packages/database
-      '@devtechs/storage':
+      '@szdevs/storage':
         specifier: workspace:*
         version: link:../../packages/storage
-      '@devtechs/types':
+      '@szdevs/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@nestjs/common':
@@ -1209,7 +1209,7 @@ importers:
         specifier: ^5.0.0
         version: 5.0.1(express@5.2.1)
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@nestjs/cli':
@@ -1242,10 +1242,10 @@ importers:
 
   services/support-service:
     dependencies:
-      '@devtechs/database':
+      '@szdevs/database':
         specifier: workspace:*
         version: link:../../packages/database
-      '@devtechs/types':
+      '@szdevs/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@nestjs/bullmq':
@@ -1315,7 +1315,7 @@ importers:
         specifier: ^5.0.0
         version: 5.0.1(express@5.2.1)
     devDependencies:
-      '@devtechs/config':
+      '@szdevs/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@nestjs/cli':

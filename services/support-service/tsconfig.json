@@ -13,8 +13,8 @@
     "noUnusedParameters": false,
     "baseUrl": ".",
     "paths": {
-      "@devtechs/database": ["../../packages/database/dist"],
-      "@devtechs/database/*": ["../../packages/database/dist/*"]
+      "@szdevs/database": ["../../packages/database/dist"],
+      "@szdevs/database/*": ["../../packages/database/dist/*"]
     }
   },
   "include": ["src/**/*.ts"],

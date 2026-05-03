@@ -4,8 +4,9 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@devtechs/database';
+import type { Prisma } from '@szdevs/database';
 
+import { AuditClientService } from '../../common/audit/audit-client.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
 import type { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -50,7 +51,10 @@ export interface CashflowMonth {
 export class TransactionsService {
   private readonly logger = new Logger(TransactionsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditClientService,
+  ) {}
 
   // ===================================================================
   // CRUD
@@ -133,10 +137,17 @@ export class TransactionsService {
     });
 
     this.logger.log(`Created transaction ${row.id} (${row.type}/${row.category})`);
+    void this.audit.log({
+      userId,
+      action: 'TRANSACTION_CREATED',
+      module: 'FINANCEIRO',
+      resourceId: row.id,
+      meta: { type: row.type, category: row.category, amount: row.amount, status: row.status },
+    });
     return this.serialize(row);
   }
 
-  async update(id: string, dto: UpdateTransactionDto): Promise<unknown> {
+  async update(id: string, dto: UpdateTransactionDto, userId?: string): Promise<unknown> {
     const existing = await this.prisma.financeTransaction.findUnique({
       where: { id },
       select: { id: true },
@@ -178,6 +189,13 @@ export class TransactionsService {
         creator: { select: { id: true, name: true, email: true } },
       },
     });
+    void this.audit.log({
+      userId: userId ?? null,
+      action: 'TRANSACTION_UPDATED',
+      module: 'FINANCEIRO',
+      resourceId: id,
+      meta: { changedFields: Object.keys(dto) },
+    });
     return this.serialize(row);
   }
 
@@ -185,7 +203,7 @@ export class TransactionsService {
    * Transition a transaction to PAID. Sets paidAt to now and
    * blocks the write if the row is already PAID or CANCELLED.
    */
-  async markPaid(id: string): Promise<unknown> {
+  async markPaid(id: string, userId?: string): Promise<unknown> {
     const existing = await this.prisma.financeTransaction.findUnique({
       where: { id },
       select: { id: true, status: true },
@@ -208,6 +226,12 @@ export class TransactionsService {
       },
     });
     this.logger.log(`Marked transaction ${id} as PAID`);
+    void this.audit.log({
+      userId: userId ?? null,
+      action: 'TRANSACTION_PAID',
+      module: 'FINANCEIRO',
+      resourceId: id,
+    });
     return this.serialize(row);
   }
 

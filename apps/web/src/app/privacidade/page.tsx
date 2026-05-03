@@ -8,7 +8,7 @@ import { LegalNavbar } from '@/components/landing/legal-navbar';
 export const metadata: Metadata = {
   title: 'Política de Privacidade',
   description:
-    'Política de Privacidade da DevTechs — como coletamos, usamos, armazenamos e protegemos seus dados pessoais, em conformidade com a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018).',
+    'Política de Privacidade da SZDevs — como coletamos, usamos, armazenamos e protegemos seus dados pessoais, em conformidade com a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018).',
   robots: { index: true, follow: true },
 };
 
@@ -18,10 +18,10 @@ const VERSION = '1.0';
 export default async function PrivacidadePage(): Promise<JSX.Element> {
   const company = await getPublicCompanySettings();
 
-  const name    = company?.name            ?? 'DevTechs Tecnologia Ltda.';
+  const name    = company?.name            ?? 'SZDevs Tecnologia Ltda.';
   const cnpj    = company?.cnpj            ?? '[CNPJ não cadastrado]';
-  const email   = company?.email           ?? 'privacidade@devtechs.io';
-  const website = company?.website         ?? 'https://devtechs.io';
+  const email   = company?.email           ?? 'privacidade@SZDevs.io';
+  const website = company?.website         ?? 'https://SZDevs.io';
   const address = formatAddress(company);
 
   return (
@@ -132,7 +132,7 @@ export default async function PrivacidadePage(): Promise<JSX.Element> {
             ]} />
 
             <Table title="3.3 Dados de Pagamento" rows={[
-              ['Dados de cartão','Processamento — tokenizados pelo gateway (Stripe/Mercado Pago); não armazenados pela DevTechs','Execução de contrato (art. 7º, V)'],
+              ['Dados de cartão','Processamento — tokenizados pelo gateway (Stripe/Mercado Pago); não armazenados pela SZDevs','Execução de contrato (art. 7º, V)'],
               ['CPF/CNPJ do pagador','Emissão de nota fiscal e compliance financeiro','Obrigação legal (art. 7º, II)'],
               ['Histórico de transações','Controle financeiro, suporte e disputas','Execução de contrato (art. 7º, V) e Obrigação legal (art. 7º, II)'],
             ]} />
@@ -143,7 +143,7 @@ export default async function PrivacidadePage(): Promise<JSX.Element> {
             ]} />
 
             <div className="mt-4 rounded-lg border border-white/8 bg-white/[0.02] p-4 text-xs">
-              <strong className="text-foreground">Dados pessoais sensíveis:</strong> A DevTechs{' '}
+              <strong className="text-foreground">Dados pessoais sensíveis:</strong> A SZDevs{' '}
               <strong>não coleta intencionalmente</strong> dados sensíveis (art. 5º, II da LGPD).
               Caso o titular os inclua em campos livres (ex.: tickets de suporte), o tratamento
               dar-se-á com base no consentimento expresso (art. 11, I da LGPD) e exclusivamente
@@ -154,7 +154,7 @@ export default async function PrivacidadePage(): Promise<JSX.Element> {
           {/* 4. COMPARTILHAMENTO */}
           <section>
             <H2 n="4">Compartilhamento de Dados</H2>
-            <p>A DevTechs não vende, aluga nem comercializa dados pessoais. O compartilhamento ocorre exclusivamente nas hipóteses abaixo:</p>
+            <p>A SZDevs não vende, aluga nem comercializa dados pessoais. O compartilhamento ocorre exclusivamente nas hipóteses abaixo:</p>
             <ul className="mt-3 space-y-3">
               {[
                 ['Prestadores de serviço (Operadores)', 'Contratados mediante cláusulas de confidencialidade e proteção de dados compatíveis com a LGPD (art. 39).'],
@@ -254,7 +254,7 @@ export default async function PrivacidadePage(): Promise<JSX.Element> {
               ].map((item) => <Li key={item}>{item}</Li>)}
             </ul>
             <p className="mt-4">
-              Em caso de incidente com risco ou dano relevante aos titulares, a DevTechs
+              Em caso de incidente com risco ou dano relevante aos titulares, a SZDevs
               notificará a ANPD e os titulares afetados em prazo razoável (art. 48 da LGPD).
             </p>
           </section>
@@ -266,7 +266,7 @@ export default async function PrivacidadePage(): Promise<JSX.Element> {
               {[
                 { type: 'Estritamente necessários', base: 'Execução de contrato / Legítimo interesse', desc: 'Sessão de autenticação, tokens CSRF. Não podem ser desativados — a plataforma não funciona sem eles.' },
                 { type: 'Analíticos (desativados por padrão)', base: 'Consentimento (art. 7º, I)', desc: 'Usados para entender o uso da plataforma. Ativados somente com consentimento explícito.' },
-                { type: 'Marketing (desativados por padrão)', base: 'Consentimento (art. 7º, I)', desc: 'A DevTechs não exibe publicidade de terceiros. Cookies de marketing somente para campanhas próprias com consentimento.' },
+                { type: 'Marketing (desativados por padrão)', base: 'Consentimento (art. 7º, I)', desc: 'A SZDevs não exibe publicidade de terceiros. Cookies de marketing somente para campanhas próprias com consentimento.' },
               ].map(({ type, base, desc }) => (
                 <div key={type} className="rounded-lg border border-white/8 bg-white/[0.02] p-4 text-xs">
                   <div className="flex items-start justify-between gap-2">
@@ -307,7 +307,7 @@ export default async function PrivacidadePage(): Promise<JSX.Element> {
             <H2 n="12">Contato e Canais de Atendimento</H2>
             <dl className="mt-4 space-y-2 rounded-xl border border-white/8 bg-white/[0.02] p-5 font-mono text-xs">
               <Row label="DPO / Encarregado"  value={email} />
-              <Row label="Suporte geral"       value="suporte@devtechs.io" />
+              <Row label="Suporte geral"       value="suporte@SZDevs.io" />
               <Row label="Portal do titular"   value={website} />
               <Row label="ANPD"                value="gov.br/anpd" />
             </dl>

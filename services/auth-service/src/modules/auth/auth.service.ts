@@ -103,7 +103,7 @@ export class AuthService {
     // picks it up immediately (no need for a separate auth.user.registered subscriber).
     await this.redis.publish(EVENT_CHANNEL_EMAIL, {
       to: user.email,
-      subject: 'Confirme seu email - DevTechs',
+      subject: 'Confirme seu email - SZDevs',
       template: 'email-verification',
       data: {
         name: user.name,
@@ -334,7 +334,7 @@ export class AuthService {
       throw new UnauthorizedException('Session has expired');
     }
     if (session.refreshToken !== rawToken) {
-      // Token reuse attempt — revoke the session defensively.
+      // Token reuse attempt â€” revoke the session defensively.
       await this.prisma.session.update({
         where: { id: session.id },
         data: { revokedAt: new Date() },
@@ -448,6 +448,168 @@ export class AuthService {
     const refreshExpiresAt = this.computeExpiry(refreshExpiresIn);
 
     return { accessToken, refreshToken, refreshExpiresAt };
+  }
+
+  // ---------------------------------------------------------------------
+  // exportMyData — LGPD art. 18, V (portabilidade)
+  // ---------------------------------------------------------------------
+
+  /**
+   * Serialises all personal data held for the authenticated user into
+   * a single JSON-serialisable object. No passwords or secrets are
+   * included — only data the user themselves generated or that was
+   * collected about them.
+   */
+  async exportMyData(userId: string, ipAddress?: string | null): Promise<Record<string, unknown>> {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatarUrl: true,
+        emailVerified: true,
+        emailVerifiedAt: true,
+        twoFactorEnabled: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        lastLoginAt: true,
+        roles: {
+          select: {
+            assignedAt: true,
+            role: { select: { name: true, description: true } },
+          },
+        },
+        sessions: {
+          where: { revokedAt: null },
+          select: { id: true, createdAt: true, ipAddress: true, userAgent: true, expiresAt: true },
+        },
+        auditLogs: {
+          orderBy: { createdAt: 'desc' },
+          take: 500,
+          select: {
+            action: true,
+            module: true,
+            resourceId: true,
+            ipAddress: true,
+            createdAt: true,
+          },
+        },
+        notifications: {
+          orderBy: { createdAt: 'desc' },
+          take: 100,
+          select: { title: true, body: true, type: true, read: true, createdAt: true },
+        },
+      },
+    });
+
+    await this.auditService.log({
+      userId,
+      action: AuditAction.DATA_EXPORT_REQUESTED,
+      module: 'AUTH',
+      resourceId: userId,
+      meta: { exportedAt: new Date().toISOString() },
+      ipAddress: ipAddress ?? null,
+    });
+
+    return {
+      exportedAt: new Date().toISOString(),
+      exportVersion: '1.0',
+      legalBasis: 'LGPD art. 18, V — direito de portabilidade',
+      profile: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
+        emailVerified: user.emailVerified,
+        emailVerifiedAt: user.emailVerifiedAt,
+        twoFactorEnabled: user.twoFactorEnabled,
+        status: user.status,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        lastLoginAt: user.lastLoginAt,
+      },
+      roles: user.roles.map((r) => ({
+        name: r.role.name,
+        description: r.role.description,
+        assignedAt: r.assignedAt,
+      })),
+      activeSessions: user.sessions,
+      auditLog: user.auditLogs,
+      notifications: user.notifications,
+    };
+  }
+
+  // ---------------------------------------------------------------------
+  // deleteMyAccount — LGPD art. 18, VI (eliminação)
+  // ---------------------------------------------------------------------
+
+  /**
+   * Permanently deletes the user account and all personally identifiable
+   * data via Prisma cascade rules.
+   *
+   * Audit logs are preserved (SET NULL on userId) to satisfy Marco Civil
+   * art. 15 (6-month log retention) and fraud-prevention obligations.
+   * The log entry itself carries the userId in its `meta` field so the
+   * deletion is traceable.
+   *
+   * Requires the caller's current password as confirmation to prevent
+   * accidental or malicious deletions (CSRF, session hijacking, etc.).
+   */
+  async deleteMyAccount(
+    userId: string,
+    currentPassword: string,
+    ipAddress?: string | null,
+  ): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, name: true, passwordHash: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      // Log the failed attempt before throwing
+      await this.auditService.log({
+        userId,
+        action: AuditAction.ACCOUNT_DELETION_REQUESTED,
+        module: 'AUTH',
+        resourceId: userId,
+        meta: { result: 'bad_password', email: user.email },
+        ipAddress: ipAddress ?? null,
+      });
+      throw new UnauthorizedException('Senha incorreta. Confirme sua senha atual para continuar.');
+    }
+
+    // Write the deletion audit record BEFORE deleting (while FK still valid).
+    // The userId will be set to NULL by Prisma's SetNull rule after the delete.
+    await this.auditService.log({
+      userId,
+      action: AuditAction.ACCOUNT_DELETED,
+      module: 'AUTH',
+      resourceId: userId,
+      meta: { email: user.email, name: user.name, deletedAt: new Date().toISOString() },
+      ipAddress: ipAddress ?? null,
+    });
+
+    // Revoke all active sessions first so any outstanding tokens immediately
+    // become invalid even if the JWT TTL hasn't elapsed.
+    await this.prisma.session.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+
+    // Hard delete — Prisma cascade handles related rows (tickets, invoices,
+    // notifications, etc.). AuditLog.userId becomes NULL via SetNull.
+    await this.prisma.user.delete({ where: { id: userId } });
+
+    this.logger.log(`Account deleted by user: ${user.email} (${userId})`);
+
+    return { message: 'Conta excluída com sucesso. Lamentamos a sua partida.' };
   }
 
   /**

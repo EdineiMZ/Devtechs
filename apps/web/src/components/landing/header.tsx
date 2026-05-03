@@ -32,13 +32,13 @@ export async function Header(): Promise<JSX.Element> {
         <Link
           href="/"
           className="flex items-center gap-2.5 group"
-          aria-label="DevsTech — página inicial"
+          aria-label="SZDevs — página inicial"
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-md border border-acid/30 bg-acid/8 group-hover:border-acid/60 transition-colors">
             <Code2 className="h-4 w-4 text-acid" />
           </div>
           <span className="font-display text-base font-semibold text-foreground tracking-tight">
-            DevsTech
+            SZDevs
           </span>
         </Link>
 

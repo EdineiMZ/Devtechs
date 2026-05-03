@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
-import { Badge, Card, CardContent, CardHeader, CardTitle, cn } from '@devtechs/ui';
+import { Badge, Card, CardContent, CardHeader, CardTitle, cn } from '@szdevs/ui';
 
 export interface VpsListItem {
   id: string;

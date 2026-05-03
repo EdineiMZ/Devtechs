@@ -49,6 +49,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = exception.message;
       errorName = exception.name;
       this.logger.error(`Unhandled ${errorName}: ${message}`, exception.stack);
+    } else if (typeof exception === 'object' && exception !== null) {
+      const plain = exception as Record<string, unknown>;
+      const rawMsg = plain.message;
+      message = typeof rawMsg === 'string' && rawMsg ? rawMsg : 'Internal server error';
+      const rawStatus = plain.status ?? plain.statusCode;
+      if (typeof rawStatus === 'number' && rawStatus >= 400 && rawStatus < 600) {
+        status = rawStatus;
+      }
+      this.logger.error(`Unhandled plain exception: ${JSON.stringify(exception)}`);
     } else {
       this.logger.error(`Unknown exception type: ${JSON.stringify(exception)}`);
     }

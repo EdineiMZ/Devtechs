@@ -1,4 +1,4 @@
-import { Badge } from '@devtechs/ui';
+import { Badge } from '@szdevs/ui';
 
 import type { TicketStatus } from '@/lib/support-api';
 
@@ -25,7 +25,7 @@ const STATUS_CONFIG: Record<
 /**
  * Visually consistent status badge for tickets. Backend uses
  * `WAITING_CLIENT` (the spec mentioned `WAITING_CUSTOMER`, but the
- * Prisma enum and DTO ship the former — we follow the wire format).
+ * Prisma enum and DTO ship the former â€” we follow the wire format).
  */
 export function TicketStatusBadge({
   status,

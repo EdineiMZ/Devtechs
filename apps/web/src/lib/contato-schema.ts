@@ -12,6 +12,7 @@ export const CONTACT_SUBJECTS = [
   'suporte',
   'parceria',
   'duvida',
+  'lgpd_dpo',
 ] as const;
 
 export type ContactSubject = (typeof CONTACT_SUBJECTS)[number];
@@ -22,6 +23,7 @@ export const CONTACT_SUBJECT_LABELS: Record<ContactSubject, string> = {
   suporte: 'Suporte',
   parceria: 'Parceria',
   duvida: 'Dúvida Geral',
+  lgpd_dpo: '🔒 Privacidade / DPO (LGPD)',
 };
 
 /**

@@ -78,7 +78,7 @@ function pushToast(options: ToastOptions): string {
 
 /**
  * Imperative toast API. Can be called from anywhere (event handlers,
- * async flows, non-React code) — no context provider required.
+ * async flows, non-React code) â€” no context provider required.
  */
 export const toast = Object.assign(
   (options: ToastOptions) => pushToast(options),
@@ -98,7 +98,7 @@ export const toast = Object.assign(
 /**
  * React hook that returns the current toast list and helper callbacks.
  * A `<Toaster />` component in the app should call this and render the
- * toasts using `@devtechs/ui` Alert / Card primitives.
+ * toasts using `@szdevs/ui` Alert / Card primitives.
  */
 export function useToast() {
   const [toasts, setToasts] = useState<Toast[]>(memoryState);

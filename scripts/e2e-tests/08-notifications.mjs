@@ -52,8 +52,8 @@ async function jsonFetch(url, opts = {}) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: 'admin@devtechs.com',
-      password: 'Admin@DevTechs2026',
+      email: 'admin@SZDevs.com',
+      password: 'Admin@SZDevs2026',
     }),
   });
   if (login.status !== 200 || !login.body?.accessToken) {

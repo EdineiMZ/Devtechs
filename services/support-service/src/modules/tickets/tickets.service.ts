@@ -10,7 +10,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@devtechs/database';
+import type { Prisma } from '@szdevs/database';
 
 import { PermissionResolverService } from '../../common/permissions/permission-resolver.service';
 import { PrismaService } from '../../prisma/prisma.service';

@@ -48,7 +48,7 @@ async function bootstrap(): Promise<void> {
   // -----------------------------------------------------------------------
   const document = setupSwagger(app, {
     service: "license",
-    title: "DevTechs — License Service API",
+    title: "SZDevs â€” License Service API",
     description: "Licensed products, client bindings, activation tokens.",
     tags: [
       { name: "products" },

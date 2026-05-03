@@ -1,8 +1,8 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 
-import { Button } from '@devtechs/ui';
+import { Button } from '@szdevs/ui';
 
 /**
  * Post-register success view — shown inline in place of the form

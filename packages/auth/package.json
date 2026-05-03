@@ -1,5 +1,5 @@
 {
-  "name": "@devtechs/auth",
+  "name": "@szdevs/auth",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",
@@ -11,10 +11,10 @@
     "test": "jest --passWithNoTests"
   },
   "dependencies": {
-    "@devtechs/types": "workspace:*"
+    "@szdevs/types": "workspace:*"
   },
   "devDependencies": {
-    "@devtechs/config": "workspace:*",
+    "@szdevs/config": "workspace:*",
     "typescript": "^5.4.0"
   }
 }

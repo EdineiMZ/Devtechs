@@ -11,18 +11,18 @@ import { ConfigService } from '@nestjs/config';
  *
  * Base URL: https://developers.hostinger.com/api/vps/v1
  * Auth:     Bearer token from `HOSTINGER_API_TOKEN` env var.
- * Timeout:  10s per request via AbortSignal.timeout — anything slower
+ * Timeout:  10s per request via AbortSignal.timeout â€” anything slower
  *           is treated as the upstream being unreachable and surfaces
  *           as a 503 from our service.
  *
  * Error mapping:
- *   - 401/403 from upstream → UnauthorizedException (token wrong / revoked)
- *   - 404 from upstream     → returns null (caller decides 404 vs absent)
- *   - 409 from upstream     → returns { alreadyInState: true }; the
+ *   - 401/403 from upstream â†’ UnauthorizedException (token wrong / revoked)
+ *   - 404 from upstream     â†’ returns null (caller decides 404 vs absent)
+ *   - 409 from upstream     â†’ returns { alreadyInState: true }; the
  *                             actuator routes (start/stop/restart) treat
  *                             this as soft-success
- *   - timeout / network err → ServiceUnavailableException with retry hint
- *   - any other 4xx/5xx     → ServiceUnavailableException carrying the
+ *   - timeout / network err â†’ ServiceUnavailableException with retry hint
+ *   - any other 4xx/5xx     â†’ ServiceUnavailableException carrying the
  *                             upstream message
  *
  * All requests log the URL + status + elapsed; bodies are NEVER logged
@@ -44,7 +44,7 @@ export interface HostingerVm {
 }
 
 /**
- * Raw shape returned by the Hostinger VPS API v1 — verified against
+ * Raw shape returned by the Hostinger VPS API v1 â€” verified against
  * the real API response (GET /virtual-machines/{id}).
  *
  * Notable differences from `HostingerVm`:
@@ -60,9 +60,9 @@ interface RawHostingerVm {
   state: string;
   plan: string;
   data_center_id?: number;
-  /** IPv4 list — primary IP is ipv4[0].address. */
+  /** IPv4 list â€” primary IP is ipv4[0].address. */
   ipv4?: Array<{ id?: number; address: string; ptr?: string }>;
-  /** IPv6 list — primary IP is ipv6[0].address. */
+  /** IPv6 list â€” primary IP is ipv6[0].address. */
   ipv6?: Array<{ id?: number; address: string; ptr?: string }>;
   cpus?: number;
   /** Memory in MB. */
@@ -177,7 +177,7 @@ export class HostingerApiService {
   private readonly logger = new Logger(HostingerApiService.name);
   private readonly baseUrl: string;
   private readonly token: string | undefined;
-  /** In-memory cache: data_center_id → city name. Populated on first use. */
+  /** In-memory cache: data_center_id â†’ city name. Populated on first use. */
   private dcCache: Map<number, string> | null = null;
 
   constructor(private readonly config: ConfigService) {
@@ -353,9 +353,9 @@ export class HostingerApiService {
   /**
    * Transform the raw Hostinger API v1 response into the canonical `HostingerVm`.
    * Verified against the real API (2026-04-29):
-   *   - ipv4/ipv6 are arrays of objects → extract [0].address
-   *   - data_center_id is an integer → look up city name from dcMap
-   *   - disk is in MB → divide by 1024 for GB
+   *   - ipv4/ipv6 are arrays of objects â†’ extract [0].address
+   *   - data_center_id is an integer â†’ look up city name from dcMap
+   *   - disk is in MB â†’ divide by 1024 for GB
    *   - memory is already in MB
    */
   private mapVm(raw: RawHostingerVm, dcMap: Map<number, string>): HostingerVm {
@@ -409,7 +409,7 @@ export class HostingerApiService {
     return [];
   }
 
-  /** Fetch and cache the data-center id→city map. Falls back to empty map on error. */
+  /** Fetch and cache the data-center idâ†’city map. Falls back to empty map on error. */
   private async getDataCenterMap(): Promise<Map<number, string>> {
     if (this.dcCache) return this.dcCache;
     try {
@@ -476,13 +476,13 @@ export class HostingerApiService {
       response = await fetch(url, {
         method,
         headers: {
-          // Bearer token authentication — the value comes from
+          // Bearer token authentication â€” the value comes from
           // HOSTINGER_API_TOKEN and is the only way the Hostinger API
           // identifies the calling account.
           Authorization: `Bearer ${this.token}`,
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          'User-Agent': 'devtechs-developer-service/1.0',
+          'User-Agent': 'SZDevs-developer-service/1.0',
         },
         body: opts.body ? JSON.stringify(opts.body) : undefined,
         // 10s budget. Anything slower => 503 with retry hint.
@@ -504,7 +504,7 @@ export class HostingerApiService {
     }
 
     const elapsed = Date.now() - startedAt;
-    this.logger.log(`[hostinger] ${method} ${path} → ${response.status} (${elapsed}ms)`);
+    this.logger.log(`[hostinger] ${method} ${path} â†’ ${response.status} (${elapsed}ms)`);
 
     if (response.status === 401 || response.status === 403) {
       throw new UnauthorizedException(
@@ -518,7 +518,7 @@ export class HostingerApiService {
     }
 
     if (opts.allow409 && response.status === 409) {
-      // Soft-success sentinel — the actuator wrapper converts this into
+      // Soft-success sentinel â€” the actuator wrapper converts this into
       // ActuatorOutcome { alreadyInState: true }.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return { __alreadyInState: true } as any;
@@ -531,7 +531,7 @@ export class HostingerApiService {
         if (body.message) message = body.message;
         else if (body.error) message = body.error;
       } catch {
-        /* ignore — keep default */
+        /* ignore â€” keep default */
       }
       throw new ServiceUnavailableException(message);
     }

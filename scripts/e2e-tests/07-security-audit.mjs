@@ -10,7 +10,7 @@
  * Post-consolidation extras (this PR):
  *   - retired module ports MUST be unreachable (no anon UI)
  *   - every /admin/* and /perfil/* sub-route bounces anonymous to
- *     /login — confirms the middleware gate covers the new surface
+ *     /login â€” confirms the middleware gate covers the new surface
  */
 
 const AUTH = 'http://127.0.0.1:4001';
@@ -18,7 +18,7 @@ const WEB = 'http://localhost:3000';
 
 // After consolidation we keep only :3000 (web) and :3006 (store) as
 // Next.js surfaces. The rest (3001 RH, 3002 financeiro, 3003 projetos,
-// 3004 devops, 3005 suporte, 3007 developer) were retired — leaving a
+// 3004 devops, 3005 suporte, 3007 developer) were retired â€” leaving a
 // listener up on any of them is a regression and a security finding.
 const RETIRED_NEXTJS_PORTS = [3001, 3002, 3003, 3004, 3005, 3007];
 
@@ -73,7 +73,7 @@ async function jsonFetch(url, opts = {}) {
   res = await jsonFetch(`${AUTH}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'admin@devtechs.com', password: 'WrongPasswordX!' }),
+    body: JSON.stringify({ email: 'admin@SZDevs.com', password: 'WrongPasswordX!' }),
   });
   record('wrong password rejected (4xx)', res.status >= 400 && res.status < 500, `status=${res.status}`);
 
@@ -133,7 +133,7 @@ async function jsonFetch(url, opts = {}) {
     record(
       `legacy :${port} unreachable (no anonymous UI)`,
       !reachable,
-      reachable ? 'STILL LISTENING — retire it!' : 'connection refused',
+      reachable ? 'STILL LISTENING â€” retire it!' : 'connection refused',
     );
   }
 

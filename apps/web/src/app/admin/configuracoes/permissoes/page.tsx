@@ -1,4 +1,4 @@
-﻿import { redirect } from 'next/navigation';
+import { redirect } from 'next/navigation';
 
 import { auth } from '@/auth';
 import { AppShell } from '@/components/app/app-shell';

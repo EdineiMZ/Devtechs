@@ -4,7 +4,7 @@
 -- Adds the finance domain: transactions (income/expense), cost centers,
 -- invoices with line items, and supporting enums. Mirrors the Prisma
 -- schema in schema.prisma; kept hand-rolled so the SQL is reviewable
--- during database change audits (the DevTechs DBA workflow reads
+-- during database change audits (the SZDevs DBA workflow reads
 -- migration.sql, not schema.prisma).
 -- =============================================================================
 

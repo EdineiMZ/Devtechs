@@ -19,7 +19,7 @@ import { RedisService } from '../../redis/redis.service';
 import { QueryNotificationsDto } from './dto/query-notifications.dto';
 import { NotificationService } from './notification.service';
 
-// ─── Preference types ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Preference types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface NotificationPreferences {
   email: {
@@ -71,7 +71,7 @@ const DEFAULTS: Record<string, boolean> = {
 };
 
 function prefsKey(userId: string): string {
-  return `devtechs:notif:prefs:${userId}`;
+  return `SZDevs:notif:prefs:${userId}`;
 }
 
 function buildPrefsFromHash(hash: Record<string, string>): NotificationPreferences {
@@ -102,7 +102,7 @@ function buildPrefsFromHash(hash: Record<string, string>): NotificationPreferenc
 /**
  * REST endpoints for the authenticated user's own notifications.
  *
- * Every route is scoped to `CurrentUser.id` — the service enforces
+ * Every route is scoped to `CurrentUser.id` â€” the service enforces
  * ownership on reads AND writes so a token holder can never touch
  * someone else's inbox.
  */
@@ -139,7 +139,7 @@ export class NotificationController {
     return this.notifications.markRead(id, user.id);
   }
 
-  // ── Preferences ─────────────────────────────────────────────────────────────
+  // â”€â”€ Preferences â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @Get('preferences')
   @HttpCode(HttpStatus.OK)

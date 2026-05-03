@@ -1,4 +1,4 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { auth } from '@/auth';
@@ -6,6 +6,8 @@ import { AppShell } from '@/components/app/app-shell';
 import { ADMIN_NAV_ITEMS } from '@/components/app/nav-config';
 import { listEmployees } from '@/lib/rh-api';
 import type { EmployeeListItem, PaginatedEmployees } from '@/lib/rh-api';
+
+import { DismissButton } from './_components/dismiss-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -169,6 +171,12 @@ export default async function EmployeesPage({
                       >
                         {canEdit ? 'Editar' : 'Ver'}
                       </Link>
+                      {canEdit && emp.status !== 'DISMISSED' && (
+                        <DismissButton
+                          employeeId={emp.id}
+                          employeeName={emp.name}
+                        />
+                      )}
                     </td>
                   </tr>
                 ))}

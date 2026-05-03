@@ -29,7 +29,7 @@ export function LegalNavbar() {
               <Code2 className="h-4 w-4 text-acid" />
             </div>
             <span className="font-display text-base font-semibold tracking-tight text-foreground">
-              DevsTech
+              SZDevs
             </span>
           </Link>
 

@@ -1,5 +1,5 @@
 {
-  "name": "@devtechs/license-service",
+  "name": "@szdevs/license-service",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -11,9 +11,9 @@
     "test": "jest --passWithNoTests"
   },
   "dependencies": {
-    "@devtechs/database": "workspace:*",
-    "@devtechs/license-sdk": "workspace:*",
-    "@devtechs/types": "workspace:*",
+    "@szdevs/database": "workspace:*",
+    "@szdevs/license-sdk": "workspace:*",
+    "@szdevs/types": "workspace:*",
     "@nestjs/common": "^10.3.0",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^10.3.0",
@@ -31,7 +31,7 @@
     "swagger-ui-express": "^5.0.0"
   },
   "devDependencies": {
-    "@devtechs/config": "workspace:*",
+    "@szdevs/config": "workspace:*",
     "@nestjs/cli": "^10.3.0",
     "@swc/cli": "^0.5.2",
     "@swc/core": "^1.4.0",

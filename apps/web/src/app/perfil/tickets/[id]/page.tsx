@@ -1,7 +1,7 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
-import { Badge, Button } from '@devtechs/ui';
+import { Badge, Button } from '@szdevs/ui';
 
 import { auth } from '@/auth';
 import { AppShell } from '@/components/app/app-shell';

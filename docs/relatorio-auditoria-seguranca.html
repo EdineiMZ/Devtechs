@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DevTechs — Relatório de Auditoria de Segurança</title>
+  <title>SZDevs — Relatório de Auditoria de Segurança</title>
   <style>
     :root {
       --bg: #0b1120;
@@ -86,7 +86,7 @@
 
   <header>
     <h1>Relatório de Auditoria de Segurança</h1>
-    <p>DevTechs — Plataforma de Gestão Empresarial (Monorepo)</p>
+    <p>SZDevs — Plataforma de Gestão Empresarial (Monorepo)</p>
     <div class="meta">
       <div class="meta-item"><span>Data: </span><strong>26/04/2026</strong></div>
       <div class="meta-item"><span>Branch: </span><strong>claude/setup-turborepo-monorepo-GhUt6</strong></div>
@@ -241,7 +241,7 @@
       </div>
       <div class="finding-location">.env.example</div>
       <div class="finding-desc">
-        O arquivo de exemplo usa valores como <code>POSTGRES_PASSWORD=devtechs</code> e
+        O arquivo de exemplo usa valores como <code>POSTGRES_PASSWORD=SZDevs</code> e
         <code>minioadmin</code> para MinIO — credenciais padrão amplamente conhecidas.
         Desenvolvedores novos podem copiá-las sem alterar.
       </div>
@@ -372,7 +372,7 @@
       </div>
       <div class="finding-location">infra/docker-compose.yml (linhas 50–53)</div>
       <div class="finding-desc">
-        Valores default como <code>POSTGRES_USER:-devtechs</code> e <code>POSTGRES_PASSWORD:-devtechs</code>
+        Valores default como <code>POSTGRES_USER:-SZDevs</code> e <code>POSTGRES_PASSWORD:-SZDevs</code>
         são usados quando variáveis não estão definidas.
       </div>
       <div class="finding-fix">
@@ -819,7 +819,7 @@
   </section>
 
   <footer>
-    <p>DevTechs — Relatório de Auditoria de Segurança &amp; Testes Funcionais</p>
+    <p>SZDevs — Relatório de Auditoria de Segurança &amp; Testes Funcionais</p>
     <p>Gerado em 26/04/2026 por Claude Sonnet 4.6 (AI Security Analyst)</p>
     <p style="margin-top:.5rem; color:#374151; font-size:.8rem;">
       Este relatório é baseado em análise estática de código e testes funcionais.

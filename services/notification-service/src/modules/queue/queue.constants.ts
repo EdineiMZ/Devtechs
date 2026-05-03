@@ -14,6 +14,8 @@ export interface SendEmailJob {
   subject: string;
   template: string;
   data: Record<string, unknown>;
+  /** Sender address override — must be on the verified Resend domain. */
+  from?: string;
   replyTo?: string;
 }
 

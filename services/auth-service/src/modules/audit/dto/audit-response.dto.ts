@@ -6,6 +6,8 @@ export interface AuditLogItem {
   resourceId: string | null;
   meta: Record<string, unknown>;
   ipAddress: string | null;
+  userAgent: string | null;
+  sessionId: string | null;
   createdAt: string;
 }
 

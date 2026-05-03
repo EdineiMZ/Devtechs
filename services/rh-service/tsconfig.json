@@ -13,10 +13,10 @@
     "noUnusedParameters": false,
     "baseUrl": ".",
     "paths": {
-      "@devtechs/database": ["../../packages/database/dist"],
-      "@devtechs/database/*": ["../../packages/database/dist/*"],
-      "@devtechs/storage": ["../../packages/storage/dist"],
-      "@devtechs/storage/*": ["../../packages/storage/dist/*"]
+      "@szdevs/database": ["../../packages/database/dist"],
+      "@szdevs/database/*": ["../../packages/database/dist/*"],
+      "@szdevs/storage": ["../../packages/storage/dist"],
+      "@szdevs/storage/*": ["../../packages/storage/dist/*"]
     }
   },
   "include": ["src/**/*.ts"],

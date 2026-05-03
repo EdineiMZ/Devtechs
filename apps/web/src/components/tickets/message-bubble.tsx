@@ -1,4 +1,4 @@
-﻿import { Avatar, AvatarFallback } from '@devtechs/ui';
+import { Avatar, AvatarFallback } from '@szdevs/ui';
 
 /**
  * Shared message shape used by REST (`TicketMessageDto`) AND the

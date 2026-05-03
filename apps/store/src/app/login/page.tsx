@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 
 import { LoginForm } from './login-form';
 
-export const metadata = { title: 'Entrar - DevTechs' };
+export const metadata = { title: 'Entrar - SZDevs' };
 
 export default function LoginPage() {
   return (
@@ -12,7 +12,7 @@ export default function LoginPage() {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600">
             <span className="text-lg font-bold text-white">D</span>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">DevTechs</h1>
+          <h1 className="text-2xl font-bold text-foreground">SZDevs</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Entre para gerenciar sua assinatura
           </p>

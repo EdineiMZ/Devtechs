@@ -2,19 +2,19 @@
 const path = require('path');
 
 /**
- * Next.js 14 config (CommonJS). Mirrors `next.config.ts` 1-to-1 — when
+ * Next.js 14 config (CommonJS). Mirrors `next.config.ts` 1-to-1 â€” when
  * we're on Next 15+, delete this file and the `.ts` flavor takes over
  * automatically (no other change needed).
  *
  * Performance flags worth knowing about:
- *   - `compress: true`      → gzip/brotli on every response in prod.
- *   - `poweredByHeader: false` → drops the `X-Powered-By: Next.js`
+ *   - `compress: true`      â†’ gzip/brotli on every response in prod.
+ *   - `poweredByHeader: false` â†’ drops the `X-Powered-By: Next.js`
  *     fingerprint (small but free security win).
- *   - `images.remotePatterns` → only allowlist hostnames you actually
+ *   - `images.remotePatterns` â†’ only allowlist hostnames you actually
  *     serve; wildcard `*` is a leaky-bucket abuse vector.
- *   - `experimental.optimizePackageImports` → tree-shakes large libs
- *     (lucide-react, date-fns, …) without the consumer doing anything.
- *   - Bundle analyzer → `pnpm --filter @devtechs/web build:analyze`.
+ *   - `experimental.optimizePackageImports` â†’ tree-shakes large libs
+ *     (lucide-react, date-fns, â€¦) without the consumer doing anything.
+ *   - Bundle analyzer â†’ `pnpm --filter @szdevs/web build:analyze`.
  *
  * Standalone output stays on (we ship Docker images that copy
  * `.next/standalone/`), and `outputFileTracingRoot` keeps the file
@@ -28,7 +28,7 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
 
-  transpilePackages: ['@devtechs/ui', '@devtechs/types'],
+  transpilePackages: ['@szdevs/ui', '@szdevs/types'],
 
   output: 'standalone',
 
@@ -55,7 +55,7 @@ const nextConfig = {
 
   experimental: {
     // Keep the file tracer following workspace symlinks out of `apps/web`
-    // into `packages/*` — needed for `output: 'standalone'` Docker builds.
+    // into `packages/*` â€” needed for `output: 'standalone'` Docker builds.
     outputFileTracingRoot: path.join(__dirname, '../../'),
     optimizePackageImports: ['lucide-react', 'date-fns', 'recharts'],
     // Server actions are on by default in 14.2; bumping the body
@@ -67,7 +67,7 @@ const nextConfig = {
 
   async headers() {
     // Sane defaults for everything served from this app. The CSP is
-    // intentionally NOT set here — that lives in middleware so the
+    // intentionally NOT set here â€” that lives in middleware so the
     // nonces can be computed per-request.
     return [
       {
@@ -83,7 +83,7 @@ const nextConfig = {
   },
 };
 
-// Only load bundle-analyzer when explicitly requested — requiring it
+// Only load bundle-analyzer when explicitly requested â€” requiring it
 // unconditionally injects a webpack() hook that conflicts with Turbopack.
 if (process.env.ANALYZE === 'true') {
   const withBundleAnalyzer = require('@next/bundle-analyzer')({ enabled: true });

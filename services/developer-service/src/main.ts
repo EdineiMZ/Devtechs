@@ -79,7 +79,7 @@ async function bootstrap(): Promise<void> {
   // -----------------------------------------------------------------------
   const document = setupSwagger(app, {
     service: "developer",
-    title: "DevTechs — Developer Service API",
+    title: "SZDevs â€” Developer Service API",
     description: "Internal ops console: docker services, queues, logs, config, VPS.",
     tags: [
       { name: "services" },

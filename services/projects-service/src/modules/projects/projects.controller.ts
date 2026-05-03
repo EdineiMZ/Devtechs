@@ -6,7 +6,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  IsEnum,
   Param,
   Post,
   Put,
@@ -165,8 +164,11 @@ export class ProjectsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @RequirePermission('projects:create')
-  create(@Body() dto: CreateProjectDto): Promise<ProjectDetail> {
-    return this.projectsService.create(dto);
+  create(
+    @Body() dto: CreateProjectDto,
+    @CurrentUser() user?: CurrentUserPayload,
+  ): Promise<ProjectDetail> {
+    return this.projectsService.create(dto, user?.id);
   }
 
   @Put(':id')
@@ -175,15 +177,19 @@ export class ProjectsController {
   update(
     @Param('id') id: string,
     @Body() dto: UpdateProjectDto,
+    @CurrentUser() user?: CurrentUserPayload,
   ): Promise<ProjectDetail> {
-    return this.projectsService.update(id, dto);
+    return this.projectsService.update(id, dto, user?.id);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @RequirePermission('projects:delete')
-  remove(@Param('id') id: string): Promise<{ message: string; id: string }> {
-    return this.projectsService.remove(id);
+  remove(
+    @Param('id') id: string,
+    @CurrentUser() user?: CurrentUserPayload,
+  ): Promise<{ message: string; id: string }> {
+    return this.projectsService.remove(id, user?.id);
   }
 
   // -----------------------------------------------------------------

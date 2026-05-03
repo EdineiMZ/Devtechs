@@ -13,6 +13,8 @@ export interface AuditLogInput {
   resourceId?: string | null;
   meta?: Record<string, unknown>;
   ipAddress?: string | null;
+  userAgent?: string | null;
+  sessionId?: string | null;
 }
 
 /**
@@ -37,6 +39,8 @@ export class AuditClientService {
           resourceId: input.resourceId ?? null,
           meta: (input.meta ?? {}) as any,
           ipAddress: input.ipAddress ?? null,
+          userAgent: input.userAgent ?? null,
+          sessionId: input.sessionId ?? null,
         },
       });
     } catch (err) {

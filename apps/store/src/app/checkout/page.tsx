@@ -6,7 +6,7 @@ import { StoreHeader } from '@/components/store-header';
 import { StoreFooter } from '@/components/store-footer';
 import { CheckoutForm } from './checkout-form';
 
-export const metadata = { title: 'Checkout - DevTechs' };
+export const metadata = { title: 'Checkout - SZDevs' };
 export const dynamic = 'force-dynamic';
 
 export default async function CheckoutPage({

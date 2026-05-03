@@ -4,7 +4,7 @@ export function StoreFooter() {
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} DevTechs. Todos os direitos reservados.
+            &copy; {new Date().getFullYear()} SZDevs. Todos os direitos reservados.
           </p>
           <div className="flex gap-6">
             <a href="#" className="text-sm text-muted-foreground hover:text-foreground">

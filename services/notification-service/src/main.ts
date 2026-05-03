@@ -44,7 +44,7 @@ if (isDev) {
  * Listens on `NOTIFICATION_SERVICE_PORT` (default 3006). The HTTP
  * listener serves REST endpoints (GET /notifications etc.) and the
  * same port is upgraded to a socket.io WebSocket server by the
- * NotificationGateway — one port, two protocols.
+ * NotificationGateway â€” one port, two protocols.
  */
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
@@ -79,14 +79,14 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   const port = Number(
-    process.env.NOTIFICATION_SERVICE_PORT ?? process.env.PORT ?? 3006,
+    process.env.NOTIFICATION_SERVICE_PORT ?? process.env.PORT ?? 4005,
   );
   // -----------------------------------------------------------------------
   // Swagger / OpenAPI
   // -----------------------------------------------------------------------
   const document = setupSwagger(app, {
     service: "notification",
-    title: "DevTechs — Notification Service API",
+    title: "SZDevs â€” Notification Service API",
     description: "User notification feed, SSE stream, templates, channels.",
     tags: [
       { name: "notifications" },

@@ -5,8 +5,9 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@devtechs/database';
+import type { Prisma } from '@szdevs/database';
 
+import { AuditClientService } from '../../common/audit/audit-client.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
 import type { CreateProjectDto } from './dto/create-project.dto';
@@ -37,7 +38,7 @@ const DEFAULT_COLUMNS: ReadonlyArray<{ name: string; order: number }> = [
 const DEFAULT_BOARD_NAME = 'Main';
 
 /**
- * Prisma include for the list endpoint — counts only, no nested rows.
+ * Prisma include for the list endpoint â€” counts only, no nested rows.
  */
 const PROJECT_LIST_INCLUDE = {
   owner: { select: { id: true, name: true, email: true } },
@@ -46,7 +47,7 @@ const PROJECT_LIST_INCLUDE = {
 } satisfies Prisma.ProjectInclude;
 
 /**
- * Prisma include for the detail endpoint — adds the member roster and milestones.
+ * Prisma include for the detail endpoint â€” adds the member roster and milestones.
  */
 const PROJECT_DETAIL_INCLUDE = {
   ...PROJECT_LIST_INCLUDE,
@@ -72,7 +73,10 @@ type ProjectDetailRow = Prisma.ProjectGetPayload<{
 export class ProjectsService {
   private readonly logger = new Logger(ProjectsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditClientService,
+  ) {}
 
   // ===================================================================
   // Project CRUD
@@ -132,7 +136,7 @@ export class ProjectsService {
     return this.toDetail(row);
   }
 
-  async create(dto: CreateProjectDto): Promise<ProjectDetail> {
+  async create(dto: CreateProjectDto, userId?: string): Promise<ProjectDetail> {
     // Bootstrap a default Board + 3 default Columns alongside the
     // project so the kanban view is immediately usable. All four
     // writes happen inside one $transaction so a partial failure
@@ -183,10 +187,17 @@ export class ProjectsService {
     this.logger.log(
       `Created project ${project.id} (${project.name}) with default board + ${DEFAULT_COLUMNS.length} columns`,
     );
+    void this.audit.log({
+      userId: userId ?? dto.ownerId,
+      action: 'PROJECT_CREATED',
+      module: 'PROJETOS',
+      resourceId: project.id,
+      meta: { name: project.name, status: project.status, ownerId: project.ownerId },
+    });
     return this.get(project.id);
   }
 
-  async update(id: string, dto: UpdateProjectDto): Promise<ProjectDetail> {
+  async update(id: string, dto: UpdateProjectDto, userId?: string): Promise<ProjectDetail> {
     const existing = await this.prisma.project.findUnique({
       where: { id },
       select: { id: true },
@@ -216,10 +227,17 @@ export class ProjectsService {
     if (dto.progressPercent !== undefined) data.progressPercent = dto.progressPercent;
 
     await this.prisma.project.update({ where: { id }, data });
+    void this.audit.log({
+      userId: userId ?? null,
+      action: 'PROJECT_UPDATED',
+      module: 'PROJETOS',
+      resourceId: id,
+      meta: { changedFields: Object.keys(dto) },
+    });
     return this.get(id);
   }
 
-  async remove(id: string): Promise<{ message: string; id: string }> {
+  async remove(id: string, userId?: string): Promise<{ message: string; id: string }> {
     const existing = await this.prisma.project.findUnique({
       where: { id },
       select: { id: true, name: true },
@@ -228,6 +246,13 @@ export class ProjectsService {
 
     await this.prisma.project.delete({ where: { id } });
     this.logger.log(`Deleted project ${id} (${existing.name})`);
+    void this.audit.log({
+      userId: userId ?? null,
+      action: 'PROJECT_DELETED',
+      module: 'PROJETOS',
+      resourceId: id,
+      meta: { name: existing.name },
+    });
     return { message: 'Project deleted', id };
   }
 
@@ -419,19 +444,19 @@ export class ProjectsService {
   }
 
   // ===================================================================
-  // Board — the hot path
+  // Board â€” the hot path
   // ===================================================================
 
   /**
    * Returns the project's primary board with every column and every
    * task in one Prisma call. Prisma's join planner resolves this to
-   * three batched SQL queries (board → columns → tasks), NEVER
+   * three batched SQL queries (board â†’ columns â†’ tasks), NEVER
    * N+1 per task. The `(columnId, order)` index on Task and the
    * `(boardId, order)` index on Column make both child fetches
    * index-only scans.
    *
    * If a project has multiple boards (rare today but allowed by the
-   * schema), this returns the oldest one — the "default" board
+   * schema), this returns the oldest one â€” the "default" board
    * created alongside the project.
    */
   async getBoard(projectId: string): Promise<BoardResponse> {
@@ -509,7 +534,7 @@ export class ProjectsService {
     }
 
     // Total estimated hours for the sprint. Tasks without an
-    // estimate contribute 0 — sprint planners are expected to
+    // estimate contribute 0 â€” sprint planners are expected to
     // estimate before activating.
     const totalHours = sprint.tasks.reduce(
       (sum, task) => sum + (task.estimatedHours ? Number(task.estimatedHours) : 0),
@@ -583,9 +608,9 @@ export class ProjectsService {
    * the burndown chart points. UTC arithmetic so a sprint that
    * crosses a DST boundary doesn't gain or lose a day.
    *
-   *   - `ideal`    — straight line from totalHours → 0 over N days
-   *   - `loggedOnDay`  — hours logged on that specific day
-   *   - `remaining`    — totalHours minus cumulative logged so far
+   *   - `ideal`    â€” straight line from totalHours â†’ 0 over N days
+   *   - `loggedOnDay`  â€” hours logged on that specific day
+   *   - `remaining`    â€” totalHours minus cumulative logged so far
    */
   private buildBurndown(
     start: Date,

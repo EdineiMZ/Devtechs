@@ -133,7 +133,7 @@ export class InvoicePdfService {
   <body>
     <header>
       <div>
-        <h1>DevTechs</h1>
+        <h1>SZDevs</h1>
         <div>Nota Fiscal de Serviço</div>
       </div>
       <div class="meta">

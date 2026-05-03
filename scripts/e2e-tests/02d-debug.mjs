@@ -23,8 +23,8 @@ import { chromium } from 'playwright';
   // Force re-fetch by hard reload (bypasses module cache for the page)
   await page.reload({ waitUntil: 'networkidle' });
 
-  await page.locator('input[type="email"]').first().fill('admin@devtechs.com');
-  await page.locator('input[type="password"]').first().fill('Admin@DevTechs2026');
+  await page.locator('input[type="email"]').first().fill('admin@SZDevs.com');
+  await page.locator('input[type="password"]').first().fill('Admin@SZDevs2026');
 
   // Inspect React Hook Form state by stepping into the form
   await page.evaluate(() => {

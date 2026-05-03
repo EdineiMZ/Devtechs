@@ -1,9 +1,9 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { PrismaClient } from '@devtechs/database';
+import { PrismaClient } from '@szdevs/database';
 
 /**
- * Lifecycle wrapper around the shared `@devtechs/database` PrismaClient.
- * Identical to auth-service / rh-service — every NestJS service in
+ * Lifecycle wrapper around the shared `@szdevs/database` PrismaClient.
+ * Identical to auth-service / rh-service â€” every NestJS service in
  * the monorepo holds its own pool against the same Postgres instance.
  */
 @Injectable()

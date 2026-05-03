@@ -1,7 +1,7 @@
 import { Code2 } from 'lucide-react';
 import Link from 'next/link';
 
-import { cn } from '@devtechs/ui';
+import { cn } from '@szdevs/ui';
 
 /**
  * Server-rendered sidebar with per-role navigation.
@@ -41,7 +41,7 @@ export function AppSidebar({
         </div>
         <div className="leading-tight">
           <div className="font-display text-sm font-semibold text-foreground tracking-tight">
-            DevsTech
+            SZDevs
           </div>
           <div className="font-mono text-[10px] uppercase tracking-widest text-ash/60">
             Platform
@@ -100,7 +100,7 @@ export function AppSidebar({
 
       {/* Footer */}
       <div className="border-t border-white/5 p-3 font-mono text-[10px] uppercase tracking-widest text-ash/40">
-        v0.1.0 · DevsTech
+        v0.1.0 Â· SZDevs
       </div>
     </aside>
   );

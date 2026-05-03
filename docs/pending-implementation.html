@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>DevTechs — Itens Pendentes &amp; Prompts de Implementação</title>
+    <title>SZDevs — Itens Pendentes &amp; Prompts de Implementação</title>
     <style>
       :root {
         --bg: #0b1020;
@@ -214,7 +214,7 @@
   </head>
   <body>
     <header>
-      <h1>DevTechs — Pendências &amp; Prompts de Implementação</h1>
+      <h1>SZDevs — Pendências &amp; Prompts de Implementação</h1>
       <div class="sub">
         Itens identificados pela auditoria E2E em <strong>2026-04-26</strong>. Cada bloco traz escopo,
         arquivos envolvidos e um prompt profissional pronto para colar em uma sessão de
@@ -300,7 +300,7 @@
         <h3>Prompt</h3>
         <div class="prompt-wrap">
           <button class="copy-btn" data-target="prompt-tickets">Copiar</button>
-          <pre id="prompt-tickets">Você está no monorepo DevTechs (Turborepo + pnpm) na branch atual. Implemente o módulo de Chamados (tickets) na app `apps/web` consumindo o `services/support-service` que já existe e está rodando em `http://127.0.0.1:4008`.
+          <pre id="prompt-tickets">Você está no monorepo SZDevs (Turborepo + pnpm) na branch atual. Implemente o módulo de Chamados (tickets) na app `apps/web` consumindo o `services/support-service` que já existe e está rodando em `http://127.0.0.1:4008`.
 
 CONTEXTO TÉCNICO QUE JÁ EXISTE (NÃO REIMPLEMENTAR):
 - `apps/web/src/lib/support-socket.ts` — fábrica `createSupportSocket(accessToken)` tipada com eventos cliente/servidor.
@@ -336,7 +336,7 @@ ENTREGÁVEIS:
 5. Atualizar `apps/web/src/components/app/nav-config.tsx` — confirmar que os hrefs `/perfil/tickets` e `/admin/suporte` já apontam para os novos arquivos (eles já estão no nav, basta deixar os arquivos no lugar certo).
 
 REGRAS GERAIS:
-- Use Tailwind + componentes de `@devtechs/ui` (Button, Input, Badge, Card etc.) — siga o padrão das páginas existentes `/perfil/page.tsx` e `/admin/page.tsx`.
+- Use Tailwind + componentes de `@szdevs/ui` (Button, Input, Badge, Card etc.) — siga o padrão das páginas existentes `/perfil/page.tsx` e `/admin/page.tsx`.
 - Não exponha `accessToken` ao DOM — passe apenas para componentes client que realmente conectam ao socket; nunca inline em `data-*` ou `JSON.stringify` no HTML.
 - Toda chamada server-side ao `support-service` deve usar `cache: 'no-store'` para não cachear dados sensíveis em build.
 - Trate fail-soft: se o socket cair (Redis offline, support-service reiniciando), a UI mostra um banner discreto "Conexão perdida — tentando reconectar…" sem quebrar a página.
@@ -358,7 +358,7 @@ REGRAS GERAIS:
         <p>
           O requisito é "somente a página inicial pública; o restante exige login". Hoje os apps
           <code>:3001</code> a <code>:3007</code> servem suas raízes anonimamente (são stubs
-          <code>&lt;main&gt;DevTechs - X app&lt;/main&gt;</code>). Eles não compartilham o cookie
+          <code>&lt;main&gt;SZDevs - X app&lt;/main&gt;</code>). Eles não compartilham o cookie
           de sessão do app <code>web</code> (origens diferentes), então cada um precisa validar a
           sessão via <code>auth-service</code> ou ser substituído por sub-rotas dentro do <code>web</code>.
         </p>
@@ -367,13 +367,13 @@ REGRAS GERAIS:
           com sub-rotas (<code>/admin/&lt;modulo&gt;</code>) e descarte os apps módulo separados —
           a ergonomia de uma única origem é muito melhor para autenticação, navegação e SEO. Os
           apps módulo só fazem sentido se forem deploys independentes em domínios distintos
-          (ex.: <code>rh.devtechs.com</code>), o que não é o caso hoje.
+          (ex.: <code>rh.SZDevs.com</code>), o que não é o caso hoje.
         </p>
 
         <h3>Prompt</h3>
         <div class="prompt-wrap">
           <button class="copy-btn" data-target="prompt-gate">Copiar</button>
-          <pre id="prompt-gate">No monorepo DevTechs, hoje os apps Next.js em `apps/{rh,financeiro,projetos,devops,suporte,store,developer}` rodam em portas separadas (3001-3007) e estão acessíveis sem nenhum gate de autenticação. Eles também são stubs (`<main>DevTechs - X app</main>`).
+          <pre id="prompt-gate">No monorepo SZDevs, hoje os apps Next.js em `apps/{rh,financeiro,projetos,devops,suporte,store,developer}` rodam em portas separadas (3001-3007) e estão acessíveis sem nenhum gate de autenticação. Eles também são stubs (`<main>SZDevs - X app</main>`).
 
 OBJETIVO: garantir que apenas a página inicial pública do app `web` (`:3000` rota `/`) seja anônima. Toda outra rota exige sessão NextAuth válida com email verificado.
 
@@ -382,14 +382,14 @@ Há duas abordagens. Avalie e, ao final, IMPLEMENTE A ABORDAGEM A (consolidaçã
 ABORDAGEM A (recomendada — consolidar em apps/web):
 1. Mover todas as funcionalidades dos apps módulo para sub-rotas dentro de `apps/web/src/app/admin/<modulo>/`. As implementações concretas estão em outros prompts deste documento.
 2. Atualizar `apps/web/src/middleware.ts` matcher para incluir os novos prefixos: `/admin/:path*` já está no matcher; basta confirmar que `/perfil/:path*` também cobre todas as sub-rotas do cliente.
-3. Remover do `pnpm-workspace.yaml` os pacotes `@devtechs/{rh,financeiro,projetos,devops,suporte,developer}` (manter `store` se ele for um SaaS público de planos — confirmar com o time).
+3. Remover do `pnpm-workspace.yaml` os pacotes `@szdevs/{rh,financeiro,projetos,devops,suporte,developer}` (manter `store` se ele for um SaaS público de planos — confirmar com o time).
 4. Remover os diretórios `apps/{rh,financeiro,...}` e os scripts `dev:*` do `package.json` raiz que apontavam para eles.
 5. Atualizar `infra/nginx.conf` removendo os `location /rh/`, `/financeiro/` etc.; tudo passa a vir de `apps/web` que serve `/admin/<modulo>` e `/perfil/<modulo>`.
 6. Atualizar README.md descrevendo a nova estrutura.
-7. Validar com `pnpm --filter @devtechs/web build` e rodar Playwright E2E confirmando que `http://localhost:3001/` etc. param de responder.
+7. Validar com `pnpm --filter @szdevs/web build` e rodar Playwright E2E confirmando que `http://localhost:3001/` etc. param de responder.
 
 ABORDAGEM B (manter apps separados — só faça se houver requisito explícito de deploy independente):
-1. Em CADA app módulo, criar `src/middleware.ts` que valida a sessão chamando `GET /auth/me` no `auth-service` (lendo o cookie `authjs.session-token` ou um header `Authorization` repassado pelo nginx). Como o cookie é por-origem, a app principal precisa setar um cookie de domínio mais amplo (`.devtechs.local`) para compartilhar — isso muda a configuração do NextAuth (`cookies.sessionToken.options.domain`).
+1. Em CADA app módulo, criar `src/middleware.ts` que valida a sessão chamando `GET /auth/me` no `auth-service` (lendo o cookie `authjs.session-token` ou um header `Authorization` repassado pelo nginx). Como o cookie é por-origem, a app principal precisa setar um cookie de domínio mais amplo (`.SZDevs.local`) para compartilhar — isso muda a configuração do NextAuth (`cookies.sessionToken.options.domain`).
 2. Cada app passa a fazer redirect para `http://localhost:3000/login?callbackUrl=<original>` quando não autenticado.
 3. Adicionar testes que confirmam o redirect em cada app.
 
@@ -449,7 +449,7 @@ ENTREGÁVEIS:
 
 6. Adicionar testes mínimos em `apps/web/__tests__/faturas.test.tsx`: rendering com lista vazia, com lista populada, formatação de moeda BRL.
 
-7. Antes de finalizar, validar manualmente com `admin@devtechs.com`: criar uma invoice de teste via Prisma Studio (`pnpm db:studio`) e confirmar que aparece na lista.</pre>
+7. Antes de finalizar, validar manualmente com `admin@SZDevs.com`: criar uma invoice de teste via Prisma Studio (`pnpm db:studio`) e confirmar que aparece na lista.</pre>
         </div>
       </section>
 
@@ -550,7 +550,7 @@ FRONTEND (apps/web):
    - Estado A (2FA desabilitado): botão "Ativar 2FA". Click → `POST /auth/2fa/setup` → renderiza QR code (use `qrcode.react` ou string SVG retornada pelo backend) + secret em texto + input para TOTP de 6 dígitos. Submit → `POST /auth/2fa/enable`. Sucesso: banner verde + lista de "códigos de recuperação" (8 códigos one-time gerados pelo backend; persistir até o usuário confirmar download).
    - Estado B (2FA habilitado): banner verde "2FA está ativo desde X". Botão "Desativar" pede senha + TOTP atual → `POST /auth/2fa/disable`. Botão "Regenerar códigos de recuperação".
 
-5. Validar manualmente o fluxo completo com `admin@devtechs.com`:
+5. Validar manualmente o fluxo completo com `admin@SZDevs.com`:
    - Mudar nome → ver na sessão.
    - Trocar senha → fazer login com nova senha.
    - Ativar 2FA com app autenticador (Google Authenticator/1Password) → fazer logout → login pede TOTP → entrar com código.
@@ -580,7 +580,7 @@ FRONTEND (apps/web):
         <h3>Prompt</h3>
         <div class="prompt-wrap">
           <button class="copy-btn" data-target="prompt-admin">Copiar</button>
-          <pre id="prompt-admin">Implemente as sub-rotas `/admin/<modulo>` em `apps/web/src/app/admin/` consumindo os respectivos services. Cada módulo tem seu próprio prompt detalhado abaixo. Use os mesmos padrões: server components que validam sessão+permissão, AppShell + ADMIN_NAV_ITEMS, componentes shadcn-style do `@devtechs/ui`, react-hook-form + Zod, react-query opcional para listagens com filtros, formatação `Intl` em `pt-BR`.
+          <pre id="prompt-admin">Implemente as sub-rotas `/admin/<modulo>` em `apps/web/src/app/admin/` consumindo os respectivos services. Cada módulo tem seu próprio prompt detalhado abaixo. Use os mesmos padrões: server components que validam sessão+permissão, AppShell + ADMIN_NAV_ITEMS, componentes shadcn-style do `@szdevs/ui`, react-hook-form + Zod, react-query opcional para listagens com filtros, formatação `Intl` em `pt-BR`.
 
 REGRA TRANSVERSAL DE PERMISSÕES:
 Cada sub-rota tem uma permissão obrigatória. No topo de cada `page.tsx`:
@@ -667,7 +667,7 @@ REGRAS:
         <p>
           As pastas <code>apps/{rh,financeiro,projetos,devops,suporte,developer}</code> contêm
           apenas um <code>layout.tsx</code> e um <code>page.tsx</code> retornando
-          <code>&lt;main&gt;DevTechs - X app&lt;/main&gt;</code>. Não há rotas, não há gates de
+          <code>&lt;main&gt;SZDevs - X app&lt;/main&gt;</code>. Não há rotas, não há gates de
           autenticação, não há UI real.
         </p>
         <div class="hint">
@@ -683,7 +683,7 @@ REGRAS:
 
 OBJETIVO: transformar cada app stub em uma aplicação real consumindo seu serviço backend correspondente, com auth gate compartilhado via NextAuth no domínio do `apps/web`.
 
-PRÉ-REQUISITO ARQUITETURAL: configurar cookie de sessão NextAuth com domínio `.devtechs.local` (ou um domínio compartilhado) em `apps/web/src/auth.ts`:
+PRÉ-REQUISITO ARQUITETURAL: configurar cookie de sessão NextAuth com domínio `.SZDevs.local` (ou um domínio compartilhado) em `apps/web/src/auth.ts`:
 ```ts
 cookies: {
   sessionToken: {
@@ -693,18 +693,18 @@ cookies: {
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
       path: '/',
-      domain: process.env.AUTH_COOKIE_DOMAIN, // .devtechs.local
+      domain: process.env.AUTH_COOKIE_DOMAIN, // .SZDevs.local
     },
   },
 },
 ```
-E mapear nginx para servir os apps com `Host: <subdomain>.devtechs.local` (ajustes em `infra/nginx.conf`).
+E mapear nginx para servir os apps com `Host: <subdomain>.SZDevs.local` (ajustes em `infra/nginx.conf`).
 
 PARA CADA APP:
 
 1. Criar `apps/<modulo>/src/middleware.ts` que decodifica o JWT do cookie usando `@auth/core/jwt` (`getToken({ req, secret: process.env.AUTH_SECRET })`) e redireciona para `<webOrigin>/login?callbackUrl=<original>` se ausente.
 
-2. Replicar de `apps/web` os componentes compartilhados via `@devtechs/ui` (já é workspace dependency). Adicionar `@devtechs/ui` ao `dependencies` de cada app se faltar.
+2. Replicar de `apps/web` os componentes compartilhados via `@szdevs/ui` (já é workspace dependency). Adicionar `@szdevs/ui` ao `dependencies` de cada app se faltar.
 
 3. Implementar páginas:
    - `apps/rh/`: dashboard RH, funcionários, férias, escalas (mesmo escopo do prompt 6 letra A, só que em app separado).
@@ -716,9 +716,9 @@ PARA CADA APP:
 
 4. Cada app ler seu service via env vars (`NEXT_PUBLIC_<MODULE>_URL`), usar `accessToken` da sessão NextAuth no header `Authorization`.
 
-5. Atualizar `infra/nginx.conf` mapeando `rh.devtechs.local` → `:3001` etc.
+5. Atualizar `infra/nginx.conf` mapeando `rh.SZDevs.local` → `:3001` etc.
 
-6. Atualizar `infra/docker-compose.yml` adicionando `AUTH_COOKIE_DOMAIN=.devtechs.local` no env do `apps/web` e dos services.
+6. Atualizar `infra/docker-compose.yml` adicionando `AUTH_COOKIE_DOMAIN=.SZDevs.local` no env do `apps/web` e dos services.
 
 7. Atualizar `scripts/e2e-tests/04-modules.mjs` para testar autenticação cross-domain.
 
@@ -776,7 +776,7 @@ PASSO A PASSO:
 
     <footer>
       <div>
-        Gerado em <strong>2026-04-26</strong> a partir da auditoria E2E DevTechs.
+        Gerado em <strong>2026-04-26</strong> a partir da auditoria E2E SZDevs.
         Fonte das pendências: rotas testadas com Playwright em <code>scripts/e2e-tests/05-deep-routes.mjs</code> +
         análise de <code>apps/web/src/components/app/nav-config.tsx</code> +
         inspeção dos diretórios <code>apps/{rh,financeiro,projetos,devops,suporte,developer}/src/app/</code>.

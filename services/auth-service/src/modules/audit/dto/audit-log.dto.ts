@@ -27,4 +27,17 @@ export interface AuditLogInput {
 
   /** IPv4/IPv6 address of the caller. */
   ipAddress?: string | null;
+
+  /**
+   * Raw `User-Agent` header from the request. Stored verbatim so that
+   * post-incident forensics can identify the device/browser without
+   * needing to join the sessions table (which may already be revoked).
+   */
+  userAgent?: string | null;
+
+  /**
+   * The session that performed this action. Allows pulling all audit
+   * events for a compromised session and correlating with Session.userAgent.
+   */
+  sessionId?: string | null;
 }

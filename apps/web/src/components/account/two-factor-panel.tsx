@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { Button, Input } from '@devtechs/ui';
+import { Button, Input } from '@szdevs/ui';
 
 import { RecoveryCodes } from '@/components/account/recovery-codes';
 

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -93,17 +94,17 @@ export class AuthController {
     examples: {
       admin: {
         summary: 'Admin happy path',
-        value: { email: 'admin@devtechs.com', password: 'Admin@DevTechs2026' },
+        value: { email: 'admin@SZDevs.com', password: 'Admin@SZDevs2026' },
       },
       twoFactorPrompt: {
         summary: 'User with 2FA enabled (will return requires2FA)',
-        value: { email: 'agent@devtechs.com', password: 'Agent@2026' },
+        value: { email: 'agent@SZDevs.com', password: 'Agent@2026' },
       },
     },
   })
   @ApiResponse({
     status: 200,
-    description: 'Login OK — tokens issued, or 2FA challenge returned.',
+    description: 'Login OK â€” tokens issued, or 2FA challenge returned.',
     schema: {
       oneOf: [
         {
@@ -116,8 +117,8 @@ export class AuthController {
               type: 'object',
               properties: {
                 id: { type: 'string', example: 'cmodlkrhe000uf1japmgdh3w1' },
-                email: { type: 'string', example: 'admin@devtechs.com' },
-                name: { type: 'string', example: 'Administrador DevTechs' },
+                email: { type: 'string', example: 'admin@SZDevs.com' },
+                name: { type: 'string', example: 'Administrador SZDevs' },
                 roles: { type: 'array', items: { type: 'string' }, example: ['admin'] },
                 primaryRole: { type: 'string', example: 'admin' },
                 emailVerified: { type: 'boolean', example: true },
@@ -147,7 +148,7 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: 'Validation failed (bad email/password shape).' })
   @ApiResponse({ status: 401, description: 'Credentials do not match.' })
-  @ApiResponse({ status: 429, description: 'Too many failed attempts — IP blocked.' })
+  @ApiResponse({ status: 429, description: 'Too many failed attempts â€” IP blocked.' })
   login(
     @Body() dto: LoginDto,
     @Ip() ip: string,
@@ -237,8 +238,8 @@ export class AuthController {
    * Returns the currently authenticated user's profile claims.
    *
    * Protected by two gates:
-   *   1. The global `JwtAuthGuard` — ensures a valid access token.
-   *   2. `EmailVerifiedGuard` + `@RequireEmailVerified()` — ensures the
+   *   1. The global `JwtAuthGuard` â€” ensures a valid access token.
+   *   2. `EmailVerifiedGuard` + `@RequireEmailVerified()` â€” ensures the
    *      user has confirmed their email address. Unverified users get
    *      a clear 403 with the `EmailNotVerified` error code pointing
    *      them at `POST /auth/email/send-verification`.
@@ -254,5 +255,85 @@ export class AuthController {
   @ApiResponse({ status: 403, description: 'Email not verified.' })
   me(@CurrentUser() user: CurrentUserPayload): CurrentUserPayload {
     return user;
+  }
+
+  // -------------------------------------------------------------------
+  // LGPD art. 18, V — Portabilidade (exportar dados)
+  // -------------------------------------------------------------------
+
+  /**
+   * Returns a JSON snapshot of all personal data held for the caller.
+   * The response is suitable for download as `meus-dados.json`.
+   *
+   * Requires a verified email address because the export contains
+   * sensitive personal data and we need to ensure the requester owns
+   * the account.
+   */
+  @UseGuards(EmailVerifiedGuard)
+  @RequireEmailVerified()
+  @Get('me/export')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('bearer')
+  @ApiOperation({
+    summary: 'Export all personal data — LGPD art. 18, V (portabilidade)',
+    description:
+      'Returns a complete JSON snapshot of all personal data stored for the ' +
+      'authenticated user. The response can be saved as `meus-dados.json`. ' +
+      'Password hashes and 2FA secrets are never included.',
+  })
+  @ApiResponse({ status: 200, description: 'Data export object.' })
+  @ApiResponse({ status: 401, description: 'No valid bearer token.' })
+  @ApiResponse({ status: 403, description: 'Email not verified.' })
+  exportMyData(
+    @CurrentUser() user: CurrentUserPayload,
+    @Ip() ip: string,
+  ): Promise<Record<string, unknown>> {
+    return this.authService.exportMyData(user.id, ip);
+  }
+
+  // -------------------------------------------------------------------
+  // LGPD art. 18, VI — Eliminação (excluir conta)
+  // -------------------------------------------------------------------
+
+  /**
+   * Permanently deletes the authenticated user's account.
+   *
+   * Requires the current password as confirmation. Audit logs are
+   * retained (SET NULL on userId) per Marco Civil art. 15 and
+   * fraud-prevention obligations.
+   */
+  @UseGuards(EmailVerifiedGuard)
+  @RequireEmailVerified()
+  @Delete('me')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('bearer')
+  @ApiOperation({
+    summary: 'Delete account — LGPD art. 18, VI (eliminação)',
+    description:
+      'Permanently deletes the account and all personally identifiable data. ' +
+      'Requires `currentPassword` in the request body as confirmation. ' +
+      'Cannot be undone.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['currentPassword'],
+      properties: {
+        currentPassword: {
+          type: 'string',
+          description: 'Current password for confirmation',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Account deleted.' })
+  @ApiResponse({ status: 401, description: 'Bad password or no valid bearer token.' })
+  @ApiResponse({ status: 403, description: 'Email not verified.' })
+  deleteMyAccount(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body('currentPassword') currentPassword: string,
+    @Ip() ip: string,
+  ): Promise<{ message: string }> {
+    return this.authService.deleteMyAccount(user.id, currentPassword, ip);
   }
 }
