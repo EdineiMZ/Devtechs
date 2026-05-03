@@ -127,7 +127,9 @@ services:
     container_name: SZDevs-auth-service
     build:
       context: ..
-      dockerfile: services/auth-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/auth-service"
     environment:
       PORT: 3001
       DATABASE_URL: ${DATABASE_URL}
@@ -147,7 +149,9 @@ services:
     container_name: SZDevs-rh-service
     build:
       context: ..
-      dockerfile: services/rh-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/rh-service"
     environment:
       PORT: 3002
       DATABASE_URL: ${DATABASE_URL}
@@ -166,7 +170,9 @@ services:
     container_name: SZDevs-finance-service
     build:
       context: ..
-      dockerfile: services/finance-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/finance-service"
     environment:
       PORT: 3003
       DATABASE_URL: ${DATABASE_URL}
@@ -185,7 +191,9 @@ services:
     container_name: SZDevs-projects-service
     build:
       context: ..
-      dockerfile: services/projects-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/projects-service"
     environment:
       PORT: 3004
       DATABASE_URL: ${DATABASE_URL}
@@ -204,7 +212,9 @@ services:
     container_name: SZDevs-devops-service
     build:
       context: ..
-      dockerfile: services/devops-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/devops-service"
     environment:
       PORT: 3005
       DATABASE_URL: ${DATABASE_URL}
@@ -223,7 +233,9 @@ services:
     container_name: SZDevs-support-service
     build:
       context: ..
-      dockerfile: services/support-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/support-service"
     environment:
       PORT: 3006
       DATABASE_URL: ${DATABASE_URL}
@@ -242,7 +254,9 @@ services:
     container_name: SZDevs-payments-service
     build:
       context: ..
-      dockerfile: services/payments-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/payments-service"
     environment:
       PORT: 3007
       DATABASE_URL: ${DATABASE_URL}
@@ -263,7 +277,9 @@ services:
     container_name: SZDevs-notification-service
     build:
       context: ..
-      dockerfile: services/notification-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/notification-service"
     environment:
       PORT: 3008
       DATABASE_URL: ${DATABASE_URL}
@@ -286,7 +302,9 @@ services:
     container_name: SZDevs-license-service
     build:
       context: ..
-      dockerfile: services/license-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/license-service"
     environment:
       PORT: 3009
       DATABASE_URL: ${DATABASE_URL}
@@ -306,7 +324,9 @@ services:
     container_name: SZDevs-developer-service
     build:
       context: ..
-      dockerfile: services/developer-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/developer-service"
     environment:
       PORT: 3010
       DATABASE_URL: ${DATABASE_URL}
@@ -340,7 +360,10 @@ services:
       - prod
     build:
       context: ..
-      dockerfile: apps/web/Dockerfile
+      dockerfile: Dockerfile.app
+      args:
+        PACKAGE_NAME: "@szdevs/web"
+        APP_NAME: web
     env_file:
       - ../.env
     environment:
@@ -363,7 +386,10 @@ services:
       - prod
     build:
       context: ..
-      dockerfile: apps/store/Dockerfile
+      dockerfile: Dockerfile.app
+      args:
+        PACKAGE_NAME: "@szdevs/store"
+        APP_NAME: store
     env_file:
       - ../.env
     environment:
