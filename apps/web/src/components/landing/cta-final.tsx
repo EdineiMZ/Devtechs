@@ -9,7 +9,7 @@ import { TerminalBadge } from './terminal-badge';
 const FOOTER_LINKS = [
   { label: 'Política de Privacidade', href: '/privacidade' },
   { label: 'Termos de Uso',           href: '/termos' },
-  { label: 'GitHub',                  href: 'https://github.com/SZDevs' },
+  { label: 'GitHub',                  href: 'https://github.com/EBSZDEVS' },
   { label: 'LinkedIn',                href: 'https://linkedin.com/company/SZDevs' },
 ];
 
@@ -60,7 +60,7 @@ export function CtaFinal(): JSX.Element {
               Iniciar projeto
             </Link>
             <a
-              href="https://github.com/SZDevs"
+              href="https://github.com/EBSZDEVS"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center rounded-md border border-acid/30 text-acid px-8 py-3.5 text-sm font-mono tracking-wider hover:bg-acid/5 hover:border-acid/60 transition-all"

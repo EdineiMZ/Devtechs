@@ -4,7 +4,7 @@ import Link from 'next/link';
 const FOOTER_LINKS = [
   { label: 'Política de Privacidade', href: '/privacidade' },
   { label: 'Termos de Uso',           href: '/termos' },
-  { label: 'GitHub',                  href: 'https://github.com/SZDevs' },
+  { label: 'GitHub',                  href: 'https://github.com/EBSZDEVS' },
   { label: 'LinkedIn',                href: 'https://linkedin.com/company/SZDevs' },
 ];
 
