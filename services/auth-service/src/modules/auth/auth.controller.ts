@@ -79,7 +79,12 @@ export class AuthController {
   // We skip the `default` global throttler here because the login guard
   // already provides stricter protection against brute-force attempts.
   @UseGuards(LoginRateLimitGuard)
-  @SkipThrottle({ [THROTTLERS.DEFAULT]: true })
+  @SkipThrottle({
+    [THROTTLERS.DEFAULT]: true,
+    [THROTTLERS.REGISTER]: true,
+    [THROTTLERS.EMAIL_VERIFICATION]: true,
+    [THROTTLERS.TWO_FA_VERIFY]: true,
+  })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

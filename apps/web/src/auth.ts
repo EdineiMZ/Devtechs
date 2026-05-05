@@ -77,7 +77,11 @@ function buildProviders(): AnyProvider[] {
         code:      { label: 'Código TOTP', type: 'text' },
         tempToken: { label: 'Temp Token', type: 'text' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
+        const clientIp =
+          request?.headers?.get('x-real-ip') ??
+          request?.headers?.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+          undefined;
         const email     = String(credentials?.email     ?? '').trim().toLowerCase();
         const password  = String(credentials?.password  ?? '');
         const code      = credentials?.code      ? String(credentials.code)      : undefined;
@@ -104,6 +108,7 @@ function buildProviders(): AnyProvider[] {
         // ── Normal path: POST /auth/login ──
         const login = await authServiceFetch<LoginResponseDto>('/auth/login', {
           body: { email, password },
+          headers: clientIp ? { 'x-real-ip': clientIp } : undefined,
         });
 
         if (!login.ok) {
