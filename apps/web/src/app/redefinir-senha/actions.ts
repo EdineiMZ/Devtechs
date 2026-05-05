@@ -18,12 +18,10 @@ export interface ResetTokenInfo {
 }
 
 export async function getResetTokenInfo(token: string): Promise<ResetTokenInfo> {
-  const res = await authServiceFetch<ResetTokenInfo>('/auth/reset-password/info', {
-    method: 'GET',
-    body: undefined,
-    headers: { 'Content-Type': 'application/json' },
-  });
-
+  const res = await authServiceFetch<ResetTokenInfo>(
+    `/auth/reset-password/info?token=${encodeURIComponent(token)}`,
+    { method: 'GET' },
+  );
   if (!res.ok) return { valid: false, requires2FA: false, expiresAt: '' };
   return res.data as ResetTokenInfo;
 }

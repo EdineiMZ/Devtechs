@@ -19,14 +19,14 @@ async function getTokenInfo(token: string) {
     valid: boolean;
     requires2FA: boolean;
     expiresAt: string;
-  }>(/auth/reset-password/info?token=, {
+  }>(`/auth/reset-password/info?token=${encodeURIComponent(token)}`, {
     method: 'GET',
   });
   if (!res.ok) return null;
   return res.data as { valid: boolean; requires2FA: boolean; expiresAt: string };
 }
 
-export default async function RedefinirSenhaPage({ searchParams }: PageProps): Promise<JSX.Element> {
+export default async function RedefinirInhaPage({ searchParams }: PageProps): Promise<JSX.Element> {
   const params = await searchParams;
   const token = params.token ?? '';
 
@@ -44,14 +44,14 @@ export default async function RedefinirSenhaPage({ searchParams }: PageProps): P
             <Link href="/" className="inline-block">
               <span className="text-2xl font-bold tracking-tight">SZDevs</span>
             </Link>
-            <h1 className="mt-6 text-2xl font-bold tracking-tight">Link invalido</h1>
+            <h1 className="mt-6 text-2xl font-bold tracking-tight">Link inválido</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Este link de redefinicao e invalido ou expirou.
+              Este link de redefinição é inválido ou expirou.
             </p>
           </div>
           <div className="rounded-xl border border-white/8 bg-secondary/20 p-8 shadow-sm text-center space-y-4">
             <p className="text-sm text-muted-foreground">
-              Solicite um novo link de redefinicao de senha.
+              Solicite um novo link de redefinição de senha.
             </p>
             <Link
               href="/esqueci-a-senha"

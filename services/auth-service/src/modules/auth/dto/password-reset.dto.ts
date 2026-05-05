@@ -21,7 +21,7 @@ class MatchPasswordConstraint implements ValidatorConstraintInterface {
   }
   defaultMessage(args: ValidationArguments): string {
     const [relatedProperty] = args.constraints as [string];
-    return ${args.property} must match ;
+    return `${args.property} must match ${relatedProperty}`;
   }
 }
 

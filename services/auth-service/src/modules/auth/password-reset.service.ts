@@ -56,7 +56,7 @@ export class PasswordResetService {
 
     const webUrl =
       this.config.get<string>('NEXT_PUBLIC_WEB_URL') ?? 'https://szdevs.com';
-    const resetUrl = ${webUrl}/redefinir-senha?token=;
+    const resetUrl = `${webUrl}/redefinir-senha?token=${encodeURIComponent(token)}`;
 
     await this.redis.publish(EVENT_CHANNEL_EMAIL, {
       to: user.email,
@@ -66,7 +66,7 @@ export class PasswordResetService {
     });
 
     this.logger.log(
-      Password reset email queued for  (); expires ,
+      `Password reset email queued for ${user.email} (${user.id}); expires ${expiresAt.toISOString()}`,
     );
 
     return silentOk;
@@ -110,7 +110,7 @@ export class PasswordResetService {
 
     const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
 
-    await this.prisma.([
+    await this.prisma.$transaction([
       this.prisma.passwordReset.update({
         where: { id: record.id },
         data: { usedAt: new Date() },
@@ -121,7 +121,7 @@ export class PasswordResetService {
       }),
     ]);
 
-    this.logger.log(Password reset completed for user );
+    this.logger.log(`Password reset completed for user ${record.userId}`);
 
     return { message: 'Senha redefinida com sucesso' };
   }
