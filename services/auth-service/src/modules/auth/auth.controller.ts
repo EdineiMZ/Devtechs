@@ -46,6 +46,8 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { VerifyEmailQueryDto } from './dto/verify-email.dto';
 import { EmailVerificationService } from './email-verification.service';
+import { PasswordResetService } from './password-reset.service';
+import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
 import type { RefreshTokenContext } from './strategies/jwt-refresh.strategy';
 
 interface RequestWithRefresh extends Request {
@@ -58,6 +60,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly emailVerificationService: EmailVerificationService,
+    private readonly passwordResetService: PasswordResetService,
   ) {}
 
   // -------------------------------------------------------------------
@@ -340,5 +343,50 @@ export class AuthController {
     @Ip() ip: string,
   ): Promise<{ message: string }> {
     return this.authService.deleteMyAccount(user.id, currentPassword, ip);
+  }
+
+  // -------------------------------------------------------------------
+  // Password reset
+  // -------------------------------------------------------------------
+
+  @Public()
+  @SkipThrottle({
+    [THROTTLERS.DEFAULT]: true,
+    [THROTTLERS.REGISTER]: true,
+    [THROTTLERS.EMAIL_VERIFICATION]: true,
+    [THROTTLERS.TWO_FA_VERIFY]: true,
+  })
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.ACCEPTED)
+  forgotPassword(@Body() dto: ForgotPasswordDto): Promise<{ message: string }> {
+    return this.passwordResetService.forgotPassword(dto.email);
+  }
+
+  @Public()
+  @SkipThrottle({
+    [THROTTLERS.DEFAULT]: true,
+    [THROTTLERS.REGISTER]: true,
+    [THROTTLERS.EMAIL_VERIFICATION]: true,
+    [THROTTLERS.TWO_FA_VERIFY]: true,
+  })
+  @Get('reset-password/info')
+  @HttpCode(HttpStatus.OK)
+  getResetInfo(
+    @Query('token') token: string,
+  ): Promise<{ valid: boolean; requires2FA: boolean; expiresAt: string }> {
+    return this.passwordResetService.getResetInfo(token);
+  }
+
+  @Public()
+  @SkipThrottle({
+    [THROTTLERS.DEFAULT]: true,
+    [THROTTLERS.REGISTER]: true,
+    [THROTTLERS.EMAIL_VERIFICATION]: true,
+    [THROTTLERS.TWO_FA_VERIFY]: true,
+  })
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  resetPassword(@Body() dto: ResetPasswordDto, @Ip() ip: string): Promise<{ message: string; requires2FA?: boolean }> {
+    return this.passwordResetService.resetPassword(dto.token, dto.newPassword, dto.totpCode, ip);
   }
 }

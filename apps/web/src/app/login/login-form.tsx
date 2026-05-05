@@ -550,7 +550,7 @@ export function LoginForm(): JSX.Element {
               Lembrar de mim
             </label>
             <Link
-              href="/forgot-password"
+              href="/esqueci-a-senha"
               className="text-xs font-medium text-copper/80 underline-offset-4 hover:text-copper"
             >
               Esqueci minha senha
