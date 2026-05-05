@@ -33,7 +33,7 @@ FROM node:${NODE_VERSION} AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
 RUN corepack enable && corepack prepare pnpm@9 --activate
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /repo
 
 # ---------------------------------------------------------------------------
@@ -42,6 +42,30 @@ WORKDIR /repo
 FROM base AS builder
 ARG PACKAGE_NAME
 ARG APP_NAME
+ARG NEXT_PUBLIC_WEB_URL
+ARG NEXT_PUBLIC_AUTH_URL
+ARG NEXT_PUBLIC_AUTH_SERVICE_URL
+ARG NEXT_PUBLIC_RH_SERVICE_URL
+ARG NEXT_PUBLIC_FINANCE_URL
+ARG NEXT_PUBLIC_PROJECTS_SERVICE_URL
+ARG NEXT_PUBLIC_DEVOPS_SERVICE_URL
+ARG NEXT_PUBLIC_SUPPORT_URL
+ARG NEXT_PUBLIC_NOTIFICATION_URL
+ARG NEXT_PUBLIC_LICENSE_URL
+ARG NEXT_PUBLIC_DEVELOPER_URL
+ARG NEXT_PUBLIC_MP_PUBLIC_KEY
+ENV NEXT_PUBLIC_WEB_URL=$NEXT_PUBLIC_WEB_URL
+ENV NEXT_PUBLIC_AUTH_URL=$NEXT_PUBLIC_AUTH_URL
+ENV NEXT_PUBLIC_AUTH_SERVICE_URL=$NEXT_PUBLIC_AUTH_SERVICE_URL
+ENV NEXT_PUBLIC_RH_SERVICE_URL=$NEXT_PUBLIC_RH_SERVICE_URL
+ENV NEXT_PUBLIC_FINANCE_URL=$NEXT_PUBLIC_FINANCE_URL
+ENV NEXT_PUBLIC_PROJECTS_SERVICE_URL=$NEXT_PUBLIC_PROJECTS_SERVICE_URL
+ENV NEXT_PUBLIC_DEVOPS_SERVICE_URL=$NEXT_PUBLIC_DEVOPS_SERVICE_URL
+ENV NEXT_PUBLIC_SUPPORT_URL=$NEXT_PUBLIC_SUPPORT_URL
+ENV NEXT_PUBLIC_NOTIFICATION_URL=$NEXT_PUBLIC_NOTIFICATION_URL
+ENV NEXT_PUBLIC_LICENSE_URL=$NEXT_PUBLIC_LICENSE_URL
+ENV NEXT_PUBLIC_DEVELOPER_URL=$NEXT_PUBLIC_DEVELOPER_URL
+ENV NEXT_PUBLIC_MP_PUBLIC_KEY=$NEXT_PUBLIC_MP_PUBLIC_KEY
 RUN test -n "${PACKAGE_NAME}" || (echo "PACKAGE_NAME build arg is required" && exit 1)
 RUN test -n "${APP_NAME}"     || (echo "APP_NAME build arg is required" && exit 1)
 
@@ -50,11 +74,12 @@ RUN test -n "${APP_NAME}"     || (echo "APP_NAME build arg is required" && exit 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV TURBO_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS="--max-old-space-size=3072"
 
 COPY . .
 
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --ignore-scripts
+    NODE_ENV=development pnpm install --frozen-lockfile --ignore-scripts
 
 # Prisma client is needed by any app that imports @szdevs/database.
 # Harmless on apps that don't touch it.
@@ -63,14 +88,38 @@ RUN pnpm --filter @szdevs/database prisma:generate
 # Build the target app (and its workspace deps). Standalone output lands
 # under apps/<name>/.next/standalone and the static chunks under
 # apps/<name>/.next/static.
-RUN pnpm --filter "${PACKAGE_NAME}^..." build \
-    && pnpm --filter "${PACKAGE_NAME}" build
+RUN pnpm --filter "${PACKAGE_NAME}" build
+RUN mkdir -p /repo/apps/${APP_NAME}/public
 
 # ---------------------------------------------------------------------------
 # Stage 3: runtime
 # ---------------------------------------------------------------------------
 FROM node:${NODE_VERSION} AS runtime
 ARG APP_NAME
+ARG NEXT_PUBLIC_WEB_URL
+ARG NEXT_PUBLIC_AUTH_URL
+ARG NEXT_PUBLIC_AUTH_SERVICE_URL
+ARG NEXT_PUBLIC_RH_SERVICE_URL
+ARG NEXT_PUBLIC_FINANCE_URL
+ARG NEXT_PUBLIC_PROJECTS_SERVICE_URL
+ARG NEXT_PUBLIC_DEVOPS_SERVICE_URL
+ARG NEXT_PUBLIC_SUPPORT_URL
+ARG NEXT_PUBLIC_NOTIFICATION_URL
+ARG NEXT_PUBLIC_LICENSE_URL
+ARG NEXT_PUBLIC_DEVELOPER_URL
+ARG NEXT_PUBLIC_MP_PUBLIC_KEY
+ENV NEXT_PUBLIC_WEB_URL=$NEXT_PUBLIC_WEB_URL
+ENV NEXT_PUBLIC_AUTH_URL=$NEXT_PUBLIC_AUTH_URL
+ENV NEXT_PUBLIC_AUTH_SERVICE_URL=$NEXT_PUBLIC_AUTH_SERVICE_URL
+ENV NEXT_PUBLIC_RH_SERVICE_URL=$NEXT_PUBLIC_RH_SERVICE_URL
+ENV NEXT_PUBLIC_FINANCE_URL=$NEXT_PUBLIC_FINANCE_URL
+ENV NEXT_PUBLIC_PROJECTS_SERVICE_URL=$NEXT_PUBLIC_PROJECTS_SERVICE_URL
+ENV NEXT_PUBLIC_DEVOPS_SERVICE_URL=$NEXT_PUBLIC_DEVOPS_SERVICE_URL
+ENV NEXT_PUBLIC_SUPPORT_URL=$NEXT_PUBLIC_SUPPORT_URL
+ENV NEXT_PUBLIC_NOTIFICATION_URL=$NEXT_PUBLIC_NOTIFICATION_URL
+ENV NEXT_PUBLIC_LICENSE_URL=$NEXT_PUBLIC_LICENSE_URL
+ENV NEXT_PUBLIC_DEVELOPER_URL=$NEXT_PUBLIC_DEVELOPER_URL
+ENV NEXT_PUBLIC_MP_PUBLIC_KEY=$NEXT_PUBLIC_MP_PUBLIC_KEY
 ENV APP_NAME=${APP_NAME}
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -96,7 +145,7 @@ USER node
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
-    CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+    CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/').then(r => process.exit(r.status < 500 ? 0 : 1)).catch(() => process.exit(1))"
 
 # CMD uses shell form so ${APP_NAME} expands at container start. dumb-init
 # is wrapped around `sh -c` so signals still forward correctly.
