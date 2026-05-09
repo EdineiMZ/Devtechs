@@ -34,7 +34,7 @@ ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
 RUN corepack enable && corepack prepare pnpm@9 --activate
 # `libc6-compat` is needed by some native node modules (Prisma engines, bcrypt)
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /repo
 
 # ---------------------------------------------------------------------------
@@ -72,6 +72,8 @@ RUN pnpm --filter "${PACKAGE_NAME}^..." build \
 # node_modules fully resolved (workspace:* links turned into real files).
 # This is what the runtime stage will ship — no source, no dev deps.
 RUN pnpm --filter "${PACKAGE_NAME}" --prod deploy /app
+RUN cp -r /repo/node_modules/.pnpm/@prisma+client@5.22.0_prisma@5.22.0/node_modules/.prisma \
+         /app/node_modules/.pnpm/@prisma+client@5.22.0_prisma@5.22.0/node_modules/
 
 # ---------------------------------------------------------------------------
 # Stage 3: runtime
@@ -81,7 +83,7 @@ ENV NODE_ENV=production
 
 # dumb-init = PID 1 that forwards signals and reaps zombies. Without it
 # `docker stop` leaves the Node process running until the 10s SIGKILL.
-RUN apk add --no-cache dumb-init libc6-compat \
+RUN apk add --no-cache dumb-init libc6-compat openssl \
     && rm -rf /var/cache/apk/*
 
 WORKDIR /app
@@ -89,6 +91,11 @@ WORKDIR /app
 # Bring over the deployed package + its resolved prod node_modules.
 COPY --from=builder --chown=node:node /app /app
 
+USER root
+RUN mkdir -p /packages && \
+    for pkg in $(ls /app/node_modules/@szdevs/ 2>/dev/null | sed "s/@szdevs\///"); do \
+        ln -sf /app/node_modules/@szdevs/$pkg /packages/$pkg; \
+    done
 # Drop privileges — `node:alpine` ships a pre-created `node` user.
 USER node
 

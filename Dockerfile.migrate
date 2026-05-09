@@ -22,7 +22,7 @@ ENV TURBO_TELEMETRY_DISABLED=1
 
 # Same base setup as Dockerfile.service
 RUN corepack enable && corepack prepare pnpm@9 --activate \
-    && apk add --no-cache libc6-compat \
+    && apk add --no-cache libc6-compat openssl \
     && rm -rf /var/cache/apk/*
 
 WORKDIR /repo

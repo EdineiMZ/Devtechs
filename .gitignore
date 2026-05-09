@@ -78,3 +78,14 @@ dump.rdb
 
 # Upload scratch directory (runtime artifacts)
 services/support-service/uploads/
+
+# TLS certificates (production secrets — never commit)
+infra/certs/
+*.crt
+*.key
+*.pem
+
+# Database backups (operational, possibly sensitive)
+backups/
+backup-db.sh
+backup*-db.sh

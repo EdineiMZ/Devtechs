@@ -18,6 +18,7 @@ export const EMAIL_TEMPLATES = [
   'vacation-rejected',
   'payment-due',
   'welcome',
+  'password-reset',
 ] as const;
 export type EmailTemplate = (typeof EMAIL_TEMPLATES)[number];
 

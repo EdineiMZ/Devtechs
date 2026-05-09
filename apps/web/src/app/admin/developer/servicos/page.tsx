@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { AppShell } from '@/components/app/app-shell';
 import { ADMIN_NAV_ITEMS } from '@/components/app/nav-config';
-import { devFetch, getDeveloperServiceUrl } from '@/lib/developer-api';
+import { devFetch } from '@/lib/developer-api';
 
 import { MonitorPanel } from './monitor-panel';
 
@@ -38,7 +38,6 @@ export default async function ServicosPage(): Promise<JSX.Element> {
     : [];
 
   const canControl = user.permissions.includes('dev:services:restart');
-  const wsUrl = getDeveloperServiceUrl();
 
   return (
     <AppShell
@@ -66,7 +65,6 @@ export default async function ServicosPage(): Promise<JSX.Element> {
       <MonitorPanel
         initial={initial}
         accessToken={session.accessToken}
-        wsUrl={wsUrl}
         canControl={canControl}
       />
     </AppShell>

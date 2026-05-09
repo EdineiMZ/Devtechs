@@ -77,17 +77,35 @@ export type SupportSocket = Socket<
   SupportClientEvents
 >;
 
-/** Where the support-service Socket.io endpoint lives. */
-function getSupportSocketUrl(): string {
-  // Accept both env var names — `NEXT_PUBLIC_SUPPORT_URL` is the one set
-  // in the repo `.env`, while older code referenced
-  // `NEXT_PUBLIC_SUPPORT_SERVICE_URL`. Default port aligns with
-  // `SUPPORT_SERVICE_PORT=4008` in `.env`.
-  return (
+/**
+ * Build the socket.io target for the support gateway.
+ *
+ * In production the page is served over HTTPS through nginx, so we
+ * connect to the same origin and route the engine.io handshake under
+ * `/api/support/socket.io/` — that path is forwarded to
+ * support-service's default `/socket.io/` by the nginx upstream.
+ * Returning a path-only URL lets socket.io inherit
+ * `window.location.protocol`, so HTTPS pages get `wss://` for free
+ * (no Mixed Content) and HTTP dev pages get `ws://`.
+ *
+ * For dev convenience, an absolute override (`http://localhost:4008`)
+ * still works as long as it points straight at the service — i.e. it
+ * does NOT contain `/api/` (the prod env var
+ * `NEXT_PUBLIC_SUPPORT_URL=https://szdevs.com/api/support` describes
+ * the REST gateway, not the websocket endpoint, so we ignore it here).
+ */
+function getSupportSocketTarget(): { url: string; path: string } {
+  const override =
     process.env.NEXT_PUBLIC_SUPPORT_SERVICE_URL ??
-    process.env.NEXT_PUBLIC_SUPPORT_URL ??
-    'http://127.0.0.1:4008'
-  );
+    process.env.NEXT_PUBLIC_SUPPORT_URL;
+  if (
+    override &&
+    !override.includes('/api/') &&
+    (override.startsWith('http://') || override.startsWith('https://'))
+  ) {
+    return { url: `${override}/support`, path: '/socket.io/' };
+  }
+  return { url: '/support', path: '/api/support/socket.io/' };
 }
 
 /**
@@ -108,7 +126,9 @@ function getSupportSocketUrl(): string {
  * it down on unmount).
  */
 export function createSupportSocket(accessToken: string): SupportSocket {
-  return io(`${getSupportSocketUrl()}/support`, {
+  const target = getSupportSocketTarget();
+  return io(target.url, {
+    path: target.path,
     auth: { token: accessToken },
     transports: ['websocket', 'polling'],
     autoConnect: false,
