@@ -48,8 +48,12 @@ export class InvoicesService {
   }
 
   async listClients(): Promise<{ id: string; name: string; email: string }[]> {
+    // The User model uses `status: UserStatus` (ACTIVE|INACTIVE|BANNED), not
+    // a `banned` boolean — Prisma was throwing "Unknown argument `banned`"
+    // on every call, the controller swallowed it as 500, and the dropdown
+    // in /admin/financeiro/faturas → "Nova fatura" rendered empty.
     const rows = await this.prisma.user.findMany({
-      where: { banned: false },
+      where: { status: 'ACTIVE' },
       select: { id: true, name: true, email: true },
       orderBy: { name: 'asc' },
     });
