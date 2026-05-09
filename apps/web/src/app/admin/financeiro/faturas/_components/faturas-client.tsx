@@ -50,7 +50,7 @@ export function FaturasClient({
 }: FaturasClientProps): JSX.Element {
   const router = useRouter();
   const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-  const dateFmt = new Intl.DateTimeFormat('pt-BR');
+  const dateFmt = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
   const [modal, setModal] = useState<ActionModalState | null>(null);
   const [reason, setReason] = useState('');

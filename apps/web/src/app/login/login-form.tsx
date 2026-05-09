@@ -127,29 +127,9 @@ export function LoginForm(): JSX.Element {
     }
 
     // ── Credentials phase ─────────────────────────────────────────────────
-    const result = await signIn('credentials', {
-      redirect: false,
-      email:    data.email,
-      password: data.password,
-    });
-
-    if (!result) {
-      setBanner({
-        kind: 'error',
-        title: 'Erro inesperado',
-        message: 'Não foi possível completar o login. Tente novamente.',
-      });
-      return;
-    }
-
-    if (!result.error) {
-      await redirectAfterLogin();
-      return;
-    }
-
-    // signIn failed — NextAuth v5 normalises all authorize() errors to
-    // 'CredentialsSignin', so we can't branch on result.error alone.
-    // Use preflightLogin to determine the real cause.
+    // Preflight first: single backend hit that returns structured errors.
+    // This avoids consuming 2 rate-limit slots per failed attempt (the old
+    // flow called /auth/login inside both signIn→authorize AND here).
     const preflight = await preflightLogin(data.email, data.password);
 
     if ('requires2FA' in preflight) {
@@ -168,8 +148,24 @@ export function LoginForm(): JSX.Element {
       return;
     }
 
-    // Preflight said ok but signIn still failed — unexpected
-    mapAuthorizeError(result.error);
+    // Credentials are valid — establish the NextAuth session.
+    const result = await signIn('credentials', {
+      redirect: false,
+      email:    data.email,
+      password: data.password,
+    });
+
+    if (!result?.error) {
+      await redirectAfterLogin();
+      return;
+    }
+
+    // Preflight said ok but signIn still failed (unexpected race condition).
+    setBanner({
+      kind: 'error',
+      title: 'Erro inesperado',
+      message: 'Não foi possível completar o login. Tente novamente.',
+    });
   });
 
   const mapAuthorizeError = (error: string): void => {

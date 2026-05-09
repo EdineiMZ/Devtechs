@@ -5,7 +5,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Ip,
   Post,
   Query,
   Req,
@@ -28,6 +27,7 @@ import type { CurrentUserPayload } from '../../common/decorators/current-user.de
 import { Public } from '../../common/decorators/public.decorator';
 import { RequireEmailVerified } from '../../common/decorators/require-email-verified.decorator';
 import { EmailVerifiedGuard } from '../../common/guards/email-verified.guard';
+import { RealIp } from '../../common/decorators/real-ip.decorator';
 import { LoginRateLimitGuard } from '../../common/rate-limit/login-rate-limit.guard';
 import { THROTTLERS } from '../../common/rate-limit/rate-limit.module';
 
@@ -159,7 +159,7 @@ export class AuthController {
   @ApiResponse({ status: 429, description: 'Too many failed attempts â€” IP blocked.' })
   login(
     @Body() dto: LoginDto,
-    @Ip() ip: string,
+    @RealIp() ip: string,
     @Req() req: Request,
   ): Promise<LoginResponse> {
     const userAgent = req.headers['user-agent'] ?? null;
@@ -189,7 +189,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   logout(
     @CurrentUser() user: CurrentUserPayload,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<LogoutResponse> {
     return this.authService.logout(user.sessionId, ip);
   }
@@ -233,7 +233,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   verifyEmail(
     @Query() query: VerifyEmailQueryDto,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<VerifyEmailResponse> {
     return this.emailVerificationService.verify(query.token, ip);
   }
@@ -294,7 +294,7 @@ export class AuthController {
   @ApiResponse({ status: 403, description: 'Email not verified.' })
   exportMyData(
     @CurrentUser() user: CurrentUserPayload,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<Record<string, unknown>> {
     return this.authService.exportMyData(user.id, ip);
   }
@@ -340,7 +340,7 @@ export class AuthController {
   deleteMyAccount(
     @CurrentUser() user: CurrentUserPayload,
     @Body('currentPassword') currentPassword: string,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<{ message: string }> {
     return this.authService.deleteMyAccount(user.id, currentPassword, ip);
   }
@@ -386,7 +386,7 @@ export class AuthController {
   })
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
-  resetPassword(@Body() dto: ResetPasswordDto, @Ip() ip: string): Promise<{ message: string; requires2FA?: boolean }> {
+  resetPassword(@Body() dto: ResetPasswordDto, @RealIp() ip: string): Promise<{ message: string; requires2FA?: boolean }> {
     return this.passwordResetService.resetPassword(dto.token, dto.newPassword, dto.totpCode, ip);
   }
 }
