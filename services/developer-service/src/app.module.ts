@@ -11,6 +11,7 @@ import { JwtStrategy } from './common/strategies/jwt.strategy';
 import { DeveloperConfigModule } from './modules/config/config.module';
 import { DockerModule } from './modules/docker/docker.module';
 import { HealthModule } from './modules/health/health.module';
+import { LogsModule } from './modules/logs/logs.module';
 import { MonitorModule } from './modules/monitor/monitor.module';
 import { QueuesModule } from './modules/queues/queues.module';
 import { ServicesModule } from './modules/services/services.module';
@@ -37,6 +38,7 @@ import { RedisModule } from './redis/redis.module';
     DeveloperConfigModule,
     QueuesModule,
     HealthModule,
+    LogsModule,
     VpsModule,
   ],
   providers: [
