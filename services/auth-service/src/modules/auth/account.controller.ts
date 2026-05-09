@@ -5,7 +5,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Ip,
   Param,
   Patch,
   Post,
@@ -13,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+import { RealIp } from '../../common/decorators/real-ip.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../../common/decorators/current-user.decorator';
 import { RequireEmailVerified } from '../../common/decorators/require-email-verified.decorator';
@@ -53,7 +53,7 @@ export class AccountController {
   updateProfile(
     @CurrentUser() user: CurrentUserPayload,
     @Body() dto: UpdateProfileDto,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<ProfileResponse> {
     return this.accountService.updateProfile(user.id, dto, ip);
   }
@@ -73,7 +73,7 @@ export class AccountController {
   changePassword(
     @CurrentUser() user: CurrentUserPayload,
     @Body() dto: ChangePasswordDto,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<ChangePasswordResult> {
     return this.accountService.changePassword(
       user.id,
@@ -105,7 +105,7 @@ export class AccountController {
   revokeSession(
     @CurrentUser() user: CurrentUserPayload,
     @Param('id') id: string,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<{ ok: true }> {
     return this.accountService.revokeOwnSession(
       user.id,

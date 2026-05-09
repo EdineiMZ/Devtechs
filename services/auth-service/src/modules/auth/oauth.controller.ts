@@ -3,7 +3,6 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
-  Ip,
   Post,
   Req,
   UseGuards,
@@ -11,6 +10,7 @@ import {
 import { SkipThrottle } from '@nestjs/throttler';
 import type { Request } from 'express';
 
+import { RealIp } from '../../common/decorators/real-ip.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { InternalSecretGuard } from '../../common/guards/internal-secret.guard';
 
@@ -44,7 +44,7 @@ export class OAuthController {
   @HttpCode(HttpStatus.OK)
   login(
     @Body() dto: OAuthLoginDto,
-    @Ip() ip: string,
+    @RealIp() ip: string,
     @Req() req: Request,
   ): Promise<LoginSuccessResponse> {
     const userAgent = req.headers['user-agent'] ?? null;

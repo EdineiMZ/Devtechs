@@ -3,7 +3,6 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
-  Ip,
   Post,
   Req,
 } from '@nestjs/common';
@@ -11,6 +10,7 @@ import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 
+import { RealIp } from '../../common/decorators/real-ip.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { THROTTLERS } from '../../common/rate-limit/rate-limit.module';
 
@@ -63,7 +63,7 @@ export class EmailOtpController {
   @ApiResponse({ status: 401, description: 'Invalid code.' })
   verify(
     @Body() dto: VerifyEmailOtpDto,
-    @Ip() ip: string,
+    @RealIp() ip: string,
     @Req() req: Request,
   ): Promise<LoginSuccessResponse> {
     return this.emailOtpService.verify(dto.email, dto.code, {
