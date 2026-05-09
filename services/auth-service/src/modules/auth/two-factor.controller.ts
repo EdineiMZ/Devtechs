@@ -8,7 +8,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { IsNumberString, IsString, Length, MaxLength, MinLength } from 'class-validator';
+import { IsNumberString, IsString, Length, Matches, MaxLength, MinLength } from 'class-validator';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
@@ -37,8 +37,11 @@ interface RequestWithTempUser extends Request {
 }
 
 class VerifySessionDto {
+  // Accepts the 6 TOTP digits with optional whitespace/dashes
+  // ("123 456", "123-456"); the service normalises before verifying.
   @IsString()
-  @Length(6, 8)
+  @MaxLength(12)
+  @Matches(/^[\d\s-]{6,12}$/)
   code!: string;
 }
 

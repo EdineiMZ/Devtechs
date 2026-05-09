@@ -1,8 +1,7 @@
 import {
-  IsNumberString,
   IsOptional,
   IsString,
-  Length,
+  Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -17,11 +16,12 @@ export class Disable2FADto {
   /**
    * Optional TOTP code. When provided, we verify it alongside the password for
    * extra safety; when absent, the password alone is enough, which matches the
-   * required contract ("exige senha atual para confirmar").
+   * required contract ("exige senha atual para confirmar"). Accepts the digits
+   * with optional whitespace/dashes — the service normalises before verifying.
    */
   @IsOptional()
   @IsString({ message: 'code must be a string' })
-  @Length(6, 6, { message: 'code must be exactly 6 digits' })
-  @IsNumberString({ no_symbols: true }, { message: 'code must contain only digits' })
+  @MaxLength(12, { message: 'code is too long' })
+  @Matches(/^[\d\s-]{6,12}$/, { message: 'code must be a 6-digit numeric code' })
   code?: string;
 }
