@@ -19,7 +19,7 @@ const inter = Inter({
 });
 
 const SITE_NAME = 'SZDevs';
-const SITE_URL = process.env.NEXT_PUBLIC_WEB_URL ?? 'https://SZDevs.io';
+const SITE_URL = process.env.NEXT_PUBLIC_WEB_URL ?? 'https://szdevs.com';
 const SITE_TITLE = 'SZDevs — Tecnologia sob medida para o seu negócio';
 const SITE_DESCRIPTION =
   'Desenvolvimento de sistemas customizados, plataforma DevOps, suporte técnico especializado e consultoria em infraestrutura cloud. Entregas rápidas, tecnologia de ponta e atendimento dedicado.';

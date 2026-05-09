@@ -109,7 +109,7 @@ credentials are never reachable from the staging workflow.
 | `TURBO_TOKEN` | Repository | All workflows | Bearer token for the Turborepo remote cache. Generate via `pnpm dlx turbo login` or copy from Vercel's Turbo dashboard. |
 | `TURBO_TEAM` | Repository | All workflows | Turbo team slug â€” identifies which remote cache namespace to read/write. |
 | `GHCR_TOKEN` | Repository | `deploy-*` | Classic PAT with `write:packages` scope. The workflows login to `ghcr.io` as `${{ github.actor }}` with this token to push images. (Alternatively use `GITHUB_TOKEN` if the repo permissions allow it â€” `GHCR_TOKEN` is here so private-package orgs have an override.) |
-| `STAGING_HOST` | `staging` environment | `deploy-staging` | DNS name or IP of the staging VPS (e.g. `staging.SZDevs.io`). |
+| `STAGING_HOST` | `staging` environment | `deploy-staging` | DNS name or IP of the staging VPS (e.g. `staging.szdevs.com`). |
 | `STAGING_SSH_KEY` | `staging` environment | `deploy-staging` | PEM-encoded private key for the `deploy` user on the staging VPS. Corresponding public key must be in `/home/deploy/.ssh/authorized_keys`. |
 | `PROD_HOST` | `production` environment | `deploy-prod` | DNS name or IP of the production VPS. |
 | `PROD_SSH_KEY` | `production` environment | `deploy-prod` | PEM-encoded private key for the `deploy` user on production. Keep this tightly-scoped; rotate on every operator offboarding. |
