@@ -1,5 +1,7 @@
 'use server';
 
+import { headers as nextHeaders } from 'next/headers';
+
 import { unstable_update } from '@/auth';
 import { authServiceFetch } from '@/lib/auth-service';
 
@@ -16,12 +18,21 @@ export async function verifyTwoFaSession(
     return { ok: false, message: 'Código inválido.' };
   }
 
+  const h = await nextHeaders();
+  const clientIp =
+    h.get('x-real-ip') ??
+    h.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    undefined;
+
   const res = await authServiceFetch<{ verified: boolean }>(
     '/auth/2fa/verify-session',
     {
       method: 'POST',
       body: { code },
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...(clientIp ? { 'x-real-ip': clientIp } : {}),
+      },
     },
   );
 

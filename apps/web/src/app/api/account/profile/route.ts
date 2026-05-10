@@ -17,7 +17,8 @@ export async function PATCH(req: Request): Promise<Response> {
     avatarUrl?: string | null;
   };
 
-  const res = await updateProfile(patch, session.accessToken);
+  const ip = req.headers.get('x-real-ip') ?? req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? undefined;
+  const res = await updateProfile(patch, session.accessToken, ip);
   return new Response(JSON.stringify(res.data), {
     status: res.status,
     headers: { 'Content-Type': 'application/json' },

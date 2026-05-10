@@ -13,7 +13,8 @@ export async function POST(req: Request): Promise<Response> {
       { status: 400, headers: { 'Content-Type': 'application/json' } },
     );
   }
-  const res = await enable2FA(body.code, session.accessToken);
+  const ip = req.headers.get('x-real-ip') ?? req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? undefined;
+  const res = await enable2FA(body.code, session.accessToken, ip);
   return new Response(JSON.stringify(res.data), {
     status: res.status,
     headers: { 'Content-Type': 'application/json' },

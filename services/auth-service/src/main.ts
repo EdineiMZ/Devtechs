@@ -47,6 +47,7 @@ async function bootstrap(): Promise<void> {
   // Global filter & interceptor
   // -----------------------------------------------------------------------
   app.getHttpAdapter().getInstance().disable('x-powered-by');
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalInterceptors(new LoggingInterceptor());
 

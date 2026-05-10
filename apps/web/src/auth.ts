@@ -98,6 +98,7 @@ function buildProviders(): AnyProvider[] {
         if (tempToken && code) {
           const verify = await authServiceFetch<LoginSuccessDto>('/auth/2fa/verify', {
             body: { tempToken, code },
+            headers: clientIp ? { 'x-real-ip': clientIp } : undefined,
           });
           if (!verify.ok) {
             throw new Error(AUTH_ERRORS.INVALID_CREDENTIALS);
@@ -151,7 +152,11 @@ function buildProviders(): AnyProvider[] {
         email: { label: 'Email', type: 'email' },
         code: { label: 'Código', type: 'text' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
+        const clientIp =
+          request?.headers?.get('x-real-ip') ??
+          request?.headers?.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+          undefined;
         const email = String(credentials?.email ?? '').trim().toLowerCase();
         const code = String(credentials?.code ?? '').trim();
 
@@ -161,6 +166,7 @@ function buildProviders(): AnyProvider[] {
 
         const res = await authServiceFetch<LoginSuccessDto>('/auth/email-otp/verify', {
           body: { email, code },
+          headers: clientIp ? { 'x-real-ip': clientIp } : undefined,
         });
 
         if (!res.ok) {

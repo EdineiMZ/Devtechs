@@ -3,14 +3,15 @@ import { revokeSession } from '@/lib/account-api';
 
 /** `DELETE /api/account/sessions/:id` → forwards to auth-service. */
 export async function DELETE(
-  _req: Request,
+  req: Request,
   ctx: { params: { id: string } },
 ): Promise<Response> {
   const session = await auth();
   if (!session?.accessToken) {
     return new Response('Unauthorized', { status: 401 });
   }
-  const res = await revokeSession(ctx.params.id, session.accessToken);
+  const ip = req.headers.get('x-real-ip') ?? req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? undefined;
+  const res = await revokeSession(ctx.params.id, session.accessToken, ip);
   return new Response(JSON.stringify(res.data), {
     status: res.status,
     headers: { 'Content-Type': 'application/json' },
