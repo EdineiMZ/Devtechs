@@ -3,22 +3,21 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import {
-  suspendUser,
-  activateUser,
-  disable2FA,
-  revokeSessions,
-  banUser,
-  unbanUser,
-} from '@/lib/auth-admin-api';
 import type { UserAdminItem } from '@/lib/auth-admin-api';
+import {
+  suspendUserAction,
+  activateUserAction,
+  banUserAction,
+  unbanUserAction,
+  disable2FAAction,
+  revokeSessionsAction,
+} from '../actions';
 
 interface Props {
   user: UserAdminItem;
-  accessToken: string;
 }
 
-export function UserActions({ user, accessToken }: Props): JSX.Element {
+export function UserActions({ user }: Props): JSX.Element {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -72,7 +71,7 @@ export function UserActions({ user, accessToken }: Props): JSX.Element {
                 onClick={() =>
                   void run(
                     'suspend',
-                    () => suspendUser(user.id, accessToken),
+                    () => suspendUserAction(user.id),
                     `Suspender a conta de ${user.name ?? user.email}? O usuário não poderá acessar o sistema.`,
                   )
                 }
@@ -87,7 +86,7 @@ export function UserActions({ user, accessToken }: Props): JSX.Element {
                 type="button"
                 disabled={loading !== null}
                 onClick={() =>
-                  void run('activate', () => activateUser(user.id, accessToken))
+                  void run('activate', () => activateUserAction(user.id))
                 }
                 className="w-full rounded-md px-3 py-2 text-left text-xs text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-50"
               >
@@ -102,7 +101,7 @@ export function UserActions({ user, accessToken }: Props): JSX.Element {
                 onClick={() =>
                   void run(
                     'ban',
-                    () => banUser(user.id, accessToken),
+                    () => banUserAction(user.id),
                     `Banir ${user.name ?? user.email}? Esta ação impedirá o login permanentemente até ser revertida.`,
                   )
                 }
@@ -114,7 +113,7 @@ export function UserActions({ user, accessToken }: Props): JSX.Element {
               <button
                 type="button"
                 disabled={loading !== null}
-                onClick={() => void run('unban', () => unbanUser(user.id, accessToken))}
+                onClick={() => void run('unban', () => unbanUserAction(user.id))}
                 className="w-full rounded-md px-3 py-2 text-left text-xs text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-50"
               >
                 {loading === 'unban' ? 'Desbanindo…' : 'Remover banimento'}
@@ -128,7 +127,7 @@ export function UserActions({ user, accessToken }: Props): JSX.Element {
                 onClick={() =>
                   void run(
                     'disable2fa',
-                    () => disable2FA(user.id, accessToken),
+                    () => disable2FAAction(user.id),
                     `Desativar 2FA de ${user.name ?? user.email}? O usuário terá que configurar novamente.`,
                   )
                 }
@@ -144,7 +143,7 @@ export function UserActions({ user, accessToken }: Props): JSX.Element {
               onClick={() =>
                 void run(
                   'revoke',
-                  () => revokeSessions(user.id, accessToken),
+                  () => revokeSessionsAction(user.id),
                   `Revogar todas as sessões de ${user.name ?? user.email}? O usuário será desconectado.`,
                 )
               }

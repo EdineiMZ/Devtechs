@@ -2,16 +2,15 @@
 
 import { useState } from 'react';
 
-import { assignRoleToUser, unassignRoleFromUser } from '@/lib/auth-admin-api';
 import type { RoleResponse, UserAdminItem } from '@/lib/auth-admin-api';
+import { assignRoleAction, unassignRoleAction } from '../actions';
 
 interface Props {
   user: UserAdminItem;
   allRoles: RoleResponse[];
-  accessToken: string;
 }
 
-export function UserRolesManager({ user, allRoles, accessToken }: Props): JSX.Element {
+export function UserRolesManager({ user, allRoles }: Props): JSX.Element {
   const [currentRoleNames, setCurrentRoleNames] = useState<string[]>(user.roles);
   const [adding, setAdding] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
@@ -24,7 +23,7 @@ export function UserRolesManager({ user, allRoles, accessToken }: Props): JSX.El
     setLoading(`assign:${role.id}`);
     setError(null);
     setAdding(false);
-    const res = await assignRoleToUser(role.id, user.id, accessToken);
+    const res = await assignRoleAction(role.id, user.id);
     setLoading(null);
     if (!res.ok) {
       const err = res.data as { message?: string | string[] };
@@ -40,7 +39,7 @@ export function UserRolesManager({ user, allRoles, accessToken }: Props): JSX.El
     if (!role) return;
     setLoading(`unassign:${role.id}`);
     setError(null);
-    const res = await unassignRoleFromUser(role.id, user.id, accessToken);
+    const res = await unassignRoleAction(role.id, user.id);
     setLoading(null);
     if (!res.ok) {
       const err = res.data as { message?: string | string[] };
