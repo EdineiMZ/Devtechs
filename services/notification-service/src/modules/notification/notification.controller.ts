@@ -8,7 +8,8 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
-import { IsBoolean, IsOptional } from 'class-validator';
+import { IsBoolean, IsObject, IsOptional, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 
 import {
   CurrentUser,
@@ -40,19 +41,18 @@ export interface NotificationPreferences {
   };
 }
 
+class ChannelPrefsDto {
+  @IsOptional() @IsBoolean() invoice?:       boolean;
+  @IsOptional() @IsBoolean() login?:         boolean;
+  @IsOptional() @IsBoolean() accountChange?: boolean;
+  @IsOptional() @IsBoolean() support?:       boolean;
+  @IsOptional() @IsBoolean() rh?:            boolean;
+  @IsOptional() @IsBoolean() system?:        boolean;
+}
+
 class UpdatePrefsDto {
-  @IsOptional() @IsBoolean() 'email.invoice'?:       boolean;
-  @IsOptional() @IsBoolean() 'email.login'?:         boolean;
-  @IsOptional() @IsBoolean() 'email.accountChange'?: boolean;
-  @IsOptional() @IsBoolean() 'email.support'?:       boolean;
-  @IsOptional() @IsBoolean() 'email.rh'?:            boolean;
-  @IsOptional() @IsBoolean() 'email.system'?:        boolean;
-  @IsOptional() @IsBoolean() 'inapp.invoice'?:       boolean;
-  @IsOptional() @IsBoolean() 'inapp.login'?:         boolean;
-  @IsOptional() @IsBoolean() 'inapp.accountChange'?: boolean;
-  @IsOptional() @IsBoolean() 'inapp.support'?:       boolean;
-  @IsOptional() @IsBoolean() 'inapp.rh'?:            boolean;
-  @IsOptional() @IsBoolean() 'inapp.system'?:        boolean;
+  @IsOptional() @IsObject() @ValidateNested() @Type(() => ChannelPrefsDto) email?:  ChannelPrefsDto;
+  @IsOptional() @IsObject() @ValidateNested() @Type(() => ChannelPrefsDto) inapp?:  ChannelPrefsDto;
 }
 
 const DEFAULTS: Record<string, boolean> = {
@@ -157,8 +157,18 @@ export class NotificationController {
     @Body() dto: UpdatePrefsDto,
   ): Promise<NotificationPreferences> {
     const key = prefsKey(user.id);
-    const entries = Object.entries(dto).filter(([, v]) => v !== undefined) as [string, boolean][];
-    for (const [field, val] of entries) {
+    const flat: [string, boolean][] = [];
+    if (dto.email) {
+      for (const [k, v] of Object.entries(dto.email) as [string, boolean | undefined][]) {
+        if (v !== undefined) flat.push([`email.${k}`, v]);
+      }
+    }
+    if (dto.inapp) {
+      for (const [k, v] of Object.entries(dto.inapp) as [string, boolean | undefined][]) {
+        if (v !== undefined) flat.push([`inapp.${k}`, v]);
+      }
+    }
+    for (const [field, val] of flat) {
       await this.redis.hset(key, field, val ? 'true' : 'false');
     }
     const hash = await this.redis.hgetall(key);

@@ -106,17 +106,11 @@ export function NotificationPrefsForm({
     setError(null);
     setSaved(false);
 
-    // Flatten prefs to the wire format the API expects
-    const flat: Record<string, boolean> = {};
-    for (const [k, v] of Object.entries(prefs.email)) {
-      flat[`email.${k}`] = v as boolean;
-    }
-    for (const [k, v] of Object.entries(prefs.inapp)) {
-      flat[`inapp.${k}`] = v as boolean;
-    }
-
     startTransition(async () => {
-      const res = await updateNotificationPreferences(flat, accessToken);
+      const res = await updateNotificationPreferences(
+        { email: prefs.email, inapp: prefs.inapp },
+        accessToken,
+      );
       if (res.ok) {
         setSaved(true);
       } else {

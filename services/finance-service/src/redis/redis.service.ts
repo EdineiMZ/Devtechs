@@ -62,4 +62,12 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async publish(channel: string, message: string): Promise<number> {
     return this.client.publish(channel, message);
   }
+
+  async hgetall(key: string): Promise<Record<string, string>> {
+    try {
+      return (await this.client.hgetall(key)) ?? {};
+    } catch {
+      return {};
+    }
+  }
 }

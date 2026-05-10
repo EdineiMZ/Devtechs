@@ -79,9 +79,7 @@ function maskCardNumber(raw: string): string {
 }
 
 /* ---------- Constants ---------- */
-const MP_PUBLIC_KEY =
-  process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ?? 'TEST-c6c55ecf-5f34-4034-b6e3-faac53bc9b95';
-const IS_SANDBOX = MP_PUBLIC_KEY.startsWith('TEST-');
+const SANDBOX_FALLBACK = 'TEST-c6c55ecf-5f34-4034-b6e3-faac53bc9b95';
 
 /* ---------- Brand icon ---------- */
 function CardBrandIcon({ brand }: { brand: string }): JSX.Element {
@@ -247,6 +245,8 @@ export function PayButton({
   const [pix, setPix] = useState<PixPaymentResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [mpPublicKey, setMpPublicKey] = useState<string>(SANDBOX_FALLBACK);
+  const [isSandbox, setIsSandbox] = useState(true);
   const mpRef = useRef<MpInstance | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -259,10 +259,26 @@ export function PayButton({
   const [cardCpf, setCardCpf] = useState('');
   const [installments, setInstallments] = useState('1');
 
+  /* Fetch the runtime MP public key once */
+  useEffect(() => {
+    fetch('/api/payment/config')
+      .then((r) => r.json() as Promise<{ mpPublicKey: string }>)
+      .then(({ mpPublicKey: key }) => {
+        const resolvedKey = key || SANDBOX_FALLBACK;
+        setMpPublicKey(resolvedKey);
+        setIsSandbox(resolvedKey.startsWith('TEST-'));
+        // Re-initialise SDK if already loaded
+        if (typeof window !== 'undefined' && window.MercadoPago) {
+          mpRef.current = new window.MercadoPago(resolvedKey, { locale: 'pt-BR' });
+        }
+      })
+      .catch(() => { /* keep sandbox fallback */ });
+  }, []);
+
   /* Initialise MP SDK */
   function handleMpLoad(): void {
     if (typeof window !== 'undefined' && window.MercadoPago && !mpRef.current) {
-      mpRef.current = new window.MercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
+      mpRef.current = new window.MercadoPago(mpPublicKey, { locale: 'pt-BR' });
     }
   }
 
@@ -708,7 +724,7 @@ export function PayButton({
                     </div>
 
                     {/* Sandbox hint */}
-                    {IS_SANDBOX && (
+                    {isSandbox && (
                       <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2.5">
                         <p className="text-[10px] font-semibold text-amber-400">
                           🧪 Ambiente de testes

@@ -12,26 +12,33 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import type { CheckoutInvoiceDto } from './dto/checkout.dto';
 
+const API_KEYS_REDIS_KEY = 'SZDevs:config:api_keys';
+
 @Injectable()
 export class CheckoutService {
   private readonly logger = new Logger(CheckoutService.name);
-  private readonly payment: Payment;
-  private readonly devMode: boolean;
+  private readonly envAccessToken: string;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     config: ConfigService,
   ) {
-    const accessToken = config.get<string>('MP_ACCESS_TOKEN') ?? '';
-    this.devMode = !accessToken;
-    if (this.devMode) {
-      this.logger.warn('MP_ACCESS_TOKEN not set — running in stub mode');
+    this.envAccessToken = config.get<string>('MP_ACCESS_TOKEN') ?? '';
+  }
+
+  private async resolveAccessToken(): Promise<string> {
+    try {
+      const keys = await this.redis.hgetall(API_KEYS_REDIS_KEY);
+      if (keys['MP_ACCESS_TOKEN']) return keys['MP_ACCESS_TOKEN'];
+    } catch {
+      // Redis unavailable — fall through to env
     }
-    const mpClient = new MercadoPagoConfig({
-      accessToken: accessToken || 'TEST-stub',
-    });
-    this.payment = new Payment(mpClient);
+    return this.envAccessToken;
+  }
+
+  private buildPayment(accessToken: string): Payment {
+    return new Payment(new MercadoPagoConfig({ accessToken }));
   }
 
   async payInvoice(
@@ -62,7 +69,11 @@ export class CheckoutService {
     const payerEmail = dto.payerEmail ?? invoice.client.email;
     const description = `Fatura SZDevs ${invoice.number}`;
 
-    if (this.devMode) {
+    const accessToken = await this.resolveAccessToken();
+    const devMode = !accessToken;
+
+    if (devMode) {
+      this.logger.warn('MP_ACCESS_TOKEN not set — running in stub mode');
       // Stub response for development
       const stubResult = {
         paymentId: `stub-${Date.now()}`,
@@ -81,6 +92,8 @@ export class CheckoutService {
       }
       return stubResult;
     }
+
+    const payment = this.buildPayment(accessToken);
 
     const body: Record<string, unknown> = {
       transaction_amount: amount,
@@ -102,7 +115,7 @@ export class CheckoutService {
 
     let result: Awaited<ReturnType<Payment['create']>>;
     try {
-      result = await this.payment.create({ body });
+      result = await payment.create({ body });
     } catch (err: unknown) {
       const mpErr = err as Record<string, unknown>;
       const mpMsg =

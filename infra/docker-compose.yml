@@ -171,9 +171,7 @@ services:
     container_name: SZDevs-finance-service
     build:
       context: ..
-      dockerfile: Dockerfile.service
-      args:
-        PACKAGE_NAME: "@szdevs/finance-service"
+      dockerfile: Dockerfile.finance-service
     environment:
       PORT: 3003
       DATABASE_URL: ${DATABASE_URL}
