@@ -3,6 +3,8 @@ import { dirname } from 'node:path';
 
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import { json } from 'express';
 
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -49,9 +51,22 @@ if (isDev) {
  * global exception filter, CORS for the Next.js frontends.
  */
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['log', 'error', 'warn', 'debug', 'verbose'],
+    bodyParser: false,
   });
+
+  // Capture raw body on the MP webhook route for HMAC verification.
+  app.use(
+    '/checkout/webhook',
+    json({
+      limit: '1mb',
+      verify: (req: { rawBody?: Buffer }, _res: unknown, buf: Buffer) => {
+        req.rawBody = Buffer.from(buf);
+      },
+    }),
+  );
+  app.use(json({ limit: '1mb' }));
 
   const corsOrigins = (
     process.env.CORS_ORIGINS ??

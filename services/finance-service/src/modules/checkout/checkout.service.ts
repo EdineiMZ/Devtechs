@@ -1,3 +1,5 @@
+import * as crypto from 'crypto';
+
 import {
   BadRequestException,
   Injectable,
@@ -18,6 +20,7 @@ const API_KEYS_REDIS_KEY = 'SZDevs:config:api_keys';
 export class CheckoutService {
   private readonly logger = new Logger(CheckoutService.name);
   private readonly envAccessToken: string;
+  private readonly webhookSecret: string;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -25,6 +28,60 @@ export class CheckoutService {
     config: ConfigService,
   ) {
     this.envAccessToken = config.get<string>('MP_ACCESS_TOKEN') ?? '';
+    this.webhookSecret =
+      config.get<string>('MP_WEBHOOK_SECRET') ??
+      config.get<string>('MERCADOPAGO_WEBHOOK_SECRET') ?? '';
+    if (!this.webhookSecret) {
+      this.logger.warn(
+        'MP_WEBHOOK_SECRET not set — webhook signature verification will be skipped (dev mode only)',
+      );
+    }
+  }
+
+  /**
+   * Verifies the Mercado Pago HMAC-SHA256 webhook signature.
+   * Returns true when the signature matches or when no secret is configured (dev mode).
+   * In production this will reject unsigned requests.
+   */
+  verifyWebhookSignature(
+    rawBody: Buffer,
+    headers: Record<string, string | string[] | undefined>,
+  ): boolean {
+    if (!this.webhookSecret) {
+      this.logger.warn('Skipping webhook signature check — MP_WEBHOOK_SECRET not configured');
+      return true;
+    }
+
+    const sigHeader = headers['x-signature'];
+    const requestId = headers['x-request-id'];
+    const dataId = headers['x-data-id'];
+
+    if (!sigHeader || !requestId) return false;
+
+    const sigStr = Array.isArray(sigHeader) ? sigHeader[0] : sigHeader;
+    const reqId = Array.isArray(requestId) ? requestId[0] : requestId;
+    const dId = Array.isArray(dataId) ? (dataId[0] ?? '') : (dataId ?? '');
+
+    if (!sigStr) return false;
+
+    const parts = Object.fromEntries(
+      sigStr.split(',').map((part) => part.split('=')),
+    ) as Record<string, string>;
+    const ts = parts['ts'];
+    const v1 = parts['v1'];
+    if (!ts || !v1) return false;
+
+    const manifest = `id:${dId};request-id:${reqId};ts:${ts};`;
+    const expected = crypto
+      .createHmac('sha256', this.webhookSecret)
+      .update(manifest)
+      .digest('hex');
+
+    try {
+      return crypto.timingSafeEqual(Buffer.from(v1), Buffer.from(expected));
+    } catch {
+      return false;
+    }
   }
 
   private async resolveAccessToken(): Promise<string> {
@@ -105,8 +162,26 @@ export class CheckoutService {
     if (dto.method === 'pix') {
       body.payment_method_id = 'pix';
     } else if (dto.method === 'card' && dto.card) {
+      const requestedInstallments = Number(dto.card.installments);
+
+      // Validate against active payment conditions configured in the system.
+      const condition = await this.prisma.paymentCondition.findFirst({
+        where: { installments: requestedInstallments, active: true },
+      });
+      if (!condition) {
+        const active = await this.prisma.paymentCondition.findMany({
+          where: { active: true },
+          orderBy: { installments: 'asc' },
+          select: { installments: true },
+        });
+        const allowed = active.map((c) => c.installments).join(', ');
+        throw new BadRequestException(
+          `Número de parcelas inválido. Opções disponíveis: ${allowed || 'nenhuma configurada'}`,
+        );
+      }
+
       body.token = dto.card.token;
-      body.installments = Number(dto.card.installments);
+      body.installments = requestedInstallments;
       body.payment_method_id = dto.card.paymentMethodId;
       body.issuer_id = dto.card.issuerId;
     } else {
@@ -196,24 +271,47 @@ export class CheckoutService {
     };
   }
 
-  /** Called by the webhook handler when MP confirms payment. */
-  async handleWebhookPayment(
-    mpPaymentId: string,
-    status: string,
-  ): Promise<void> {
+  /**
+   * Called by the webhook handler when MP notifies a payment event.
+   * MP webhooks do NOT carry the payment status in the body — we must
+   * fetch it from the MP API using the payment ID.
+   */
+  async handleWebhookPayment(mpPaymentId: string): Promise<void> {
+    const accessToken = await this.resolveAccessToken();
+    if (!accessToken) {
+      this.logger.warn(`handleWebhookPayment: no MP access token, skipping ${mpPaymentId}`);
+      return;
+    }
+
+    let mpStatus: string;
+    try {
+      const mpPayment = this.buildPayment(accessToken);
+      const result = await mpPayment.get({ id: Number(mpPaymentId) });
+      mpStatus = result.status ?? 'unknown';
+      this.logger.log(`MP payment ${mpPaymentId} status from API: ${mpStatus}`);
+    } catch (err) {
+      this.logger.error(
+        `handleWebhookPayment: failed to fetch payment ${mpPaymentId} from MP API: ${String(err)}`,
+      );
+      return;
+    }
+
     const payment = await this.prisma.payment.findFirst({
       where: { externalId: mpPaymentId },
     });
-    if (!payment) return;
+    if (!payment) {
+      this.logger.warn(`handleWebhookPayment: no local payment found for externalId ${mpPaymentId}`);
+      return;
+    }
 
     const mappedStatus =
-      status === 'approved' ? 'PAID' : status === 'rejected' ? 'FAILED' : 'PENDING';
+      mpStatus === 'approved' ? 'PAID' : mpStatus === 'rejected' ? 'FAILED' : 'PENDING';
     await this.prisma.payment.update({
       where: { id: payment.id },
       data: { status: mappedStatus as 'PAID' | 'FAILED' | 'PENDING' },
     });
 
-    if (status === 'approved' && payment.invoiceId) {
+    if (mpStatus === 'approved' && payment.invoiceId) {
       const invoice = await this.prisma.invoice.findUnique({
         where: { id: payment.invoiceId },
         select: { id: true, clientId: true, number: true, total: true, status: true },
@@ -252,7 +350,7 @@ export class CheckoutService {
         title: 'Pagamento confirmado',
         body: `Seu pagamento de ${brl} referente à fatura ${invoiceNumber} foi confirmado.`,
         type: 'invoice.paid',
-        link: `/financeiro/faturas`,
+        link: `/perfil/faturas`,
       }),
     );
   }

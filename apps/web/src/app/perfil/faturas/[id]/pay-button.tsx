@@ -5,6 +5,14 @@ import Script from 'next/script';
 
 import { checkoutInvoice, type PixPaymentResponse } from '@/lib/finance-api';
 
+interface PaymentCondition {
+  id: string;
+  name: string;
+  installments: number;
+  interestRate: number;
+  active: boolean;
+}
+
 /* ---------- MP types ---------- */
 declare global {
   interface Window {
@@ -258,21 +266,35 @@ export function PayButton({
   const [cardCvv, setCardCvv] = useState('');
   const [cardCpf, setCardCpf] = useState('');
   const [installments, setInstallments] = useState('1');
+  const [paymentConditions, setPaymentConditions] = useState<PaymentCondition[]>([]);
 
-  /* Fetch the runtime MP public key once */
+  /* Fetch the runtime MP public key and payment conditions once */
   useEffect(() => {
-    fetch('/api/payment/config')
+    void fetch('/api/payment/config')
       .then((r) => r.json() as Promise<{ mpPublicKey: string }>)
       .then(({ mpPublicKey: key }) => {
         const resolvedKey = key || SANDBOX_FALLBACK;
         setMpPublicKey(resolvedKey);
         setIsSandbox(resolvedKey.startsWith('TEST-'));
-        // Re-initialise SDK if already loaded
         if (typeof window !== 'undefined' && window.MercadoPago) {
           mpRef.current = new window.MercadoPago(resolvedKey, { locale: 'pt-BR' });
         }
       })
       .catch(() => { /* keep sandbox fallback */ });
+
+    void fetch('/api/payment/conditions', { cache: 'no-store' })
+      .then((r) => r.json() as Promise<PaymentCondition[]>)
+      .then((conditions) => {
+        if (Array.isArray(conditions) && conditions.length > 0) {
+          setPaymentConditions(conditions);
+          setInstallments(String(conditions[0]!.installments));
+        }
+      })
+      .catch(() => {
+        setPaymentConditions([
+          { id: 'f1', name: '1× sem juros', installments: 1, interestRate: 0, active: true },
+        ]);
+      });
   }, []);
 
   /* Initialise MP SDK */
@@ -690,9 +712,9 @@ export function PayButton({
                           onChange={(e) => setInstallments(e.target.value)}
                           className="w-full rounded-xl border border-white/10 bg-[#0d0d0f] px-2 py-3 text-sm text-white focus:border-violet-500/60 focus:outline-none"
                         >
-                          {[1, 2, 3, 6, 12].map((n) => (
-                            <option key={n} value={String(n)}>
-                              {n}×
+                          {paymentConditions.map((c) => (
+                            <option key={c.id} value={String(c.installments)}>
+                              {c.name || `${c.installments}×${c.interestRate > 0 ? ` (${(c.interestRate * 100).toFixed(2)}% a.m.)` : ' sem juros'}`}
                             </option>
                           ))}
                         </select>
