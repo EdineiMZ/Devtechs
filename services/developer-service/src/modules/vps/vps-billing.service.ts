@@ -175,7 +175,7 @@ export class VpsBillingService {
       title: 'Nova cobrança de VPS',
       body: `A mensalidade do VPS ${vps.label} foi gerada: R$ ${amount.toFixed(2)}`,
       type: 'vps.billing',
-      link: `/financeiro/faturas/${invoice.id}`,
+      link: `/perfil/faturas/${invoice.id}`,
     });
   }
 
@@ -229,7 +229,7 @@ export class VpsBillingService {
       title: 'VPS suspenso por inadimplência',
       body: `O VPS ${vps.label} foi suspenso. Pague a fatura pendente para reativar.`,
       type: 'vps.suspended',
-      link: `/financeiro/faturas/${overdueInvoice.id}`,
+      link: `/perfil/faturas/${overdueInvoice.id}`,
     });
   }
 

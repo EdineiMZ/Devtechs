@@ -40,18 +40,18 @@ export class CheckoutService {
 
   /**
    * Verifies the Mercado Pago HMAC-SHA256 webhook signature.
+   * Resolves the secret from Redis first (falls back to env var).
    * Returns true when the signature matches or when no secret is configured (dev mode).
-   * In production this will reject unsigned requests.
    */
-  verifyWebhookSignature(
+  async verifyWebhookSignature(
     rawBody: Buffer,
     headers: Record<string, string | string[] | undefined>,
-  ): boolean {
-    if (!this.webhookSecret) {
-      this.logger.warn('Skipping webhook signature check — MP_WEBHOOK_SECRET not configured');
+  ): Promise<boolean> {
+    const secret = await this.resolveWebhookSecret();
+    if (!secret) {
+      this.logger.warn('Skipping webhook signature check — MP_WEBHOOK_SECRET not configured in env or Redis');
       return true;
     }
-
     const sigHeader = headers['x-signature'];
     const requestId = headers['x-request-id'];
     const dataId = headers['x-data-id'];
@@ -65,7 +65,10 @@ export class CheckoutService {
     if (!sigStr) return false;
 
     const parts = Object.fromEntries(
-      sigStr.split(',').map((part) => part.split('=')),
+      sigStr.split(',').map((part) => {
+        const idx = part.indexOf('=');
+        return idx === -1 ? [part, ''] : [part.slice(0, idx), part.slice(idx + 1)];
+      }),
     ) as Record<string, string>;
     const ts = parts['ts'];
     const v1 = parts['v1'];
@@ -73,7 +76,7 @@ export class CheckoutService {
 
     const manifest = `id:${dId};request-id:${reqId};ts:${ts};`;
     const expected = crypto
-      .createHmac('sha256', this.webhookSecret)
+      .createHmac('sha256', secret)
       .update(manifest)
       .digest('hex');
 
@@ -82,6 +85,16 @@ export class CheckoutService {
     } catch {
       return false;
     }
+  }
+
+  private async resolveWebhookSecret(): Promise<string> {
+    try {
+      const keys = await this.redis.hgetall(API_KEYS_REDIS_KEY);
+      if (keys['MP_WEBHOOK_SECRET']) return keys['MP_WEBHOOK_SECRET'];
+    } catch {
+      // Redis unavailable — fall through to env
+    }
+    return this.webhookSecret;
   }
 
   private async resolveAccessToken(): Promise<string> {
@@ -308,7 +321,10 @@ export class CheckoutService {
       mpStatus === 'approved' ? 'PAID' : mpStatus === 'rejected' ? 'FAILED' : 'PENDING';
     await this.prisma.payment.update({
       where: { id: payment.id },
-      data: { status: mappedStatus as 'PAID' | 'FAILED' | 'PENDING' },
+      data: {
+        status: mappedStatus as 'PAID' | 'FAILED' | 'PENDING',
+        paidAt: mpStatus === 'approved' ? new Date() : undefined,
+      },
     });
 
     if (mpStatus === 'approved' && payment.invoiceId) {

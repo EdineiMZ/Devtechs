@@ -106,6 +106,7 @@ export default async function TicketDetailPage({
         currentUserId={user.id}
         isAgent={isAgent}
         ticketStatus={ticket.status}
+        initialTicketAttachments={ticket.attachments}
         initialMessages={ticket.messages.map((m) => ({
           id: m.id,
           ticketId: ticket.id,
@@ -113,10 +114,11 @@ export default async function TicketDetailPage({
           isInternal: m.isInternal,
           author: {
             id: m.author.id,
-            name: m.author.name ?? m.author.email,
+            name: m.author.name,
             email: m.author.email,
           },
           createdAt: m.createdAt,
+          attachments: m.attachments,
         }))}
       />
     </AppShell>

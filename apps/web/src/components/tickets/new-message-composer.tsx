@@ -6,36 +6,17 @@ import { useEffect, useRef, useState } from 'react';
 import { uploadAttachment } from '@/lib/support-api';
 
 export interface NewMessageComposerProps {
-  /** Called with the message body and the internal-note flag. */
   onSend: (body: string, isInternal: boolean) => void;
-  /** Called on every keystroke for the typing indicator. */
   onKeyStroke?: () => void;
-  /** Render the "internal note" toggle (agents only). */
   isAgent?: boolean;
-  /** Render-blocking flag — true when not yet joined to the room. */
   disabled?: boolean;
-  /**
-   * When true the composer is replaced by a "ticket finalizado" notice.
-   * No messages can be sent on a CLOSED ticket.
-   */
   isClosed?: boolean;
   placeholder?: string;
-  /** Ticket ID for file uploads. Required to enable file attachment. */
   ticketId?: string;
-  /** Access token for REST file upload. */
   accessToken?: string;
-  /** Called after a file is successfully uploaded. */
   onAttachmentUploaded?: (filename: string) => void;
 }
 
-/**
- * Resizing textarea + send button with optional file attachment support.
- * Keyboard contract:
- *   - Enter sends.
- *   - Shift+Enter inserts a newline.
- * Agents can toggle "internal note". Files can be attached via the
- * paperclip button and are uploaded via the REST endpoint independently.
- */
 export function NewMessageComposer({
   onSend,
   onKeyStroke,
@@ -51,11 +32,10 @@ export function NewMessageComposer({
   const [isInternal, setIsInternal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [privateUpload, setPrivateUpload] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Autosize: keep the textarea from sprouting scrollbars on every
-  // keystroke until it crosses ~6 lines.
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -80,10 +60,15 @@ export function NewMessageComposer({
     setUploading(true);
     setUploadError(null);
 
-    const result = await uploadAttachment(ticketId, file, accessToken);
+    const result = await uploadAttachment(
+      ticketId,
+      file,
+      accessToken,
+      undefined,
+      isAgent && privateUpload,
+    );
 
     setUploading(false);
-    // Reset so the same file can be re-selected after an error.
     if (fileInputRef.current) fileInputRef.current.value = '';
 
     if (result.ok) {
@@ -96,7 +81,6 @@ export function NewMessageComposer({
 
   const canAttach = Boolean(ticketId && accessToken) && !disabled && !isClosed;
 
-  // Closed tickets: replace the composer with an informative notice.
   if (isClosed) {
     return (
       <div className="flex items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/[0.04] px-4 py-4 text-sm text-ash">
@@ -200,6 +184,27 @@ export function NewMessageComposer({
                   </svg>
                 )}
               </button>
+              {/* Private toggle — only visible to agents */}
+              {isAgent ? (
+                <label
+                  className="inline-flex cursor-pointer items-center gap-1"
+                  title="Marcar como arquivo privado (só admins veem)"
+                >
+                  <input
+                    type="checkbox"
+                    checked={privateUpload}
+                    onChange={(e) => setPrivateUpload(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-white/8 accent-amber-500"
+                  />
+                  <span
+                    className={`select-none ${
+                      privateUpload ? 'text-amber-300' : 'text-ash'
+                    }`}
+                  >
+                    Privado
+                  </span>
+                </label>
+              ) : null}
             </>
           ) : null}
           {disabled ? (

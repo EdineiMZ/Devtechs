@@ -7,6 +7,7 @@ import { THROTTLERS } from './rate-limit.module';
 interface RequestWithUser {
   user?: CurrentUserPayload;
   ip?: string;
+  headers?: Record<string, string | string[] | undefined>;
 }
 
 /**
@@ -23,10 +24,15 @@ interface RequestWithUser {
 @Injectable()
 export class CustomThrottlerGuard extends ThrottlerGuard {
   /**
-   * Decide the bucket key for a given request. For the
-   * email-verification throttler we key on the authenticated user
-   * so rate limits are per-user (3/hour). For every other bucket
-   * we key on the IP, which is the default behavior.
+   * Decide the bucket key for a given request.
+   *
+   * - `email-verification`: keyed by authenticated user ID (3/hour per user).
+   * - All other buckets: keyed by the real client IP.
+   *
+   * The auth-service sits behind a Next.js proxy that sets `x-real-ip`
+   * to the browser's IP. We read that header first so throttle counters
+   * track individual clients, not the shared web-container IP
+   * (172.16.x.x) that would otherwise batch every user into one bucket.
    */
   protected override getTracker(
     req: Record<string, unknown>,
@@ -36,7 +42,9 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
       const user = (req as RequestWithUser).user;
       if (user?.id) return Promise.resolve(`user:${user.id}`);
     }
-    const ip = (req as RequestWithUser).ip;
-    return Promise.resolve(ip ?? 'unknown');
+    const r = req as RequestWithUser;
+    const realIp = r.headers?.['x-real-ip'];
+    const clientIp = Array.isArray(realIp) ? realIp[0] : realIp;
+    return Promise.resolve(clientIp ?? r.ip ?? 'unknown');
   }
 }

@@ -436,7 +436,7 @@ export class InvoicesService {
         title: 'Cobrança cancelada',
         body: `A fatura ${number} foi cancelada.${reason ? ` Motivo: ${reason}` : ''}`,
         type: 'invoice.cancelled',
-        link: `/financeiro/faturas`,
+        link: `/perfil/faturas`,
       }),
     );
   }
@@ -460,7 +460,7 @@ export class InvoicesService {
         title: 'Reembolso processado',
         body: `O valor de ${brl} referente à fatura ${number} foi estornado.${reason ? ` Motivo: ${reason}` : ''}`,
         type: 'invoice.refunded',
-        link: `/financeiro/faturas`,
+        link: `/perfil/faturas`,
       }),
     );
   }
@@ -487,7 +487,7 @@ export class InvoicesService {
         title: 'Nova cobrança gerada',
         body: `A fatura ${number} no valor de ${brl} foi emitida e aguarda pagamento.`,
         type: 'invoice.created',
-        link: `/financeiro/faturas/${invoiceId}`,
+        link: `/perfil/faturas/${invoiceId}`,
       }),
     );
   }

@@ -5,6 +5,9 @@ import Script from 'next/script';
 
 import { checkoutInvoice, type PixPaymentResponse } from '@/lib/finance-api';
 
+type InvoiceStatusResponse = { status: string };
+
+
 interface PaymentCondition {
   id: string;
   name: string;
@@ -267,6 +270,7 @@ export function PayButton({
   const [cardCpf, setCardCpf] = useState('');
   const [installments, setInstallments] = useState('1');
   const [paymentConditions, setPaymentConditions] = useState<PaymentCondition[]>([]);
+  const pixPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /* Fetch the runtime MP public key and payment conditions once */
   useEffect(() => {
@@ -276,9 +280,6 @@ export function PayButton({
         const resolvedKey = key || SANDBOX_FALLBACK;
         setMpPublicKey(resolvedKey);
         setIsSandbox(resolvedKey.startsWith('TEST-'));
-        if (typeof window !== 'undefined' && window.MercadoPago) {
-          mpRef.current = new window.MercadoPago(resolvedKey, { locale: 'pt-BR' });
-        }
       })
       .catch(() => { /* keep sandbox fallback */ });
 
@@ -297,16 +298,49 @@ export function PayButton({
       });
   }, []);
 
-  /* Initialise MP SDK */
+  /* (Re-)initialise MP SDK whenever the public key is resolved */
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.MercadoPago) {
+      mpRef.current = new window.MercadoPago(mpPublicKey, { locale: 'pt-BR' });
+    }
+  }, [mpPublicKey]);
+
+  /* Initialise MP SDK on Script load */
   function handleMpLoad(): void {
-    if (typeof window !== 'undefined' && window.MercadoPago && !mpRef.current) {
+    if (typeof window !== 'undefined' && window.MercadoPago) {
       mpRef.current = new window.MercadoPago(mpPublicKey, { locale: 'pt-BR' });
     }
   }
 
+  /* Poll invoice status every 5s while on the PIX QR step */
   useEffect(() => {
-    handleMpLoad();
-  });
+    if (step !== 'pix-qr') {
+      if (pixPollRef.current) {
+        clearInterval(pixPollRef.current);
+        pixPollRef.current = null;
+      }
+      return;
+    }
+    pixPollRef.current = setInterval(() => {
+      void fetch(`/api/payment/status/${encodeURIComponent(invoiceId)}`, { cache: 'no-store' })
+        .then((r) => r.json() as Promise<InvoiceStatusResponse>)
+        .then(({ status }) => {
+          if (status === 'PAID') {
+            clearInterval(pixPollRef.current!);
+            pixPollRef.current = null;
+            setStep('success');
+            setTimeout(() => window.location.reload(), 2500);
+          }
+        })
+        .catch(() => { /* silent retry */ });
+    }, 5000);
+    return () => {
+      if (pixPollRef.current) {
+        clearInterval(pixPollRef.current);
+        pixPollRef.current = null;
+      }
+    };
+  }, [step, invoiceId]);
 
   /* Close modal with Escape */
   const handleKeyDown = useCallback(
@@ -457,7 +491,7 @@ export function PayButton({
     <>
       <Script
         src="https://sdk.mercadopago.com/js/v2"
-        strategy="lazyOnload"
+        strategy="afterInteractive"
         onLoad={handleMpLoad}
       />
 
@@ -872,8 +906,9 @@ export function PayButton({
                     </div>
                   )}
 
-                  <div className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-400/80">
-                    Após o pagamento PIX, aguarde alguns minutos para a confirmação automática.
+                  <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-xs text-emerald-400/80">
+                    <div className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-emerald-400" />
+                    Verificando automaticamente o pagamento a cada 5 segundos…
                   </div>
 
                   <button

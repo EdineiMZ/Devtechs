@@ -100,6 +100,7 @@ export default async function AgentTicketDetail({
           currentUserId={user.id}
           isAgent={isAgent}
           ticketStatus={ticket.status}
+          initialTicketAttachments={ticket.attachments}
           initialMessages={ticket.messages.map((m) => ({
             id: m.id,
             ticketId: ticket.id,
@@ -111,6 +112,7 @@ export default async function AgentTicketDetail({
               email: m.author.email,
             },
             createdAt: m.createdAt,
+            attachments: m.attachments,
           }))}
         />
 

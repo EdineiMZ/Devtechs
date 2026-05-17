@@ -164,6 +164,12 @@ const PERMISSIONS: PermissionSeed[] = [
     description: 'Read support analytics and team performance reports',
     module: PermissionModule.SUPORTE,
   },
+  {
+    key: 'support:attachments:private',
+    name: 'Anexos privados',
+    description: 'Enviar e visualizar anexos marcados como privados em chamados (invisíveis para o cliente)',
+    module: PermissionModule.SUPORTE,
+  },
 
   // ------------------------------------------------------------------
   // Pagamentos

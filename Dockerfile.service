@@ -92,7 +92,8 @@ WORKDIR /app
 COPY --from=builder --chown=node:node /app /app
 
 USER root
-RUN mkdir -p /packages && \
+RUN mkdir -p /packages /app/uploads && \
+    chown node:node /app/uploads && \
     for pkg in $(ls /app/node_modules/@szdevs/ 2>/dev/null | sed "s/@szdevs\///"); do \
         ln -sf /app/node_modules/@szdevs/$pkg /packages/$pkg; \
     done

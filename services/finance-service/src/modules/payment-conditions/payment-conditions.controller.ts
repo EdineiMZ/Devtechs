@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
+import { Public } from '../../common/decorators/public.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { PermissionGuard } from '../../common/guards/permission.guard';
 
@@ -33,6 +34,7 @@ export class PaymentConditionsController {
 
   /** List all conditions; pass `?active=true` to return only active ones. */
   @Get()
+  @Public()
   @HttpCode(HttpStatus.OK)
   list(@Query('active') active?: string): Promise<unknown[]> {
     return this.service.list(active === 'true');

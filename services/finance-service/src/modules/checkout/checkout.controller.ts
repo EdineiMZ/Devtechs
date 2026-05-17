@@ -51,14 +51,14 @@ export class CheckoutController {
   @Post('webhook')
   @Public()
   @HttpCode(HttpStatus.OK)
-  webhook(@Req() req: RawBodyRequest<Request>): Promise<void> {
+  async webhook(@Req() req: RawBodyRequest<Request>): Promise<void> {
     const rawBody = req.rawBody;
     if (!rawBody) {
       throw new BadRequestException('Raw body not available');
     }
 
     const headers = req.headers as Record<string, string | string[] | undefined>;
-    const valid = this.checkout.verifyWebhookSignature(rawBody, headers);
+    const valid = await this.checkout.verifyWebhookSignature(rawBody, headers);
     if (!valid) {
       this.logger.warn('Mercado Pago webhook signature verification failed');
       throw new BadRequestException('Invalid webhook signature');

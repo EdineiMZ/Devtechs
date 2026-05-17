@@ -191,6 +191,7 @@ export function DeveloperAuthGate(): JSX.Element {
               <input
                 id="dev-password"
                 type="password"
+                autoComplete="new-password"
                 autoFocus
                 required
                 value={password}

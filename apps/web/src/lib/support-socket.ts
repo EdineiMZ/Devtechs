@@ -18,8 +18,16 @@ export interface SupportMessageDto {
   ticketId: string;
   body: string;
   isInternal: boolean;
-  author: { id: string; name: string; email: string };
+  author: { id: string; name: string | null; email: string };
   createdAt: string;
+  /** Populated from REST on initial load; empty for live socket messages. */
+  attachments?: Array<{
+    id: string;
+    filename: string;
+    size: number;
+    mimeType: string;
+    isPrivate?: boolean;
+  }>;
 }
 
 export interface TypingEntry {

@@ -247,7 +247,7 @@ importers:
         specifier: workspace:*
         version: link:../config
       prisma:
-        specifier: ^5.15.0
+        specifier: ^5.22.0
         version: 5.22.0
       tsx:
         specifier: ^4.11.0
