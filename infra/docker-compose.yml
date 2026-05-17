@@ -6,7 +6,7 @@ version: "3.9"
 # Profiles
 # --------
 #   (none)        postgres + redis + (optional) dev tooling. This is the
-#                 stack you want when developing â€” the apps and services
+#                 stack you want when developing â€" the apps and services
 #                 themselves run natively on the host with `pnpm dev`,
 #                 talking to containerized infra on localhost ports.
 #   prod          The full production topology: nginx + every service +
@@ -56,8 +56,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      SZDevs:
-        ipv4_address: 172.16.1.2
+      - SZDevs
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-SZDevs} -d ${POSTGRES_DB:-SZDevs}"]
       interval: 10s
@@ -75,8 +74,7 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      SZDevs:
-        ipv4_address: 172.16.1.3
+      - SZDevs
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -101,8 +99,7 @@ services:
       # deploy. Read-only mount.
       - ../docs:/usr/share/nginx/html/docs:ro
     networks:
-      SZDevs:
-        ipv4_address: 172.16.1.16
+      - SZDevs
     depends_on:
       - auth-service
       - rh-service
@@ -166,8 +163,7 @@ services:
     expose:
       - "3002"
     networks:
-      SZDevs:
-        ipv4_address: 172.16.1.13
+      - SZDevs
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3002/health"]
       interval: 30s
@@ -212,8 +208,7 @@ services:
     expose:
       - "3004"
     networks:
-      SZDevs:
-        ipv4_address: 172.16.1.9
+      - SZDevs
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3004/health"]
       interval: 30s
@@ -236,8 +231,7 @@ services:
     expose:
       - "3005"
     networks:
-      SZDevs:
-        ipv4_address: 172.16.1.12
+      - SZDevs
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3005/health"]
       interval: 30s
@@ -288,8 +282,7 @@ services:
     expose:
       - "3007"
     networks:
-      SZDevs:
-        ipv4_address: 172.16.1.4
+      - SZDevs
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3007/health"]
       interval: 30s
@@ -316,8 +309,7 @@ services:
     expose:
       - "3008"
     networks:
-      SZDevs:
-        ipv4_address: 172.16.1.6
+      - SZDevs
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3008/health"]
       interval: 30s
@@ -341,8 +333,7 @@ services:
     expose:
       - "3009"
     networks:
-      SZDevs:
-        ipv4_address: 172.16.1.8
+      - SZDevs
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3009/health"]
       interval: 30s
@@ -357,7 +348,7 @@ services:
       context: ..
       dockerfile: Dockerfile.service
       args:
-        PACKAGE_NAME: “@szdevs/developer-service”
+        PACKAGE_NAME: "@szdevs/developer-service"
     environment:
       PORT: 3010
       DATABASE_URL: ${DATABASE_URL}
@@ -367,18 +358,18 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       DOCKER_SOCKET_PATH: /var/run/docker.sock
     expose:
-      - “3010”
+      - "3010"
     # Mount the host Docker socket so dockerode can manage sibling
     # containers (start/stop/restart/logs). The developer-service
     # process must run as a user inside the host's `docker` group
-    # for this to work without root â€” see Dockerfile.
+    # for this to work without root â€" see Dockerfile.
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       SZDevs:
         ipv4_address: 172.16.1.5
     healthcheck:
-      test: [“CMD”, “wget”, “-q”, “--spider”, “http://127.0.0.1:3010/health”]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3010/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -444,8 +435,7 @@ services:
     expose:
       - "4006"
     networks:
-      SZDevs:
-        ipv4_address: 172.16.1.15
+      - SZDevs
     depends_on:
       payments-service:
         condition: service_healthy
