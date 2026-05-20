@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import { useState } from 'react';
+import { type ChangeEvent, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { Button, Input } from '@szdevs/ui';
@@ -562,10 +562,15 @@ export function LoginForm(): JSX.Element {
             autoComplete="one-time-code"
             placeholder="000000"
             maxLength={6}
+            autoFocus
             disabled={loading}
             hint="6 dígitos do seu aplicativo autenticador"
             error={errors.code?.message}
-            {...register('code')}
+            {...register('code', {
+              onChange: (e: ChangeEvent<HTMLInputElement>) => {
+                e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+              },
+            })}
           />
         ) : null}
 

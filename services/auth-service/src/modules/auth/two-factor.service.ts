@@ -381,6 +381,16 @@ export class TwoFactorService {
     try {
       secret = this.crypto.decrypt(user.twoFactorSecret);
     } catch {
+      this.logger.error(
+        `Failed to decrypt TOTP secret for user ${user.id}; check ENCRYPTION_KEY rotation`,
+      );
+      await this.auditService.log({
+        userId: user.id,
+        action: AuditAction.TWO_FA_FAILED,
+        module: 'AUTH',
+        meta: { reason: 'decrypt_error' },
+        ipAddress: ipAddress ?? null,
+      });
       throw new UnauthorizedException('Unable to verify 2FA code');
     }
 

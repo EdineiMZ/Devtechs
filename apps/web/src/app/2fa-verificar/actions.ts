@@ -38,10 +38,10 @@ export async function verifyTwoFaSession(
 
   if (!res.ok) {
     const data = res.data as Record<string, unknown>;
-    const msg =
-      typeof data.message === 'string'
-        ? data.message
-        : 'Código incorreto. Tente novamente.';
+    const raw = typeof data.message === 'string' ? data.message : '';
+    const msg = raw.toLowerCase().includes('decrypt') || raw.toLowerCase().includes('unable')
+      ? 'Erro interno ao verificar o código. Entre em contato com o suporte.'
+      : 'Código incorreto ou expirado. Verifique o código e tente novamente.';
     return { ok: false, message: msg };
   }
 

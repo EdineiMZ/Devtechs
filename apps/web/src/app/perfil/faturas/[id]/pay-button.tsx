@@ -256,6 +256,7 @@ export function PayButton({
   const [pix, setPix] = useState<PixPaymentResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [checkingPix, setCheckingPix] = useState(false);
   const [mpPublicKey, setMpPublicKey] = useState<string>(SANDBOX_FALLBACK);
   const [isSandbox, setIsSandbox] = useState(true);
   const mpRef = useRef<MpInstance | null>(null);
@@ -404,6 +405,25 @@ export function PayButton({
     await navigator.clipboard.writeText(pix.pixQrCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
+  }
+
+  async function manualCheckPix(): Promise<void> {
+    setCheckingPix(true);
+    try {
+      const res = await fetch(`/api/payment/check/${encodeURIComponent(invoiceId)}`, {
+        method: 'POST',
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { status: string };
+        if (data.status === 'PAID') {
+          setStep('success');
+          setTimeout(() => window.location.reload(), 2500);
+        }
+      }
+    } finally {
+      setCheckingPix(false);
+    }
   }
 
   /* ---- Card ---- */
@@ -911,13 +931,23 @@ export function PayButton({
                     Verificando automaticamente o pagamento a cada 5 segundos…
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setStep('choose')}
-                    className="mt-4 w-full rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm text-white/60 transition hover:bg-white/10 hover:text-white"
-                  >
-                    ← Escolher outro método
-                  </button>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void manualCheckPix()}
+                      disabled={checkingPix}
+                      className="flex-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 py-2.5 text-sm font-medium text-emerald-400 transition hover:bg-emerald-500/20 disabled:opacity-50"
+                    >
+                      {checkingPix ? 'Verificando…' : 'Já paguei'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStep('choose')}
+                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white/60 transition hover:bg-white/10 hover:text-white"
+                    >
+                      ←
+                    </button>
+                  </div>
                 </div>
               )}
 
