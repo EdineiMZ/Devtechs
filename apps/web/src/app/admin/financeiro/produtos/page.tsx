@@ -15,26 +15,26 @@ export default async function ProdutosPage(): Promise<JSX.Element> {
   if (!session?.user) redirect('/login?callbackUrl=/admin/financeiro/produtos');
   const user = session.user;
   if (!session.accessToken) redirect('/login');
-  if (!user.permissions.includes('finance:reports:view')) redirect('/perfil');
+  if (!user.permissions.includes('finance:products:view')) redirect('/perfil');
 
   const res = await listBillingProducts();
   const products: BillingProduct[] = res.ok ? (res.data as BillingProduct[]) : [];
 
   return (
     <AppShell
-      pathname="/admin/financeiro"
+      pathname="/admin/financeiro/produtos"
       navItems={ADMIN_NAV_ITEMS}
       permissions={user.permissions}
       breadcrumbs={[
         { label: 'Admin', href: '/admin' },
         { label: 'Financeiro', href: '/admin/financeiro' },
-        { label: 'Catálogo de Produtos' },
+        { label: 'Produtos & Serviços' },
       ]}
     >
       <ProductsClient
         products={products}
         accessToken={session.accessToken}
-        canManage={user.permissions.includes('finance:invoices:issue')}
+        canManage={user.permissions.includes('finance:products:manage')}
       />
     </AppShell>
   );

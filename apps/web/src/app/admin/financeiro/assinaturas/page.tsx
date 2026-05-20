@@ -17,7 +17,7 @@ export default async function AssinaturasPage(): Promise<JSX.Element> {
   if (!session?.user) redirect('/login?callbackUrl=/admin/financeiro/assinaturas');
   const user = session.user;
   if (!session.accessToken) redirect('/login?callbackUrl=/admin/financeiro/assinaturas');
-  if (!user.permissions.includes('finance:reports:view')) redirect('/perfil');
+  if (!user.permissions.includes('finance:subscriptions:view')) redirect('/perfil');
 
   const [subsRes, clientsRes] = await Promise.all([
     listRecurringSubscriptions(),
@@ -31,7 +31,7 @@ export default async function AssinaturasPage(): Promise<JSX.Element> {
 
   return (
     <AppShell
-      pathname="/admin/financeiro"
+      pathname="/admin/financeiro/assinaturas"
       navItems={ADMIN_NAV_ITEMS}
       permissions={user.permissions}
       breadcrumbs={[
@@ -44,7 +44,8 @@ export default async function AssinaturasPage(): Promise<JSX.Element> {
         subscriptions={subscriptions}
         clients={clients}
         accessToken={session.accessToken}
-        canManage={user.permissions.includes('finance:invoices:issue')}
+        canManage={user.permissions.includes('finance:subscriptions:manage')}
+        canCancel={user.permissions.includes('finance:subscriptions:cancel')}
       />
     </AppShell>
   );

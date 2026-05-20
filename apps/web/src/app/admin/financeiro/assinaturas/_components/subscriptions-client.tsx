@@ -28,6 +28,7 @@ interface Props {
   clients: InvoiceClient[];
   accessToken: string;
   canManage: boolean;
+  canCancel?: boolean;
 }
 
 interface CancelModalState {
@@ -36,7 +37,7 @@ interface CancelModalState {
   immediate: boolean;
 }
 
-export function SubscriptionsClient({ subscriptions, clients: _clients, accessToken, canManage }: Props) {
+export function SubscriptionsClient({ subscriptions, clients: _clients, accessToken, canManage, canCancel }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -180,7 +181,7 @@ export function SubscriptionsClient({ subscriptions, clients: _clients, accessTo
                         >
                           Detalhes
                         </Link>
-                        {canManage && sub.status === 'ACTIVE' && (
+                        {(canCancel ?? canManage) && sub.status === 'ACTIVE' && (
                           <button
                             onClick={() => setCancelModal({ subscription: sub, reason: '', immediate: false })}
                             className="text-xs text-red-600 dark:text-red-400 hover:underline"

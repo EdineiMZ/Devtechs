@@ -19,7 +19,7 @@ export default async function AssinaturaDetailPage({
   if (!session?.user) redirect('/login');
   const user = session.user;
   if (!session.accessToken) redirect('/login');
-  if (!user.permissions.includes('finance:reports:view')) redirect('/perfil');
+  if (!user.permissions.includes('finance:subscriptions:view')) redirect('/perfil');
 
   const res = await getRecurringSubscription(params.id);
   const sub: RecurringSubscription | null = res.ok ? (res.data as RecurringSubscription) : null;
@@ -44,7 +44,8 @@ export default async function AssinaturaDetailPage({
         <SubscriptionDetailClient
           subscription={sub}
           accessToken={session.accessToken}
-          canManage={user.permissions.includes('finance:invoices:issue')}
+          canManage={user.permissions.includes('finance:subscriptions:manage')}
+          canCancel={user.permissions.includes('finance:subscriptions:cancel')}
         />
       )}
     </AppShell>

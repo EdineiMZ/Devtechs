@@ -27,9 +27,10 @@ interface Props {
   subscription: RecurringSubscription;
   accessToken: string;
   canManage: boolean;
+  canCancel?: boolean;
 }
 
-export function SubscriptionDetailClient({ subscription: sub, accessToken, canManage }: Props) {
+export function SubscriptionDetailClient({ subscription: sub, accessToken, canManage, canCancel }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [cancelModal, setCancelModal] = useState(false);
@@ -76,7 +77,7 @@ export function SubscriptionDetailClient({ subscription: sub, accessToken, canMa
           <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${st.className}`}>
             {st.label}
           </span>
-          {canManage && (sub.status === 'ACTIVE' || sub.status === 'SUSPENDED') && (
+          {(canCancel ?? canManage) && (sub.status === 'ACTIVE' || sub.status === 'SUSPENDED') && (
             <button
               onClick={() => setCancelModal(true)}
               className="rounded-lg border border-red-300 dark:border-red-700 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"

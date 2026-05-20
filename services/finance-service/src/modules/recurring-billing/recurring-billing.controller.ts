@@ -39,7 +39,7 @@ export class RecurringBillingController {
   // ────────────────────────────── Products ──────────────────────────────
 
   @Get('products')
-  @RequirePermission('finance:reports:view')
+  @RequirePermission('finance:products:view')
   listProducts(
     @Query('active') active?: string,
     @Query('licensed') licensed?: string,
@@ -51,20 +51,20 @@ export class RecurringBillingController {
   }
 
   @Get('products/:id')
-  @RequirePermission('finance:reports:view')
+  @RequirePermission('finance:products:view')
   getProduct(@Param('id') id: string): Promise<unknown> {
     return this.products.get(id);
   }
 
   @Post('products')
-  @RequirePermission('finance:invoices:issue')
+  @RequirePermission('finance:products:manage')
   @HttpCode(HttpStatus.CREATED)
   createProduct(@Body() dto: CreateBillingProductDto): Promise<unknown> {
     return this.products.create(dto);
   }
 
   @Put('products/:id')
-  @RequirePermission('finance:invoices:issue')
+  @RequirePermission('finance:products:manage')
   updateProduct(
     @Param('id') id: string,
     @Body() dto: UpdateBillingProductDto,
@@ -73,7 +73,7 @@ export class RecurringBillingController {
   }
 
   @Delete('products/:id')
-  @RequirePermission('finance:invoices:issue')
+  @RequirePermission('finance:products:manage')
   @HttpCode(HttpStatus.OK)
   deactivateProduct(@Param('id') id: string): Promise<{ message: string; id: string }> {
     return this.products.deactivate(id);
@@ -82,7 +82,7 @@ export class RecurringBillingController {
   // ─────────────────────────── Subscriptions ────────────────────────────
 
   @Get('subscriptions')
-  @RequirePermission('finance:reports:view')
+  @RequirePermission('finance:subscriptions:view')
   listSubscriptions(
     @Query('clientId') clientId?: string,
     @Query('status') status?: string,
@@ -91,13 +91,13 @@ export class RecurringBillingController {
   }
 
   @Get('subscriptions/:id')
-  @RequirePermission('finance:reports:view')
+  @RequirePermission('finance:subscriptions:view')
   getSubscription(@Param('id') id: string): Promise<unknown> {
     return this.subscriptions.get(id);
   }
 
   @Post('subscriptions')
-  @RequirePermission('finance:invoices:issue')
+  @RequirePermission('finance:subscriptions:manage')
   @HttpCode(HttpStatus.CREATED)
   createSubscription(
     @Body() dto: CreateRecurringSubscriptionDto,
@@ -107,7 +107,7 @@ export class RecurringBillingController {
   }
 
   @Put('subscriptions/:id')
-  @RequirePermission('finance:invoices:issue')
+  @RequirePermission('finance:subscriptions:manage')
   updateSubscription(
     @Param('id') id: string,
     @Body() dto: UpdateRecurringSubscriptionDto,
@@ -116,7 +116,7 @@ export class RecurringBillingController {
   }
 
   @Post('subscriptions/:id/cancel')
-  @RequirePermission('finance:invoices:issue')
+  @RequirePermission('finance:subscriptions:cancel')
   @HttpCode(HttpStatus.OK)
   cancelSubscription(
     @Param('id') id: string,
@@ -128,7 +128,7 @@ export class RecurringBillingController {
 
   /** Manual trigger for the billing cycle (staff only, for testing/recovery). */
   @Post('billing-cycle/run')
-  @RequirePermission('finance:invoices:issue')
+  @RequirePermission('finance:subscriptions:billing:run')
   @HttpCode(HttpStatus.OK)
   runBillingCycle(): Promise<{ generated: number; errors: number }> {
     return this.subscriptions.runBillingCycle();
