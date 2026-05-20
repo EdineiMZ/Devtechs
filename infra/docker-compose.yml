@@ -141,6 +141,8 @@ services:
     networks:
       SZDevs:
         ipv4_address: 172.16.1.7
+        aliases:
+          - auth-service
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3001/health"]
       interval: 30s
@@ -186,6 +188,8 @@ services:
     networks:
       SZDevs:
         ipv4_address: 172.16.1.14
+        aliases:
+          - finance-service
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3003/health"]
       interval: 30s
@@ -258,6 +262,8 @@ services:
     networks:
       SZDevs:
         ipv4_address: 172.16.1.10
+        aliases:
+          - support-service
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3006/health"]
       interval: 30s
@@ -368,6 +374,8 @@ services:
     networks:
       SZDevs:
         ipv4_address: 172.16.1.5
+        aliases:
+          - developer-service
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3010/health"]
       interval: 30s
