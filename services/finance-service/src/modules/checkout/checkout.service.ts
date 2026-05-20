@@ -152,14 +152,12 @@ export class CheckoutService {
         pixQrCode: dto.method === 'pix' ? '00020126580014br.gov.bcb.pix' : null,
         pixQrCodeBase64: dto.method === 'pix' ? 'stub-base64-qr' : null,
       };
-      // Auto-update invoice status to PAID in stub mode for card
-      if (dto.method === 'card') {
-        await this.prisma.invoice.update({
-          where: { id: invoiceId },
-          data: { status: 'PAID', paidAt: new Date() },
-        });
-        void this.notifyPaymentReceived(invoice.clientId, invoice.number, amount);
-      }
+      // Auto-confirm invoice in stub mode for both card and PIX
+      await this.prisma.invoice.update({
+        where: { id: invoiceId },
+        data: { status: 'PAID', paidAt: new Date() },
+      });
+      void this.notifyPaymentReceived(invoice.clientId, invoice.number, amount);
       return stubResult;
     }
 
@@ -282,6 +280,43 @@ export class CheckoutService {
       method: dto.method,
       ...metadata,
     };
+  }
+
+  /**
+   * Pulls the latest Mercado Pago payment status for an invoice and
+   * updates local records. Designed for the PIX manual check button as
+   * a fallback when the webhook hasn't fired yet.
+   */
+  async checkPaymentStatus(invoiceId: string, requesterId: string): Promise<{ status: string }> {
+    const invoice = await this.prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      select: { id: true, clientId: true, status: true },
+    });
+    if (!invoice) throw new NotFoundException('Invoice not found');
+    if (invoice.clientId !== requesterId) {
+      throw new BadRequestException('You can only check your own invoices');
+    }
+    if (invoice.status === 'PAID') {
+      return { status: 'PAID' };
+    }
+
+    const payment = await this.prisma.payment.findFirst({
+      where: { invoiceId },
+      orderBy: { createdAt: 'desc' },
+      select: { externalId: true },
+    });
+
+    if (!payment?.externalId || payment.externalId.startsWith('stub-')) {
+      return { status: invoice.status };
+    }
+
+    await this.handleWebhookPayment(payment.externalId);
+
+    const updated = await this.prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      select: { status: true },
+    });
+    return { status: updated?.status ?? invoice.status };
   }
 
   /**

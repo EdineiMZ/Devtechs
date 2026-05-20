@@ -44,6 +44,20 @@ export class CheckoutController {
   }
 
   /**
+   * POST /checkout/invoice/:id/check-payment
+   * Manual trigger to pull the latest payment status from Mercado Pago.
+   * Used by the PIX QR view as a fallback when the automatic webhook hasn't fired.
+   */
+  @Post('invoice/:id/check-payment')
+  @HttpCode(HttpStatus.OK)
+  async checkPayment(
+    @Param('id') invoiceId: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ): Promise<{ status: string }> {
+    return this.checkout.checkPaymentStatus(invoiceId, user.id);
+  }
+
+  /**
    * POST /checkout/webhook
    * Mercado Pago webhook endpoint — receives payment status updates.
    * HMAC-SHA256 signature is verified before processing.

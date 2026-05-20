@@ -296,7 +296,7 @@ export class RecurringSubscriptionsService {
     const adminUser = await this.prisma.user.findFirst({
       where: {
         roles: {
-          some: { role: { name: { in: ['ADMIN', 'FINANCEIRO'] } } },
+          some: { role: { name: 'admin' } },
         },
         status: 'ACTIVE',
       },
