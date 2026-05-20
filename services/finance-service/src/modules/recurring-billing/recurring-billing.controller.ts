@@ -40,8 +40,14 @@ export class RecurringBillingController {
 
   @Get('products')
   @RequirePermission('finance:reports:view')
-  listProducts(@Query('active') active?: string): Promise<unknown[]> {
-    return this.products.list(active === 'true');
+  listProducts(
+    @Query('active') active?: string,
+    @Query('licensed') licensed?: string,
+  ): Promise<unknown[]> {
+    return this.products.list({
+      activeOnly: active === 'true',
+      licensedOnly: licensed === 'true',
+    });
   }
 
   @Get('products/:id')

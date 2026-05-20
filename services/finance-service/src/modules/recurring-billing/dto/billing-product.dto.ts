@@ -1,6 +1,5 @@
 import {
   IsBoolean,
-  IsDecimal,
   IsOptional,
   IsString,
   MaxLength,
@@ -36,6 +35,10 @@ export class CreateBillingProductDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isLicensed?: boolean;
 }
 
 export class UpdateBillingProductDto {
@@ -67,4 +70,8 @@ export class UpdateBillingProductDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isLicensed?: boolean;
 }

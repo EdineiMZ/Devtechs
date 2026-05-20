@@ -14,9 +14,12 @@ import type {
 export class BillingProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(activeOnly = false): Promise<unknown[]> {
+  async list(filters?: { activeOnly?: boolean; licensedOnly?: boolean }): Promise<unknown[]> {
+    const where: Record<string, unknown> = {};
+    if (filters?.activeOnly) where['isActive'] = true;
+    if (filters?.licensedOnly) where['isLicensed'] = true;
     const rows = await this.prisma.billingProduct.findMany({
-      where: activeOnly ? { isActive: true } : undefined,
+      where: Object.keys(where).length > 0 ? where : undefined,
       orderBy: [{ category: 'asc' }, { name: 'asc' }],
     });
     return rows.map(this.serialize);
@@ -43,6 +46,7 @@ export class BillingProductsService {
         unit: dto.unit ?? 'mês',
         category: dto.category ?? null,
         isActive: dto.isActive ?? true,
+        isLicensed: dto.isLicensed ?? false,
       },
     });
     return this.serialize(row);
@@ -70,6 +74,7 @@ export class BillingProductsService {
         unit: dto.unit,
         category: dto.category,
         isActive: dto.isActive,
+        isLicensed: dto.isLicensed,
       },
     });
     return this.serialize(row);
@@ -93,6 +98,7 @@ export class BillingProductsService {
     unit: string;
     category: string | null;
     isActive: boolean;
+    isLicensed: boolean;
     createdAt: Date;
     updatedAt: Date;
   }): unknown {
@@ -104,6 +110,7 @@ export class BillingProductsService {
       unit: row.unit,
       category: row.category,
       isActive: row.isActive,
+      isLicensed: row.isLicensed,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

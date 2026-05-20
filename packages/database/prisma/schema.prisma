@@ -1211,6 +1211,8 @@ model BillingProduct {
   /// Free-form category tag for grouping, e.g. "VPS", "Hospedagem".
   category    String?
   isActive    Boolean  @default(true)
+  /// When true, this product appears in /admin/developer/licencas for license management.
+  isLicensed  Boolean  @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1218,6 +1220,7 @@ model BillingProduct {
   subscriptionItems RecurringSubscriptionItem[]
 
   @@index([isActive])
+  @@index([isLicensed])
   @@map("billing_products")
 }
 

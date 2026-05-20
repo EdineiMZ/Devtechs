@@ -25,6 +25,7 @@ const EMPTY_FORM: FormState = {
   unit: 'mês',
   category: null,
   isActive: true,
+  isLicensed: false,
 };
 
 function formatBRL(v: number): string {
@@ -64,6 +65,7 @@ export function ProductsClient({ products, accessToken, canManage }: Props) {
       unit: product.unit,
       category: product.category,
       isActive: product.isActive,
+      isLicensed: product.isLicensed,
     });
     setError(null);
     setShowForm(true);
@@ -173,11 +175,18 @@ export function ProductsClient({ products, accessToken, canManage }: Props) {
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                     {product.name}
                   </h3>
-                  {product.category && (
-                    <span className="inline-block mt-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded px-2 py-0.5">
-                      {product.category}
-                    </span>
-                  )}
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {product.category && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded px-2 py-0.5">
+                        {product.category}
+                      </span>
+                    )}
+                    {product.isLicensed && (
+                      <span className="text-xs text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 rounded px-2 py-0.5">
+                        Licenciado
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {!product.isActive && (
                   <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">Inativo</span>
@@ -286,6 +295,19 @@ export function ProductsClient({ products, accessToken, canManage }: Props) {
                   className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.isLicensed}
+                  onChange={(e) => setForm({ ...form, isLicensed: e.target.checked })}
+                  className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  Produto licenciado{' '}
+                  <span className="text-xs text-gray-500">(aparece em Developer → Licenças)</span>
+                </span>
+              </label>
 
               {editingId && (
                 <label className="flex items-center gap-3 cursor-pointer">

@@ -9,6 +9,7 @@ export interface BillingProduct {
   unit: string;
   category: string | null;
   isActive: boolean;
+  isLicensed: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -94,10 +95,13 @@ async function request<T>(
 // ─────────────────────────── Products ────────────────────────────
 
 export async function listBillingProducts(
-  params?: { activeOnly?: boolean; accessToken?: string },
+  params?: { activeOnly?: boolean; licensedOnly?: boolean; accessToken?: string },
 ): Promise<ApiResult<BillingProduct[]>> {
-  const qs = params?.activeOnly ? '?active=true' : '';
-  return request<BillingProduct[]>(`/recurring-billing/products${qs}`, {
+  const qs = new URLSearchParams();
+  if (params?.activeOnly) qs.set('active', 'true');
+  if (params?.licensedOnly) qs.set('licensed', 'true');
+  const qsStr = qs.toString() ? `?${qs.toString()}` : '';
+  return request<BillingProduct[]>(`/recurring-billing/products${qsStr}`, {
     accessToken: params?.accessToken,
   });
 }

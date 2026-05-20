@@ -10,10 +10,12 @@ import {
   type ActivationToken,
   type LicensedProduct,
 } from '@/lib/license-api';
+import { listBillingProducts, type BillingProduct } from '@/lib/recurring-billing-api';
 
 import { GenerateTokenDialog } from './_components/generate-token-dialog';
 import { ProductsSection } from './_components/products-section';
 import { TokensSection } from './_components/tokens-section';
+import { BillingProductsSection } from './_components/billing-products-section';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,10 +50,11 @@ export default async function LicensasPage(): Promise<JSX.Element> {
 
   if (!canView) redirect('/perfil');
 
-  const [productsRes, tokensRes, usersRes] = await Promise.all([
+  const [productsRes, tokensRes, usersRes, billingProductsRes] = await Promise.all([
     listProducts(session.accessToken).catch(() => ({ ok: false, data: [] })),
     listTokens({}, session.accessToken).catch(() => ({ ok: false, data: [] })),
     listUsers({ pageSize: 500 }).catch(() => ({ ok: false, data: { items: [] } })),
+    listBillingProducts({ licensedOnly: true, accessToken: session.accessToken }).catch(() => ({ ok: false, data: [] })),
   ]);
 
   const products: LicensedProduct[] =
@@ -62,6 +65,11 @@ export default async function LicensasPage(): Promise<JSX.Element> {
   const tokens: ActivationToken[] =
     tokensRes.ok && Array.isArray(tokensRes.data)
       ? (tokensRes.data as ActivationToken[])
+      : [];
+
+  const billingProducts: BillingProduct[] =
+    billingProductsRes.ok && Array.isArray(billingProductsRes.data)
+      ? (billingProductsRes.data as BillingProduct[])
       : [];
 
   const clients = usersRes.ok
@@ -76,6 +84,11 @@ export default async function LicensasPage(): Promise<JSX.Element> {
   const serviceError =
     !productsRes.ok || !tokensRes.ok
       ? 'license-service pode estar indisponível. Alguns dados podem não aparecer.'
+      : null;
+
+  const billingServiceError =
+    !billingProductsRes.ok
+      ? 'finance-service indisponível — produtos licenciados não carregados.'
       : null;
 
   return (
@@ -110,13 +123,24 @@ export default async function LicensasPage(): Promise<JSX.Element> {
 
       {/* Stats */}
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Produtos" value={products.length} />
+        <StatCard label="Produtos (licença)" value={products.length} />
         <StatCard label="Tokens ativos" value={activeCount} accent="text-emerald-400" />
         <StatCard label="Revogados" value={revokedCount} accent="text-destructive" />
         <StatCard label="Expirados" value={expiredCount} accent="text-ash" />
       </div>
 
-      {/* Products */}
+      {/* Billing Products (licensed) */}
+      {billingServiceError ? (
+        <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-400">
+          ⚠ {billingServiceError}
+        </div>
+      ) : (
+        <div className="mb-10">
+          <BillingProductsSection products={billingProducts} />
+        </div>
+      )}
+
+      {/* Licensed Products (license-service) */}
       <div className="mb-10">
         <ProductsSection products={products} canCreate={canCreateProduct} />
       </div>
