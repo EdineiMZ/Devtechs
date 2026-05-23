@@ -20,11 +20,11 @@ export default async function NotificacoesPage(): Promise<JSX.Element> {
     : {
         email: {
           invoice: true, login: false, accountChange: true,
-          support: true,  rh: true,    system: true,
+          support: true,  rh: true,    system: true, subscription: true,
         },
         inapp: {
           invoice: true, login: true,  accountChange: true,
-          support: true,  rh: true,    system: true,
+          support: true,  rh: true,    system: true, subscription: true,
         },
       };
 

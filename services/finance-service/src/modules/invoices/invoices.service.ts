@@ -5,7 +5,9 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '@szdevs/database';
+import MercadoPagoConfig, { Payment } from 'mercadopago';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
@@ -16,14 +18,20 @@ import type {
   UpdateInvoiceDto,
 } from './dto/invoice.dto';
 
+const API_KEYS_REDIS_KEY = 'SZDevs:config:api_keys';
+
 @Injectable()
 export class InvoicesService {
   private readonly logger = new Logger(InvoicesService.name);
+  private readonly envMpToken: string;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-  ) {}
+    config: ConfigService,
+  ) {
+    this.envMpToken = config.get<string>('MP_ACCESS_TOKEN') ?? '';
+  }
 
   // ===================================================================
   // CRUD
@@ -110,7 +118,7 @@ export class InvoicesService {
   async update(id: string, dto: UpdateInvoiceDto): Promise<unknown> {
     const existing = await this.prisma.invoice.findUnique({
       where: { id },
-      select: { id: true, status: true },
+      select: { id: true, number: true, total: true, status: true, clientId: true },
     });
     if (!existing) throw new NotFoundException('Invoice not found');
     if (existing.status !== 'DRAFT' && dto.items) {
@@ -161,6 +169,16 @@ export class InvoicesService {
       await tx.invoice.update({ where: { id }, data });
     });
 
+    // If manually marked as PAID by staff, register the income transaction.
+    if (dto.status === 'PAID' && existing.status !== 'PAID') {
+      void this.recordPaymentTransaction(
+        id,
+        existing.number,
+        Number(existing.total),
+        existing.clientId,
+      );
+    }
+
     return this.get(id);
   }
 
@@ -199,6 +217,7 @@ export class InvoicesService {
       `Invoice ${id} cancelled by ${staffId}. Reason: ${reason ?? 'none'}`,
     );
     void this.notifyInvoiceCancelled(existing.clientId, existing.number, reason);
+    void this.cancelMpPaymentsForInvoice(id);
     return this.get(id);
   }
 
@@ -219,11 +238,14 @@ export class InvoicesService {
       },
     });
     if (!existing) throw new NotFoundException('Invoice not found');
-    if (existing.status === 'REFUNDED') {
-      throw new BadRequestException('Invoice is already refunded');
-    }
-    if (existing.status === 'CANCELLED') {
-      throw new BadRequestException('Invoice is already cancelled');
+    if (existing.status !== 'PAID') {
+      throw new BadRequestException(
+        existing.status === 'REFUNDED'
+          ? 'Invoice is already refunded'
+          : existing.status === 'CANCELLED'
+            ? 'Invoice is already cancelled'
+            : 'Only PAID invoices can be refunded',
+      );
     }
 
     await this.prisma.invoice.update({
@@ -233,6 +255,12 @@ export class InvoicesService {
         refundedAt: new Date(),
         cancelReason: reason ?? null,
       },
+    });
+
+    // Cancel the income transaction that was created when the invoice was paid.
+    await this.prisma.financeTransaction.updateMany({
+      where: { invoiceId: id },
+      data: { status: 'CANCELLED' },
     });
 
     this.logger.log(
@@ -421,6 +449,90 @@ export class InvoicesService {
       updatedAt: row.updatedAt.toISOString(),
     };
   }
+
+  // ===================================================================
+  // Finance transaction helpers
+  // ===================================================================
+
+  /** Creates (or idempotently updates) the INCOME FinanceTransaction tied to a paid invoice. */
+  async recordPaymentTransaction(
+    invoiceId: string,
+    invoiceNumber: string,
+    total: number,
+    createdBy: string,
+  ): Promise<void> {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    try {
+      await this.prisma.financeTransaction.upsert({
+        where: { invoiceId },
+        create: {
+          invoiceId,
+          type: 'INCOME',
+          category: 'SERVICE',
+          description: `Fatura #${invoiceNumber}`,
+          amount: total,
+          date: today,
+          status: 'PAID',
+          paidAt: new Date(),
+          createdBy,
+        },
+        update: {
+          status: 'PAID',
+          paidAt: new Date(),
+        },
+      });
+    } catch (err) {
+      this.logger.error(`Failed to record payment transaction for invoice ${invoiceId}: ${String(err)}`);
+    }
+  }
+
+  /** Resolves the MP access token (Redis → env fallback). */
+  private async resolveMpToken(): Promise<string> {
+    try {
+      const keys = await this.redis.hgetall(API_KEYS_REDIS_KEY);
+      if (keys['MP_ACCESS_TOKEN']) return keys['MP_ACCESS_TOKEN'];
+    } catch {
+      // Redis unavailable — fall through to env
+    }
+    return this.envMpToken;
+  }
+
+  /** Cancels all PENDING Mercado Pago payments linked to an invoice. */
+  private async cancelMpPaymentsForInvoice(invoiceId: string): Promise<void> {
+    const pending = await this.prisma.payment.findMany({
+      where: { invoiceId, status: 'PENDING', externalId: { not: null } },
+      select: { id: true, externalId: true },
+    });
+    if (pending.length === 0) return;
+
+    const token = await this.resolveMpToken();
+    if (!token) {
+      this.logger.warn(`No MP access token — skipping payment cancellation for invoice ${invoiceId}`);
+      return;
+    }
+
+    const mpPayment = new Payment(new MercadoPagoConfig({ accessToken: token }));
+    for (const p of pending) {
+      try {
+        await mpPayment.update({
+          id: Number(p.externalId),
+          updatePaymentRequest: { status: 'cancelled' },
+        });
+        await this.prisma.payment.update({
+          where: { id: p.id },
+          data: { status: 'FAILED' },
+        });
+        this.logger.log(`Cancelled MP payment ${p.externalId} for invoice ${invoiceId}`);
+      } catch (err) {
+        this.logger.warn(`Could not cancel MP payment ${p.externalId}: ${String(err)}`);
+      }
+    }
+  }
+
+  // ===================================================================
+  // Notification helpers
+  // ===================================================================
 
   private async notifyInvoiceCancelled(
     clientId: string,

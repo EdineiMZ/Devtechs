@@ -1050,6 +1050,10 @@ model FinanceTransaction {
   attachmentKey String?
   notes         String?
   createdBy     String
+  /// Set when this transaction was auto-generated from an Invoice
+  /// payment. Unique so only one transaction exists per invoice
+  /// (prevents duplicates if the webhook fires twice).
+  invoiceId     String?   @unique
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

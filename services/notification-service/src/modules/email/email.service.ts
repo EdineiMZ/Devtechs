@@ -19,6 +19,9 @@ export const EMAIL_TEMPLATES = [
   'payment-due',
   'welcome',
   'password-reset',
+  'subscription-created',
+  'subscription-cancelled',
+  'subscription-payment-due',
 ] as const;
 export type EmailTemplate = (typeof EMAIL_TEMPLATES)[number];
 

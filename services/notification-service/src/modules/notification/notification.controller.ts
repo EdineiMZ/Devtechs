@@ -30,6 +30,7 @@ export interface NotificationPreferences {
     support:        boolean;
     rh:             boolean;
     system:         boolean;
+    subscription:   boolean;
   };
   inapp: {
     invoice:        boolean;
@@ -38,6 +39,7 @@ export interface NotificationPreferences {
     support:        boolean;
     rh:             boolean;
     system:         boolean;
+    subscription:   boolean;
   };
 }
 
@@ -48,6 +50,7 @@ class ChannelPrefsDto {
   @IsOptional() @IsBoolean() support?:       boolean;
   @IsOptional() @IsBoolean() rh?:            boolean;
   @IsOptional() @IsBoolean() system?:        boolean;
+  @IsOptional() @IsBoolean() subscription?:  boolean;
 }
 
 class UpdatePrefsDto {
@@ -62,12 +65,14 @@ const DEFAULTS: Record<string, boolean> = {
   'email.support':       true,
   'email.rh':            true,
   'email.system':        true,
+  'email.subscription':  true,
   'inapp.invoice':       true,
   'inapp.login':         true,
   'inapp.accountChange': true,
   'inapp.support':       true,
   'inapp.rh':            true,
   'inapp.system':        true,
+  'inapp.subscription':  true,
 };
 
 function prefsKey(userId: string): string {
@@ -87,6 +92,7 @@ function buildPrefsFromHash(hash: Record<string, string>): NotificationPreferenc
       support:       bool('email.support'),
       rh:            bool('email.rh'),
       system:        bool('email.system'),
+      subscription:  bool('email.subscription'),
     },
     inapp: {
       invoice:       bool('inapp.invoice'),
@@ -95,6 +101,7 @@ function buildPrefsFromHash(hash: Record<string, string>): NotificationPreferenc
       support:       bool('inapp.support'),
       rh:            bool('inapp.rh'),
       system:        bool('inapp.system'),
+      subscription:  bool('inapp.subscription'),
     },
   };
 }

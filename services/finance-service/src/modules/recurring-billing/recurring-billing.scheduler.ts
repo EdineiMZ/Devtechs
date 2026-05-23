@@ -22,4 +22,16 @@ export class RecurringBillingScheduler {
       this.logger.error(`Recurring billing cycle failed: ${String(err)}`);
     }
   }
+
+  /** Runs daily at 07:00 to remind clients whose billing date is 3 days away. */
+  @Cron(CronExpression.EVERY_DAY_AT_7AM)
+  async handlePaymentDueReminders(): Promise<void> {
+    this.logger.log('Checking for upcoming billing reminders...');
+    try {
+      const result = await this.service.sendPaymentDueReminders();
+      this.logger.log(`Payment due reminders: ${result.sent} sent`);
+    } catch (err) {
+      this.logger.error(`Payment due reminders failed: ${String(err)}`);
+    }
+  }
 }

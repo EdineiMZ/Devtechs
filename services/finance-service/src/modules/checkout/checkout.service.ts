@@ -158,6 +158,7 @@ export class CheckoutService {
         data: { status: 'PAID', paidAt: new Date() },
       });
       void this.notifyPaymentReceived(invoice.clientId, invoice.number, amount);
+      void this.recordPaymentTransaction(invoiceId, invoice.number, amount, invoice.clientId);
       return stubResult;
     }
 
@@ -377,7 +378,45 @@ export class CheckoutService {
           invoice.number,
           Number(invoice.total),
         );
+        void this.recordPaymentTransaction(
+          invoice.id,
+          invoice.number,
+          Number(invoice.total),
+          invoice.clientId,
+        );
       }
+    }
+  }
+
+  private async recordPaymentTransaction(
+    invoiceId: string,
+    invoiceNumber: string,
+    total: number,
+    createdBy: string,
+  ): Promise<void> {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    try {
+      await this.prisma.financeTransaction.upsert({
+        where: { invoiceId },
+        create: {
+          invoiceId,
+          type: 'INCOME',
+          category: 'SERVICE',
+          description: `Fatura #${invoiceNumber}`,
+          amount: total,
+          date: today,
+          status: 'PAID',
+          paidAt: new Date(),
+          createdBy,
+        },
+        update: {
+          status: 'PAID',
+          paidAt: new Date(),
+        },
+      });
+    } catch (err) {
+      this.logger.error(`Failed to record payment transaction for invoice ${invoiceId}: ${String(err)}`);
     }
   }
 

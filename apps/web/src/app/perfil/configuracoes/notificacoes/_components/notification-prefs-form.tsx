@@ -18,6 +18,11 @@ const PREF_ROWS: PrefRow[] = [
     desc:  'Nova cobrança gerada, fatura paga ou vencida.',
   },
   {
+    key:   'subscription',
+    label: 'Assinaturas',
+    desc:  'Assinatura confirmada, próxima cobrança e cancelamento.',
+  },
+  {
     key:   'login',
     label: 'Login na conta',
     desc:  'Acesso detectado à sua conta (novo dispositivo ou localização).',

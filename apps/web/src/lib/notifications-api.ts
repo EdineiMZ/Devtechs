@@ -167,6 +167,7 @@ export interface NotificationPreferences {
     support:       boolean;
     rh:            boolean;
     system:        boolean;
+    subscription:  boolean;
   };
   inapp: {
     invoice:       boolean;
@@ -175,6 +176,7 @@ export interface NotificationPreferences {
     support:       boolean;
     rh:            boolean;
     system:        boolean;
+    subscription:  boolean;
   };
 }
 

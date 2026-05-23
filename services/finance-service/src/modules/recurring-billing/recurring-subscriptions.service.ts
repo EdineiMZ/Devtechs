@@ -96,7 +96,32 @@ export class RecurringSubscriptionsService {
     this.logger.log(
       `RecurringSubscription ${row.id} created for client ${client.name} by staff ${staffId}`,
     );
-    return this.serialize(row);
+
+    const serialized = this.serialize(row) as Record<string, unknown>;
+    const monthlyTotal = (serialized['monthlyTotal'] as number) ?? 0;
+    const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(monthlyTotal);
+    const nextBillingDate = (serialized['nextBillingDate'] as string ?? '').split('T')[0] ?? '';
+    const nextBillingFormatted = nextBillingDate
+      ? new Date(nextBillingDate + 'T00:00:00').toLocaleDateString('pt-BR')
+      : '';
+
+    await this.redis.publish(
+      'finance:subscription:created',
+      JSON.stringify({
+        publishedAt: new Date().toISOString(),
+        payload: {
+          subscriptionId: row.id,
+          clientId: client.id,
+          clientName: client.name,
+          clientEmail: client.email,
+          subscriptionName: dto.name,
+          monthlyTotal: brl,
+          nextBillingDate: nextBillingFormatted,
+        },
+      }),
+    );
+
+    return serialized;
   }
 
   async update(id: string, dto: UpdateRecurringSubscriptionDto): Promise<unknown> {
@@ -174,17 +199,21 @@ export class RecurringSubscriptionsService {
     );
     const endsAtFormatted = endsAt.toLocaleDateString('pt-BR');
 
-    // Notify client
+    // Notify client via dedicated subscription channel (checks user preferences)
     await this.redis.publish(
-      'notifications:inapp',
+      'finance:subscription:cancelled',
       JSON.stringify({
         publishedAt: new Date().toISOString(),
         payload: {
-          userId: sub.clientId,
-          title: 'Assinatura cancelada',
-          body: `Sua assinatura "${sub.name}" (${brl}/mês) foi cancelada. Acesso mantido até ${endsAtFormatted}.`,
-          type: 'subscription.cancelled',
-          link: `/perfil`,
+          subscriptionId: id,
+          clientId: sub.clientId,
+          clientName: sub.client.name,
+          clientEmail: sub.client.email,
+          subscriptionName: sub.name,
+          monthlyTotal: brl,
+          endsAt: endsAtFormatted,
+          immediate: dto.immediate ?? false,
+          cancelReason: dto.reason ?? null,
         },
       }),
     );
@@ -230,6 +259,57 @@ export class RecurringSubscriptionsService {
       `RecurringSubscription ${id} cancelled by staff ${staffId}. endsAt=${endsAt.toISOString()}`,
     );
     return this.serialize(updated);
+  }
+
+  /**
+   * Called by the daily scheduler to notify clients whose subscription
+   * billing date is exactly 3 days away.
+   */
+  async sendPaymentDueReminders(): Promise<{ sent: number }> {
+    const target = new Date();
+    target.setDate(target.getDate() + 3);
+    target.setHours(0, 0, 0, 0);
+    const targetEnd = new Date(target);
+    targetEnd.setHours(23, 59, 59, 999);
+
+    const due = await this.prisma.recurringSubscription.findMany({
+      where: {
+        status: 'ACTIVE',
+        nextBillingDate: { gte: target, lte: targetEnd },
+      },
+      include: {
+        client: { select: { id: true, name: true, email: true } },
+        items: true,
+      },
+    });
+
+    let sent = 0;
+    for (const sub of due) {
+      const monthlyTotal = sub.items.reduce((sum, item) => sum + Number(item.total), 0);
+      const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(monthlyTotal);
+      const dateFormatted = sub.nextBillingDate.toLocaleDateString('pt-BR');
+
+      await this.redis.publish(
+        'finance:subscription:payment:due',
+        JSON.stringify({
+          publishedAt: new Date().toISOString(),
+          payload: {
+            subscriptionId: sub.id,
+            clientId: sub.clientId,
+            clientName: sub.client.name,
+            clientEmail: sub.client.email,
+            subscriptionName: sub.name,
+            monthlyTotal: brl,
+            nextBillingDate: dateFormatted,
+            daysUntilDue: 3,
+          },
+        }),
+      );
+      sent++;
+    }
+
+    this.logger.log(`Payment due reminders sent: ${sent}`);
+    return { sent };
   }
 
   /**

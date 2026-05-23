@@ -21,6 +21,15 @@ const CHANNEL_INAPP = 'notifications:inapp';
 const CHANNEL_VACATION_APPROVED = 'rh:vacation:approved';
 const CHANNEL_VACATION_REJECTED = 'rh:vacation:rejected';
 const CHANNEL_FINANCE_ALERTS = 'finance:alerts';
+const CHANNEL_SUBSCRIPTION_CREATED = 'finance:subscription:created';
+const CHANNEL_SUBSCRIPTION_CANCELLED = 'finance:subscription:cancelled';
+const CHANNEL_SUBSCRIPTION_PAYMENT_DUE = 'finance:subscription:payment:due';
+
+/** Default preference values for the subscription category. */
+const SUBSCRIPTION_PREF_DEFAULTS: Record<string, boolean> = {
+  'email.subscription': true,
+  'inapp.subscription': true,
+};
 
 /** Envelope shape published by the other services. */
 interface PubSubEnvelope<T = unknown> {
@@ -45,6 +54,39 @@ interface InappEventPayload {
   body: string;
   type: string;
   link?: string | null;
+}
+
+interface SubscriptionCreatedPayload {
+  subscriptionId: string;
+  clientId: string;
+  clientName: string;
+  clientEmail: string;
+  subscriptionName: string;
+  monthlyTotal: string;
+  nextBillingDate: string;
+}
+
+interface SubscriptionCancelledPayload {
+  subscriptionId: string;
+  clientId: string;
+  clientName: string;
+  clientEmail: string;
+  subscriptionName: string;
+  monthlyTotal: string;
+  endsAt: string;
+  immediate: boolean;
+  cancelReason?: string | null;
+}
+
+interface SubscriptionPaymentDuePayload {
+  subscriptionId: string;
+  clientId: string;
+  clientName: string;
+  clientEmail: string;
+  subscriptionName: string;
+  monthlyTotal: string;
+  nextBillingDate: string;
+  daysUntilDue: number;
 }
 
 interface VacationEventPayload {
@@ -97,6 +139,9 @@ export class RedisSubscriber implements OnModuleInit, OnModuleDestroy {
       CHANNEL_VACATION_APPROVED,
       CHANNEL_VACATION_REJECTED,
       CHANNEL_FINANCE_ALERTS,
+      CHANNEL_SUBSCRIPTION_CREATED,
+      CHANNEL_SUBSCRIPTION_CANCELLED,
+      CHANNEL_SUBSCRIPTION_PAYMENT_DUE,
     ];
     await this.subscriber.subscribe(...channels);
     this.logger.log(`Subscribed to ${channels.length} channel(s): ${channels.join(', ')}`);
@@ -140,6 +185,12 @@ export class RedisSubscriber implements OnModuleInit, OnModuleDestroy {
         return this.handleVacationRejected(envelope.payload as VacationEventPayload);
       case CHANNEL_FINANCE_ALERTS:
         return this.handleFinanceAlert(envelope.payload);
+      case CHANNEL_SUBSCRIPTION_CREATED:
+        return this.handleSubscriptionCreated(envelope.payload as SubscriptionCreatedPayload);
+      case CHANNEL_SUBSCRIPTION_CANCELLED:
+        return this.handleSubscriptionCancelled(envelope.payload as SubscriptionCancelledPayload);
+      case CHANNEL_SUBSCRIPTION_PAYMENT_DUE:
+        return this.handleSubscriptionPaymentDue(envelope.payload as SubscriptionPaymentDuePayload);
       default:
         this.logger.warn(`No handler for channel ${channel}`);
     }
@@ -231,6 +282,115 @@ export class RedisSubscriber implements OnModuleInit, OnModuleDestroy {
       type: 'vacation.rejected',
       link: `/rh/ferias/${payload.vacationId}`,
     });
+  }
+
+  // -------------------------------------------------------------------
+  // Subscription domain — preference-aware fan-out
+  // -------------------------------------------------------------------
+
+  private async getSubscriptionPref(userId: string, channel: 'email' | 'inapp'): Promise<boolean> {
+    const hash = await this.redis.hgetall(`SZDevs:notif:prefs:${userId}`);
+    const field = `${channel}.subscription`;
+    if (field in hash) return hash[field] === 'true';
+    return SUBSCRIPTION_PREF_DEFAULTS[field] ?? true;
+  }
+
+  private async handleSubscriptionCreated(payload: SubscriptionCreatedPayload): Promise<void> {
+    const [wantsEmail, wantsInapp] = await Promise.all([
+      this.getSubscriptionPref(payload.clientId, 'email'),
+      this.getSubscriptionPref(payload.clientId, 'inapp'),
+    ]);
+
+    if (wantsEmail) {
+      await this.enqueueEmail({
+        to: payload.clientEmail,
+        subject: `Assinatura "${payload.subscriptionName}" confirmada — SZDevs`,
+        template: 'subscription-created',
+        from: 'Financeiro SZDevs <financeiro@szdevs.com>',
+        data: {
+          clientName: payload.clientName,
+          subscriptionName: payload.subscriptionName,
+          monthlyTotal: payload.monthlyTotal,
+          nextBillingDate: payload.nextBillingDate,
+        },
+      });
+    }
+
+    if (wantsInapp) {
+      await this.enqueueInapp({
+        userId: payload.clientId,
+        title: 'Assinatura confirmada',
+        body: `"${payload.subscriptionName}" (${payload.monthlyTotal}/mês) está ativa. Próxima cobrança: ${payload.nextBillingDate}.`,
+        type: 'subscription.created',
+        link: '/perfil/faturas',
+      });
+    }
+  }
+
+  private async handleSubscriptionCancelled(payload: SubscriptionCancelledPayload): Promise<void> {
+    const [wantsEmail, wantsInapp] = await Promise.all([
+      this.getSubscriptionPref(payload.clientId, 'email'),
+      this.getSubscriptionPref(payload.clientId, 'inapp'),
+    ]);
+
+    if (wantsEmail) {
+      await this.enqueueEmail({
+        to: payload.clientEmail,
+        subject: `Assinatura "${payload.subscriptionName}" cancelada — SZDevs`,
+        template: 'subscription-cancelled',
+        from: 'Financeiro SZDevs <financeiro@szdevs.com>',
+        data: {
+          clientName: payload.clientName,
+          subscriptionName: payload.subscriptionName,
+          monthlyTotal: payload.monthlyTotal,
+          endsAt: payload.endsAt,
+          cancelReason: payload.cancelReason ?? null,
+        },
+      });
+    }
+
+    if (wantsInapp) {
+      await this.enqueueInapp({
+        userId: payload.clientId,
+        title: 'Assinatura cancelada',
+        body: `"${payload.subscriptionName}" (${payload.monthlyTotal}/mês) foi cancelada. Acesso até ${payload.endsAt}.`,
+        type: 'subscription.cancelled',
+        link: '/perfil/faturas',
+      });
+    }
+  }
+
+  private async handleSubscriptionPaymentDue(payload: SubscriptionPaymentDuePayload): Promise<void> {
+    const [wantsEmail, wantsInapp] = await Promise.all([
+      this.getSubscriptionPref(payload.clientId, 'email'),
+      this.getSubscriptionPref(payload.clientId, 'inapp'),
+    ]);
+
+    if (wantsEmail) {
+      await this.enqueueEmail({
+        to: payload.clientEmail,
+        subject: `Sua cobrança de "${payload.subscriptionName}" se aproxima — SZDevs`,
+        template: 'subscription-payment-due',
+        from: 'Financeiro SZDevs <financeiro@szdevs.com>',
+        data: {
+          clientName: payload.clientName,
+          subscriptionName: payload.subscriptionName,
+          monthlyTotal: payload.monthlyTotal,
+          nextBillingDate: payload.nextBillingDate,
+          daysUntilDue: payload.daysUntilDue,
+        },
+      });
+    }
+
+    if (wantsInapp) {
+      await this.enqueueInapp({
+        userId: payload.clientId,
+        title: 'Cobrança em breve',
+        body: `"${payload.subscriptionName}" — ${payload.monthlyTotal} será cobrado em ${payload.daysUntilDue} dias (${payload.nextBillingDate}).`,
+        type: 'subscription.payment_due',
+        link: '/perfil/faturas',
+      });
+    }
   }
 
   private async handleFinanceAlert(payload: unknown): Promise<void> {
