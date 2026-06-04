@@ -36,6 +36,7 @@ enum PermissionModule {
   LICENCAS
   DEVOPS
   DEVELOPER
+  INTEGRATIONS
 }
 
 enum OAuthProvider {
@@ -1994,6 +1995,88 @@ model ClientVPS {
   @@index([projectId])
   @@index([addedAt])
   @@map("client_vps")
+}
+
+// =============================================================================
+// API Keys module — public API gateway key management.
+//
+// Migration name: add_api_keys_module
+//
+// Design notes:
+//   - The full secret is shown exactly once at creation time and never stored
+//     in plaintext. Only the bcrypt hash (keyHash) is persisted so a DB dump
+//     doesn't expose live keys.
+//   - keyPrefix stores "szd_live_XXXXXXXX" for O(1) lookup before bcrypt compare.
+//   - Permissions are a plain string array (e.g. ["tickets:read","projects:write"]).
+//   - IP binding supports three modes: DISABLED (skip), AUTO (learn first IP),
+//     MANUAL (explicit allowlist in boundIps).
+//   - rateLimit is a JSON object { perMinute, perHour, perDay } storing the limits.
+//   - ApiKeyAuditLog captures every REQUEST_OK, BLOCKED_IP, RATE_LIMITED event.
+// =============================================================================
+
+enum ApiKeyStatus {
+  ACTIVE
+  REVOKED
+  SUSPENDED
+  EXPIRED
+}
+
+enum IpBindingMode {
+  DISABLED
+  AUTO
+  MANUAL
+}
+
+model ApiKey {
+  id          String        @id @default(cuid())
+  name        String
+  /// First segment of the key: "szd_live_XXXXXXXX". Used for O(1) DB lookup.
+  keyPrefix   String        @unique
+  /// bcrypt hash of the 32-char secret. Never stored in plaintext.
+  keyHash     String
+  status      ApiKeyStatus  @default(ACTIVE)
+  /// String array of permission scopes, e.g. ["tickets:read","projects:write"].
+  permissions String[]
+  ipBinding   IpBindingMode @default(DISABLED)
+  /// IP addresses allowed when ipBinding = MANUAL, or the auto-learned IP
+  /// when ipBinding = AUTO. Empty when DISABLED or before first AUTO use.
+  boundIps    String[]
+  /// Rate-limit config stored as JSON: { perMinute: Int, perHour: Int, perDay: Int }
+  rateLimit   Json
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+  lastUsedIp  String?
+  totalRequests Int         @default(0)
+  revokeReason  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  auditLogs ApiKeyAuditLog[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("api_keys")
+}
+
+model ApiKeyAuditLog {
+  id       String @id @default(cuid())
+  apiKeyId String
+  /// Event type: REQUEST_OK | BLOCKED_IP | RATE_LIMITED | KEY_CREATED | KEY_REVOKED
+  event    String
+  ip       String?
+  endpoint String?
+  /// HTTP status code for REQUEST_OK events.
+  statusCode Int?
+  meta     Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  apiKey ApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+
+  @@index([apiKeyId])
+  @@index([event])
+  @@index([createdAt])
+  @@map("api_key_audit_logs")
 }
 
 // =============================================================================

@@ -48,7 +48,7 @@ const devMultiplier = isDev ? 100 : 1;
       { name: THROTTLERS.DEFAULT, limit: 100 * devMultiplier, ttl: 60_000 },
       { name: THROTTLERS.REGISTER, limit: 10 * devMultiplier, ttl: 60 * 60_000 },
       { name: THROTTLERS.EMAIL_VERIFICATION, limit: 3 * devMultiplier, ttl: 60 * 60_000 },
-      { name: THROTTLERS.TWO_FA_VERIFY, limit: 10 * devMultiplier, ttl: 5 * 60_000 },
+      { name: THROTTLERS.TWO_FA_VERIFY, limit: 20 * devMultiplier, ttl: 10 * 60_000 },
     ]),
   ],
   exports: [ThrottlerModule],

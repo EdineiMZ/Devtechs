@@ -27,6 +27,8 @@ out
 **/.turbo
 .swc
 **/.swc
+*.tsbuildinfo
+**/*.tsbuildinfo
 coverage
 **/coverage
 *.tsbuildinfo

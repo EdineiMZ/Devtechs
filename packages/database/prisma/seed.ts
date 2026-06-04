@@ -300,6 +300,16 @@ const PERMISSIONS: PermissionSeed[] = [
   },
 
   // ------------------------------------------------------------------
+  // Integrações (API keys — api.szdevs.com gateway)
+  // ------------------------------------------------------------------
+  {
+    key: 'integrations:manage',
+    name: 'Gerenciar integrações',
+    description: 'Criar, editar, revogar e monitorar chaves de API (api.szdevs.com)',
+    module: PermissionModule.INTEGRATIONS,
+  },
+
+  // ------------------------------------------------------------------
   // Developer (super-user / platform-level)
   // ------------------------------------------------------------------
   {

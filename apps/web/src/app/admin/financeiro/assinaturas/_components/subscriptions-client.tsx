@@ -9,10 +9,10 @@ import type { InvoiceClient } from '@/lib/finance-api';
 import { cancelRecurringSubscription } from '@/lib/recurring-billing-api';
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  ACTIVE: { label: 'Ativa', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
-  CANCELLED: { label: 'Cancelada', className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' },
-  EXPIRED: { label: 'Expirada', className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
-  SUSPENDED: { label: 'Suspensa', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' },
+  ACTIVE:    { label: 'Ativa',      className: 'bg-emerald-500/15 text-emerald-400' },
+  CANCELLED: { label: 'Cancelada',  className: 'bg-red-500/15 text-red-400' },
+  EXPIRED:   { label: 'Expirada',   className: 'bg-white/[0.06] text-ash' },
+  SUSPENDED: { label: 'Suspensa',   className: 'bg-amber-500/15 text-amber-400' },
 };
 
 function formatBRL(value: number): string {
@@ -72,17 +72,17 @@ export function SubscriptionsClient({ subscriptions, clients: _clients, accessTo
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+          <h1 className="text-2xl font-semibold text-foreground">
             Assinaturas Recorrentes
           </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-sm text-ash">
             Gerencie cobranças recorrentes dos clientes
           </p>
         </div>
         {canManage && (
           <Link
             href="/admin/financeiro/assinaturas/nova"
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -96,71 +96,70 @@ export function SubscriptionsClient({ subscriptions, clients: _clients, accessTo
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {(['ALL', 'ACTIVE', 'CANCELLED', 'SUSPENDED'] as const).map((s) => {
           const count = s === 'ALL' ? subscriptions.length : subscriptions.filter((x) => x.status === s).length;
-          const info = s === 'ALL' ? { label: 'Total', className: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' } : STATUS_LABELS[s]!;
           return (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`rounded-lg border p-4 text-left transition-all ${statusFilter === s ? 'ring-2 ring-blue-500' : ''} ${s === 'ALL' ? info.className : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}
+              className={`rounded-xl border p-4 text-left transition-all bg-white/[0.02] border-white/8 ${statusFilter === s ? 'ring-1 ring-primary' : ''}`}
             >
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{count}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{s === 'ALL' ? 'Total' : (STATUS_LABELS[s]?.label ?? s)}</p>
+              <p className="text-2xl font-bold text-foreground">{count}</p>
+              <p className="text-sm text-ash">{s === 'ALL' ? 'Total' : (STATUS_LABELS[s]?.label ?? s)}</p>
             </button>
           );
         })}
       </div>
 
       {statusFilter === 'ACTIVE' && (
-        <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 px-4 py-3">
-          <span className="text-sm font-medium text-green-800 dark:text-green-300">
+        <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-4 py-3">
+          <span className="text-sm font-medium text-emerald-400">
             Receita recorrente ativa: {formatBRL(totalMonthly)}/mês
           </span>
         </div>
       )}
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <div className="overflow-hidden rounded-xl border border-white/8 bg-white/[0.02]">
         {filtered.length === 0 ? (
-          <div className="p-12 text-center text-sm text-gray-500 dark:text-gray-400">
+          <div className="p-12 text-center text-sm text-ash">
             Nenhuma assinatura encontrada
           </div>
         ) : (
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-900/50">
+          <table className="min-w-full divide-y divide-white/8">
+            <thead className="bg-white/[0.04]">
               <tr>
                 {['Cliente', 'Assinatura', 'Valor/mês', 'Dia cobr.', 'Próx. cobrança', 'Status', 'Ações'].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  <th key={h} className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-ash">
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+            <tbody className="divide-y divide-white/8">
               {filtered.map((sub) => {
                 const st = STATUS_LABELS[sub.status] ?? { label: sub.status, className: '' };
                 return (
-                  <tr key={sub.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                  <tr key={sub.id} className="hover:bg-white/[0.04] transition-colors">
                     <td className="px-4 py-3">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      <div className="text-sm font-medium text-foreground">
                         {sub.client?.name ?? '—'}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className="text-xs text-ash">
                         {sub.client?.email}
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="text-sm text-gray-900 dark:text-white">{sub.name}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className="text-sm text-foreground">{sub.name}</div>
+                      <div className="text-xs text-ash">
                         {sub.items.length} {sub.items.length === 1 ? 'item' : 'itens'}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                    <td className="px-4 py-3 text-sm font-medium text-foreground">
                       {formatBRL(sub.monthlyTotal)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                    <td className="px-4 py-3 text-sm text-ash">
                       Dia {sub.billingDay}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                    <td className="px-4 py-3 text-sm text-ash">
                       {sub.status === 'ACTIVE' ? formatDate(sub.nextBillingDate) : '—'}
                     </td>
                     <td className="px-4 py-3">
@@ -168,7 +167,7 @@ export function SubscriptionsClient({ subscriptions, clients: _clients, accessTo
                         {st.label}
                       </span>
                       {sub.status === 'CANCELLED' && sub.endsAt && (
-                        <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        <div className="mt-0.5 text-xs text-ash">
                           Encerra {formatDate(sub.endsAt.split('T')[0] ?? sub.endsAt)}
                         </div>
                       )}
@@ -177,14 +176,14 @@ export function SubscriptionsClient({ subscriptions, clients: _clients, accessTo
                       <div className="flex items-center gap-2">
                         <Link
                           href={`/admin/financeiro/assinaturas/${sub.id}`}
-                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                          className="text-xs text-primary hover:underline"
                         >
                           Detalhes
                         </Link>
                         {(canCancel ?? canManage) && sub.status === 'ACTIVE' && (
                           <button
                             onClick={() => setCancelModal({ subscription: sub, reason: '', immediate: false })}
-                            className="text-xs text-red-600 dark:text-red-400 hover:underline"
+                            className="text-xs text-red-400 hover:underline"
                           >
                             Cancelar
                           </button>
@@ -201,25 +200,25 @@ export function SubscriptionsClient({ subscriptions, clients: _clients, accessTo
 
       {/* Cancel Modal */}
       {cancelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/8 bg-background p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-foreground mb-1">
               Cancelar assinatura
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              <strong>{cancelModal.subscription.name}</strong> — {cancelModal.subscription.client?.name}
+            <p className="text-sm text-ash mb-4">
+              <strong className="text-foreground">{cancelModal.subscription.name}</strong> — {cancelModal.subscription.client?.name}
             </p>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-ash mb-1">
                   Motivo do cancelamento (opcional)
                 </label>
                 <textarea
                   rows={3}
                   value={cancelModal.reason}
                   onChange={(e) => setCancelModal({ ...cancelModal, reason: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-white/8 bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                   placeholder="Ex: Cliente solicitou cancelamento..."
                 />
               </div>
@@ -229,13 +228,13 @@ export function SubscriptionsClient({ subscriptions, clients: _clients, accessTo
                   type="checkbox"
                   checked={cancelModal.immediate}
                   onChange={(e) => setCancelModal({ ...cancelModal, immediate: e.target.checked })}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="h-4 w-4 rounded border-white/30 text-primary focus:ring-primary"
                 />
                 <div>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  <span className="text-sm font-medium text-foreground">
                     Cancelamento imediato
                   </span>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-ash">
                     {cancelModal.immediate
                       ? 'Acesso encerrado agora.'
                       : `Acesso mantido até ${formatDate(cancelModal.subscription.nextBillingDate)} (próxima cobrança).`}
@@ -245,7 +244,7 @@ export function SubscriptionsClient({ subscriptions, clients: _clients, accessTo
             </div>
 
             {cancelError && (
-              <div className="mt-3 rounded-lg bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+              <div className="mt-3 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400">
                 {cancelError}
               </div>
             )}
@@ -253,7 +252,7 @@ export function SubscriptionsClient({ subscriptions, clients: _clients, accessTo
             <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={() => { setCancelModal(null); setCancelError(null); }}
-                className="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                className="rounded-lg border border-white/8 px-4 py-2 text-sm font-medium text-ash hover:bg-white/[0.04]"
               >
                 Voltar
               </button>

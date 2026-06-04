@@ -101,6 +101,10 @@ function buildProviders(): AnyProvider[] {
             headers: clientIp ? { 'x-real-ip': clientIp } : undefined,
           });
           if (!verify.ok) {
+            console.error(
+              `[auth] 2FA verify failed: status=${verify.status} body=${JSON.stringify(verify.data)}`,
+            );
+            if (verify.status === 429) throw new Error(AUTH_ERRORS.RATE_LIMITED);
             throw new Error(AUTH_ERRORS.INVALID_CREDENTIALS);
           }
           return toAuthUser(verify.data as LoginSuccessDto);

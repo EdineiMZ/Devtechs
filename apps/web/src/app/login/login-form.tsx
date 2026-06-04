@@ -50,7 +50,7 @@ export function LoginForm(): JSX.Element {
 
   const [mode, setMode] = useState<FormMode>('credentials');
   const [phase, setPhase] = useState<CredentialsPhase>('credentials');
-  const [tempToken, setTempToken] = useState<string | null>(null);
+  const [, setTempToken] = useState<string | null>(null);
   const [banner, setBanner] = useState<BannerState>(() =>
     initialError === AUTH_ERRORS.OAUTH_LINK_FAILED
       ? {
@@ -85,29 +85,39 @@ export function LoginForm(): JSX.Element {
   const onSubmit = handleSubmit(async (data) => {
     setBanner({ kind: 'none' });
 
-    // ── Two-factor phase: tempToken already in state ──────────────────────
-    // The user obtained a tempToken via preflight after the first submit.
-    // Call signIn with tempToken+code so authorize uses the fast path
-    // (/auth/2fa/verify) without re-checking the password.
+    // ── Two-factor phase ──────────────────────────────────────────────────
+    // Always refresh the tempToken before verifying — this ensures it hasn't
+    // expired even if the user took more than the original 5-minute window.
     if (phase === 'two-factor') {
-      if (!tempToken) {
-        // Token expired — send them back to start
-        setBanner({
-          kind: 'error',
-          title: 'Sessão expirou',
-          message: 'O código temporário expirou. Inicie o login novamente.',
-        });
+      const refresh = await preflightLogin(data.email, data.password);
+
+      if ('error' in refresh) {
+        mapAuthorizeError(refresh.error);
         setPhase('credentials');
         setTempToken(null);
         return;
       }
+
+      if (!('requires2FA' in refresh)) {
+        // 2FA was removed or disabled — log in normally without the code.
+        const result = await signIn('credentials', {
+          redirect: false,
+          email:    data.email,
+          password: data.password,
+        } as Parameters<typeof signIn>[1]);
+        if (!result?.error) await redirectAfterLogin();
+        return;
+      }
+
+      const freshToken = refresh.tempToken;
+      setTempToken(freshToken);
 
       const result = await signIn('credentials', {
         redirect: false,
         email:     data.email,
         password:  data.password,
         code:      data.code?.trim() || undefined,
-        tempToken,
+        tempToken: freshToken,
       } as Parameters<typeof signIn>[1]);
 
       if (!result) {
@@ -118,7 +128,7 @@ export function LoginForm(): JSX.Element {
         setBanner({
           kind: 'error',
           title: 'Código inválido',
-          message: 'O código de verificação está incorreto ou expirou. Tente novamente.',
+          message: 'O código de verificação está incorreto. Tente novamente.',
         });
         return;
       }

@@ -111,6 +111,7 @@ services:
       - notification-service
       - license-service
       - developer-service
+      - api-service
       - web
       - store
     healthcheck:
@@ -378,6 +379,38 @@ services:
           - developer-service
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3010/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  api-service:
+    <<: *service-defaults
+    container_name: SZDevs-api-service
+    build:
+      context: ..
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/api-service"
+    environment:
+      PORT: 3011
+      API_SERVICE_PORT: 3011
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      SUPPORT_SERVICE_URL: http://support-service:3006
+      PROJECTS_SERVICE_URL: http://projects-service:3004
+      FINANCE_SERVICE_URL: http://finance-service:3003
+    expose:
+      - "3011"
+    networks:
+      SZDevs:
+        ipv4_address: 172.16.1.17
+        aliases:
+          - api-service
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3011/health"]
       interval: 30s
       timeout: 5s
       retries: 3
