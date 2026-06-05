@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 import { Button, Input } from '@szdevs/ui';
 
@@ -36,6 +37,7 @@ export function TwoFactorPanel({
   initiallyEnabled: boolean;
 }): JSX.Element {
   const router = useRouter();
+  const { data: authSession } = useSession();
   const [enabled, setEnabled] = useState(initiallyEnabled);
   const [setup, setSetup] = useState<SetupSnapshot | null>(null);
   const [enableCode, setEnableCode] = useState('');
@@ -385,7 +387,22 @@ export function TwoFactorPanel({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
+          <form
+            className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6"
+            onSubmit={(e) => { e.preventDefault(); void disable(); }}
+          >
+            {/* Hidden username for password-manager autofill association */}
+            <input
+              type="email"
+              name="username"
+              autoComplete="username"
+              defaultValue={authSession?.user?.email ?? ''}
+              readOnly
+              hidden
+              aria-hidden="true"
+              tabIndex={-1}
+            />
+
             <h3 className="text-sm font-semibold text-foreground">
               Desativar 2FA
             </h3>
@@ -494,16 +511,15 @@ export function TwoFactorPanel({
 
             <div className="mt-4 flex justify-end">
               <Button
-                type="button"
+                type="submit"
                 variant="destructive"
                 loading={disableLoading}
                 disabled={disableMode === 'email' && !emailCodeSent}
-                onClick={disable}
               >
                 Desativar 2FA
               </Button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

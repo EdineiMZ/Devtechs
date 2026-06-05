@@ -110,9 +110,10 @@ export function changePassword(
 
 // ---------- sessions ----------
 
-export function listSessions(accessToken: string) {
+export function listSessions(accessToken: string, realIp?: string) {
   return authedFetch<AccountSession[]>('/auth/me/sessions', accessToken, {
     method: 'GET',
+    realIp,
   });
 }
 

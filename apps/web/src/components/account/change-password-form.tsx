@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
@@ -23,6 +23,7 @@ import {
  * floating around in localstorage.
  */
 export function ChangePasswordForm(): JSX.Element {
+  const { data: authSession } = useSession();
   const [banner, setBanner] = useState<
     | { kind: 'success'; message: string }
     | { kind: 'error'; message: string }
@@ -84,6 +85,17 @@ export function ChangePasswordForm(): JSX.Element {
       className="space-y-4 rounded-2xl border border-white/8 bg-white/[0.02] p-6"
       aria-describedby={banner ? 'password-form-banner' : undefined}
     >
+      {/* Hidden username for password-manager autofill association */}
+      <input
+        type="email"
+        name="username"
+        autoComplete="username"
+        defaultValue={authSession?.user?.email ?? ''}
+        readOnly
+        hidden
+        aria-hidden="true"
+        tabIndex={-1}
+      />
       <Input
         label="Senha atual"
         type="password"

@@ -1,3 +1,4 @@
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { auth } from '@/auth';
@@ -13,7 +14,13 @@ export default async function SecurityPage(): Promise<JSX.Element> {
     redirect('/login?callbackUrl=/perfil/configuracoes/seguranca');
   }
 
-  const res = await listSessions(session.accessToken);
+  const reqHeaders = await headers();
+  const realIp =
+    reqHeaders.get('x-real-ip') ??
+    reqHeaders.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    undefined;
+
+  const res = await listSessions(session.accessToken, realIp);
   let sessions: AccountSession[] = [];
   let sessionsError: string | null = null;
   if (res.ok) {
