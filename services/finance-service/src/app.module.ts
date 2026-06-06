@@ -15,6 +15,7 @@ import { HealthModule } from './modules/health/health.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
 import { OverdueSweepModule } from './modules/jobs/overdue-sweep.module';
 import { PaymentConditionsModule } from './modules/payment-conditions/payment-conditions.module';
+import { RecurringBillingModule } from './modules/recurring-billing/recurring-billing.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
@@ -83,6 +84,7 @@ import { RedisModule } from './redis/redis.module';
     InvoicesModule,
     CheckoutModule,
     PaymentConditionsModule,
+    RecurringBillingModule,
     OverdueSweepModule,
     HealthModule,
   ],

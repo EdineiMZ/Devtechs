@@ -38,17 +38,24 @@ export interface ServiceStatus {
   autoRestart: boolean;
 }
 
+// Ports here are the INTERNAL container ports each NestJS app binds to.
+// In docker-compose the same number is exposed on the host as 4001..4010
+// (used by nginx + browser), but the developer-service itself probes on
+// the docker network where every peer is reachable at <service-name>:<3xxx>.
+// The legacy values (4001..4010) caused the probe at 127.0.0.1:<port> to
+// always fail inside the container, which combined with auto-restart=true
+// produced a kill-loop where every healthy service was restarted every 20s.
 const SERVICES: ServiceDefinition[] = [
-  { name: 'auth-service',         displayName: 'Auth',         port: 4001 },
-  { name: 'rh-service',           displayName: 'RH',           port: 4002 },
-  { name: 'projects-service',     displayName: 'Projects',     port: 4003 },
-  { name: 'finance-service',      displayName: 'Finance',      port: 4004 },
-  { name: 'notification-service', displayName: 'Notification', port: 4005 },
-  { name: 'payments-service',     displayName: 'Payments',     port: 4006 },
-  { name: 'license-service',      displayName: 'License',      port: 4007 },
-  { name: 'support-service',      displayName: 'Support',      port: 4008 },
-  { name: 'devops-service',       displayName: 'DevOps',       port: 4009 },
-  { name: 'developer-service',    displayName: 'Developer',    port: 4010 },
+  { name: 'auth-service',         displayName: 'Auth',         port: 3001 },
+  { name: 'rh-service',           displayName: 'RH',           port: 3002 },
+  { name: 'finance-service',      displayName: 'Finance',      port: 3003 },
+  { name: 'projects-service',     displayName: 'Projects',     port: 3004 },
+  { name: 'devops-service',       displayName: 'DevOps',       port: 3005 },
+  { name: 'support-service',      displayName: 'Support',      port: 3006 },
+  { name: 'payments-service',     displayName: 'Payments',     port: 3007 },
+  { name: 'notification-service', displayName: 'Notification', port: 3008 },
+  { name: 'license-service',      displayName: 'License',      port: 3009 },
+  { name: 'developer-service',    displayName: 'Developer',    port: 3010 },
 ];
 
 const CHECK_INTERVAL_MS   = 10_000;
@@ -61,7 +68,13 @@ export class MonitorService implements OnModuleInit, OnModuleDestroy {
   private readonly state = new Map<string, ServiceStatus>();
   private readonly autoRestart = new Map<string, boolean>();
   private intervalHandle: ReturnType<typeof setInterval> | null = null;
-  private readonly host: string;
+  /**
+   * Optional override for probe hostname. Default is to use each service's
+   * own name as the hostname (resolves via docker-compose's network DNS).
+   * Set MONITOR_HOST=127.0.0.1 only when running developer-service on the
+   * host with the other services bound to 127.0.0.1 (rare local setup).
+   */
+  private readonly hostOverride: string | null;
 
   /** Absolute path to the `services/` directory of the monorepo. */
   private readonly servicesDir: string;
@@ -72,7 +85,7 @@ export class MonitorService implements OnModuleInit, OnModuleDestroy {
     private readonly redis: RedisService,
     config: ConfigService,
   ) {
-    this.host = config.get<string>('MONITOR_HOST') ?? '127.0.0.1';
+    this.hostOverride = config.get<string>('MONITOR_HOST') ?? null;
 
     // developer-service runs with cwd = <monorepo>/services/developer-service
     // so one level up is <monorepo>/services
@@ -170,7 +183,7 @@ export class MonitorService implements OnModuleInit, OnModuleDestroy {
 
   private async checkOne(svc: ServiceDefinition): Promise<void> {
     const prev = this.state.get(svc.name)!;
-    const { online, responseMs } = await this.probe(svc.port);
+    const { online, responseMs } = await this.probe(svc);
     const now = new Date().toISOString();
     const wasOnline = prev.online;
     const failures = online ? 0 : prev.consecutiveFailures + 1;
@@ -194,8 +207,18 @@ export class MonitorService implements OnModuleInit, OnModuleDestroy {
       this.events.statusChange$.next(updated);
     }
 
-    // Auto-restart
-    if (!online && failures >= AUTO_RESTART_THRESHOLD && this.autoRestart.get(svc.name)) {
+    // Auto-restart, but ONLY if the service was previously seen online —
+    // i.e. this represents a real "went down". Without this guard, a probe
+    // misconfig (wrong host/port/DNS) makes every service look down from
+    // the very first sweep and we restart healthy peers in a tight loop;
+    // happened in production when the SERVICES table had host ports
+    // (4xxx) instead of internal ports (3xxx).
+    if (
+      !online &&
+      failures >= AUTO_RESTART_THRESHOLD &&
+      this.autoRestart.get(svc.name) &&
+      prev.upSince !== null
+    ) {
       this.logger.warn(`Auto-restart ${svc.name} after ${failures} failures`);
       try {
         await this.control(svc.name, 'restart');
@@ -210,8 +233,12 @@ export class MonitorService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async probe(port: number): Promise<{ online: boolean; responseMs: number | null }> {
-    const url = `http://${this.host}:${port}/health`;
+  private async probe(svc: ServiceDefinition): Promise<{ online: boolean; responseMs: number | null }> {
+    // Prefer per-service DNS (docker-compose network) so each peer is
+    // reachable at its container hostname; fall back to a single override
+    // host only when explicitly configured (local dev all on 127.0.0.1).
+    const host = this.hostOverride ?? svc.name;
+    const url = `http://${host}:${svc.port}/health`;
     const t0 = Date.now();
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS) });
@@ -376,7 +403,7 @@ export class MonitorService implements OnModuleInit, OnModuleDestroy {
       if (action === 'start' || action === 'restart') {
         // If it's already running (start called while online), warn
         if (action === 'start') {
-          const { online } = await this.probe(svc.port);
+          const { online } = await this.probe(svc);
           if (online) {
             return { ok: false, message: `${name} já está em execução na porta ${svc.port}` };
           }

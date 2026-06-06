@@ -12,6 +12,7 @@ export interface CurrentUserPayload {
   roles: string[];
   sessionId: string;
   emailVerified: boolean;
+  twoFactorEnabled: boolean;
 }
 
 interface RequestWithUser extends Request {

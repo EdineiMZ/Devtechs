@@ -18,6 +18,11 @@ const PREF_ROWS: PrefRow[] = [
     desc:  'Nova cobrança gerada, fatura paga ou vencida.',
   },
   {
+    key:   'subscription',
+    label: 'Assinaturas',
+    desc:  'Assinatura confirmada, próxima cobrança e cancelamento.',
+  },
+  {
     key:   'login',
     label: 'Login na conta',
     desc:  'Acesso detectado à sua conta (novo dispositivo ou localização).',
@@ -106,17 +111,11 @@ export function NotificationPrefsForm({
     setError(null);
     setSaved(false);
 
-    // Flatten prefs to the wire format the API expects
-    const flat: Record<string, boolean> = {};
-    for (const [k, v] of Object.entries(prefs.email)) {
-      flat[`email.${k}`] = v as boolean;
-    }
-    for (const [k, v] of Object.entries(prefs.inapp)) {
-      flat[`inapp.${k}`] = v as boolean;
-    }
-
     startTransition(async () => {
-      const res = await updateNotificationPreferences(flat, accessToken);
+      const res = await updateNotificationPreferences(
+        { email: prefs.email, inapp: prefs.inapp },
+        accessToken,
+      );
       if (res.ok) {
         setSaved(true);
       } else {

@@ -24,6 +24,7 @@ export const AUDIT_MODULE_VALUES = [
   'LICENCAS',
   'DEVOPS',
   'DEVELOPER',
+  'INTEGRATIONS',
 ] as const;
 
 export type AuditModuleFilter = (typeof AUDIT_MODULE_VALUES)[number];

@@ -177,7 +177,8 @@ export class SubscriptionsService {
   /**
    * Handles a confirmed payment webhook:
    * - Marks Payment as PAID.
-   * - Activates subscription if TRIALING or PAST_DUE.
+   * - If payment has invoiceId: marks Invoice as PAID and notifies client.
+   * - If payment has subscriptionId: activates subscription if TRIALING or PAST_DUE.
    * - Publishes Redis event.
    */
   async handleWebhookPaymentConfirmed(externalPaymentId: string): Promise<void> {
@@ -190,11 +191,50 @@ export class SubscriptionsService {
       return;
     }
 
+    if (payment.status === 'PAID') {
+      this.logger.log(`Payment ${payment.id} already PAID — skipping (idempotent)`);
+      return;
+    }
+
     await this.prisma.payment.update({
       where: { id: payment.id },
       data: { status: 'PAID', paidAt: new Date() },
     });
 
+    // Handle invoice payment (PIX or card for a finance invoice)
+    if (payment.invoiceId) {
+      const invoice = await this.prisma.invoice.findUnique({
+        where: { id: payment.invoiceId },
+        select: { id: true, clientId: true, number: true, total: true, status: true },
+      });
+      if (invoice && invoice.status !== 'PAID') {
+        await this.prisma.invoice.update({
+          where: { id: invoice.id },
+          data: { status: 'PAID', paidAt: new Date() },
+        });
+        const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+          Number(invoice.total),
+        );
+        await this.redis.publish(
+          'notifications:inapp',
+          JSON.stringify({
+            publishedAt: new Date().toISOString(),
+            payload: {
+              userId: invoice.clientId,
+              title: 'Pagamento confirmado',
+              body: `Seu pagamento de ${brl} referente à fatura ${invoice.number} foi confirmado.`,
+              type: 'invoice.paid',
+              link: `/perfil/faturas`,
+            },
+          }),
+        );
+        this.logger.log(
+          `Invoice ${invoice.id} (${invoice.number}) marked PAID via payment ${payment.id}`,
+        );
+      }
+    }
+
+    // Handle SaaS subscription payment
     const sub = payment.subscription;
     if (sub && (sub.status === 'TRIALING' || sub.status === 'PAST_DUE')) {
       await this.prisma.subscription.update({

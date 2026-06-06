@@ -1,3 +1,5 @@
+import * as crypto from 'crypto';
+
 import {
   BadRequestException,
   Injectable,
@@ -12,26 +14,101 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import type { CheckoutInvoiceDto } from './dto/checkout.dto';
 
+const API_KEYS_REDIS_KEY = 'SZDevs:config:api_keys';
+
 @Injectable()
 export class CheckoutService {
   private readonly logger = new Logger(CheckoutService.name);
-  private readonly payment: Payment;
-  private readonly devMode: boolean;
+  private readonly envAccessToken: string;
+  private readonly webhookSecret: string;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     config: ConfigService,
   ) {
-    const accessToken = config.get<string>('MP_ACCESS_TOKEN') ?? '';
-    this.devMode = !accessToken;
-    if (this.devMode) {
-      this.logger.warn('MP_ACCESS_TOKEN not set — running in stub mode');
+    this.envAccessToken = config.get<string>('MP_ACCESS_TOKEN') ?? '';
+    this.webhookSecret =
+      config.get<string>('MP_WEBHOOK_SECRET') ??
+      config.get<string>('MERCADOPAGO_WEBHOOK_SECRET') ?? '';
+    if (!this.webhookSecret) {
+      this.logger.warn(
+        'MP_WEBHOOK_SECRET not set — webhook signature verification will be skipped (dev mode only)',
+      );
     }
-    const mpClient = new MercadoPagoConfig({
-      accessToken: accessToken || 'TEST-stub',
-    });
-    this.payment = new Payment(mpClient);
+  }
+
+  /**
+   * Verifies the Mercado Pago HMAC-SHA256 webhook signature.
+   * Resolves the secret from Redis first (falls back to env var).
+   * Returns true when the signature matches or when no secret is configured (dev mode).
+   */
+  async verifyWebhookSignature(
+    rawBody: Buffer,
+    headers: Record<string, string | string[] | undefined>,
+  ): Promise<boolean> {
+    const secret = await this.resolveWebhookSecret();
+    if (!secret) {
+      this.logger.warn('Skipping webhook signature check — MP_WEBHOOK_SECRET not configured in env or Redis');
+      return true;
+    }
+    const sigHeader = headers['x-signature'];
+    const requestId = headers['x-request-id'];
+    const dataId = headers['x-data-id'];
+
+    if (!sigHeader || !requestId) return false;
+
+    const sigStr = Array.isArray(sigHeader) ? sigHeader[0] : sigHeader;
+    const reqId = Array.isArray(requestId) ? requestId[0] : requestId;
+    const dId = Array.isArray(dataId) ? (dataId[0] ?? '') : (dataId ?? '');
+
+    if (!sigStr) return false;
+
+    const parts = Object.fromEntries(
+      sigStr.split(',').map((part) => {
+        const idx = part.indexOf('=');
+        return idx === -1 ? [part, ''] : [part.slice(0, idx), part.slice(idx + 1)];
+      }),
+    ) as Record<string, string>;
+    const ts = parts['ts'];
+    const v1 = parts['v1'];
+    if (!ts || !v1) return false;
+
+    const manifest = `id:${dId};request-id:${reqId};ts:${ts};`;
+    const expected = crypto
+      .createHmac('sha256', secret)
+      .update(manifest)
+      .digest('hex');
+
+    try {
+      return crypto.timingSafeEqual(Buffer.from(v1), Buffer.from(expected));
+    } catch {
+      return false;
+    }
+  }
+
+  private async resolveWebhookSecret(): Promise<string> {
+    try {
+      const keys = await this.redis.hgetall(API_KEYS_REDIS_KEY);
+      if (keys['MP_WEBHOOK_SECRET']) return keys['MP_WEBHOOK_SECRET'];
+    } catch {
+      // Redis unavailable — fall through to env
+    }
+    return this.webhookSecret;
+  }
+
+  private async resolveAccessToken(): Promise<string> {
+    try {
+      const keys = await this.redis.hgetall(API_KEYS_REDIS_KEY);
+      if (keys['MP_ACCESS_TOKEN']) return keys['MP_ACCESS_TOKEN'];
+    } catch {
+      // Redis unavailable — fall through to env
+    }
+    return this.envAccessToken;
+  }
+
+  private buildPayment(accessToken: string): Payment {
+    return new Payment(new MercadoPagoConfig({ accessToken }));
   }
 
   async payInvoice(
@@ -62,7 +139,11 @@ export class CheckoutService {
     const payerEmail = dto.payerEmail ?? invoice.client.email;
     const description = `Fatura SZDevs ${invoice.number}`;
 
-    if (this.devMode) {
+    const accessToken = await this.resolveAccessToken();
+    const devMode = !accessToken;
+
+    if (devMode) {
+      this.logger.warn('MP_ACCESS_TOKEN not set — running in stub mode');
       // Stub response for development
       const stubResult = {
         paymentId: `stub-${Date.now()}`,
@@ -71,16 +152,17 @@ export class CheckoutService {
         pixQrCode: dto.method === 'pix' ? '00020126580014br.gov.bcb.pix' : null,
         pixQrCodeBase64: dto.method === 'pix' ? 'stub-base64-qr' : null,
       };
-      // Auto-update invoice status to PAID in stub mode for card
-      if (dto.method === 'card') {
-        await this.prisma.invoice.update({
-          where: { id: invoiceId },
-          data: { status: 'PAID', paidAt: new Date() },
-        });
-        void this.notifyPaymentReceived(invoice.clientId, invoice.number, amount);
-      }
+      // Auto-confirm invoice in stub mode for both card and PIX
+      await this.prisma.invoice.update({
+        where: { id: invoiceId },
+        data: { status: 'PAID', paidAt: new Date() },
+      });
+      void this.notifyPaymentReceived(invoice.clientId, invoice.number, amount);
+      void this.recordPaymentTransaction(invoiceId, invoice.number, amount, invoice.clientId);
       return stubResult;
     }
+
+    const payment = this.buildPayment(accessToken);
 
     const body: Record<string, unknown> = {
       transaction_amount: amount,
@@ -92,8 +174,26 @@ export class CheckoutService {
     if (dto.method === 'pix') {
       body.payment_method_id = 'pix';
     } else if (dto.method === 'card' && dto.card) {
+      const requestedInstallments = Number(dto.card.installments);
+
+      // Validate against active payment conditions configured in the system.
+      const condition = await this.prisma.paymentCondition.findFirst({
+        where: { installments: requestedInstallments, active: true },
+      });
+      if (!condition) {
+        const active = await this.prisma.paymentCondition.findMany({
+          where: { active: true },
+          orderBy: { installments: 'asc' },
+          select: { installments: true },
+        });
+        const allowed = active.map((c) => c.installments).join(', ');
+        throw new BadRequestException(
+          `Número de parcelas inválido. Opções disponíveis: ${allowed || 'nenhuma configurada'}`,
+        );
+      }
+
       body.token = dto.card.token;
-      body.installments = Number(dto.card.installments);
+      body.installments = requestedInstallments;
       body.payment_method_id = dto.card.paymentMethodId;
       body.issuer_id = dto.card.issuerId;
     } else {
@@ -102,7 +202,7 @@ export class CheckoutService {
 
     let result: Awaited<ReturnType<Payment['create']>>;
     try {
-      result = await this.payment.create({ body });
+      result = await payment.create({ body });
     } catch (err: unknown) {
       const mpErr = err as Record<string, unknown>;
       const mpMsg =
@@ -183,24 +283,87 @@ export class CheckoutService {
     };
   }
 
-  /** Called by the webhook handler when MP confirms payment. */
-  async handleWebhookPayment(
-    mpPaymentId: string,
-    status: string,
-  ): Promise<void> {
+  /**
+   * Pulls the latest Mercado Pago payment status for an invoice and
+   * updates local records. Designed for the PIX manual check button as
+   * a fallback when the webhook hasn't fired yet.
+   */
+  async checkPaymentStatus(invoiceId: string, requesterId: string): Promise<{ status: string }> {
+    const invoice = await this.prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      select: { id: true, clientId: true, status: true },
+    });
+    if (!invoice) throw new NotFoundException('Invoice not found');
+    if (invoice.clientId !== requesterId) {
+      throw new BadRequestException('You can only check your own invoices');
+    }
+    if (invoice.status === 'PAID') {
+      return { status: 'PAID' };
+    }
+
+    const payment = await this.prisma.payment.findFirst({
+      where: { invoiceId },
+      orderBy: { createdAt: 'desc' },
+      select: { externalId: true },
+    });
+
+    if (!payment?.externalId || payment.externalId.startsWith('stub-')) {
+      return { status: invoice.status };
+    }
+
+    await this.handleWebhookPayment(payment.externalId);
+
+    const updated = await this.prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      select: { status: true },
+    });
+    return { status: updated?.status ?? invoice.status };
+  }
+
+  /**
+   * Called by the webhook handler when MP notifies a payment event.
+   * MP webhooks do NOT carry the payment status in the body — we must
+   * fetch it from the MP API using the payment ID.
+   */
+  async handleWebhookPayment(mpPaymentId: string): Promise<void> {
+    const accessToken = await this.resolveAccessToken();
+    if (!accessToken) {
+      this.logger.warn(`handleWebhookPayment: no MP access token, skipping ${mpPaymentId}`);
+      return;
+    }
+
+    let mpStatus: string;
+    try {
+      const mpPayment = this.buildPayment(accessToken);
+      const result = await mpPayment.get({ id: Number(mpPaymentId) });
+      mpStatus = result.status ?? 'unknown';
+      this.logger.log(`MP payment ${mpPaymentId} status from API: ${mpStatus}`);
+    } catch (err) {
+      this.logger.error(
+        `handleWebhookPayment: failed to fetch payment ${mpPaymentId} from MP API: ${String(err)}`,
+      );
+      return;
+    }
+
     const payment = await this.prisma.payment.findFirst({
       where: { externalId: mpPaymentId },
     });
-    if (!payment) return;
+    if (!payment) {
+      this.logger.warn(`handleWebhookPayment: no local payment found for externalId ${mpPaymentId}`);
+      return;
+    }
 
     const mappedStatus =
-      status === 'approved' ? 'PAID' : status === 'rejected' ? 'FAILED' : 'PENDING';
+      mpStatus === 'approved' ? 'PAID' : mpStatus === 'rejected' ? 'FAILED' : 'PENDING';
     await this.prisma.payment.update({
       where: { id: payment.id },
-      data: { status: mappedStatus as 'PAID' | 'FAILED' | 'PENDING' },
+      data: {
+        status: mappedStatus as 'PAID' | 'FAILED' | 'PENDING',
+        paidAt: mpStatus === 'approved' ? new Date() : undefined,
+      },
     });
 
-    if (status === 'approved' && payment.invoiceId) {
+    if (mpStatus === 'approved' && payment.invoiceId) {
       const invoice = await this.prisma.invoice.findUnique({
         where: { id: payment.invoiceId },
         select: { id: true, clientId: true, number: true, total: true, status: true },
@@ -215,7 +378,45 @@ export class CheckoutService {
           invoice.number,
           Number(invoice.total),
         );
+        void this.recordPaymentTransaction(
+          invoice.id,
+          invoice.number,
+          Number(invoice.total),
+          invoice.clientId,
+        );
       }
+    }
+  }
+
+  private async recordPaymentTransaction(
+    invoiceId: string,
+    invoiceNumber: string,
+    total: number,
+    createdBy: string,
+  ): Promise<void> {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    try {
+      await this.prisma.financeTransaction.upsert({
+        where: { invoiceId },
+        create: {
+          invoiceId,
+          type: 'INCOME',
+          category: 'SERVICE',
+          description: `Fatura #${invoiceNumber}`,
+          amount: total,
+          date: today,
+          status: 'PAID',
+          paidAt: new Date(),
+          createdBy,
+        },
+        update: {
+          status: 'PAID',
+          paidAt: new Date(),
+        },
+      });
+    } catch (err) {
+      this.logger.error(`Failed to record payment transaction for invoice ${invoiceId}: ${String(err)}`);
     }
   }
 
@@ -239,7 +440,7 @@ export class CheckoutService {
         title: 'Pagamento confirmado',
         body: `Seu pagamento de ${brl} referente à fatura ${invoiceNumber} foi confirmado.`,
         type: 'invoice.paid',
-        link: `/financeiro/faturas`,
+        link: `/perfil/faturas`,
       }),
     );
   }

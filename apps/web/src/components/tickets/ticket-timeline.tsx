@@ -14,18 +14,16 @@ interface MessageEvent {
 
 export type TimelineEvent = StatusEvent | MessageEvent;
 
-/**
- * Render a chronological mix of messages + status events. Status
- * events render as small timeline notes, messages as bubbles.
- */
 export function TicketTimeline({
   events,
   currentUserId,
   isAgent,
+  ticketId,
 }: {
   events: TimelineEvent[];
   currentUserId: string;
   isAgent: boolean;
+  ticketId: string;
 }): JSX.Element {
   return (
     <div className="flex flex-col gap-4">
@@ -48,6 +46,7 @@ export function TicketTimeline({
             message={event.message}
             isOwn={event.message.author.id === currentUserId}
             isAgent={isAgent}
+            ticketId={ticketId}
           />
         );
       })}

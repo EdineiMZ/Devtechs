@@ -119,7 +119,6 @@ export default async function UsuariosPage({
                       <UserRolesManager
                         user={u}
                         allRoles={allRoles}
-                        accessToken={session.accessToken!}
                       />
                     </td>
                     <td className="px-4 py-3 text-xs text-ash">
@@ -156,7 +155,7 @@ export default async function UsuariosPage({
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <UserActions user={u} accessToken={session.accessToken!} />
+                      <UserActions user={u} />
                     </td>
                   </tr>
                 ))}

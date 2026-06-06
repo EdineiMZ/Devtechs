@@ -50,7 +50,7 @@ export function FaturasClient({
 }: FaturasClientProps): JSX.Element {
   const router = useRouter();
   const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-  const dateFmt = new Intl.DateTimeFormat('pt-BR');
+  const dateFmt = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
   const [modal, setModal] = useState<ActionModalState | null>(null);
   const [reason, setReason] = useState('');
@@ -77,16 +77,21 @@ export function FaturasClient({
     if (!modal) return;
     setLoading(true);
     setActionError(null);
-    const fn = modal.type === 'cancel' ? cancelInvoice : refundInvoice;
-    const res = await fn(modal.invoiceId, reason || undefined, accessToken);
-    setLoading(false);
-    if (!res.ok) {
-      const msg = (res.data as { message?: string | string[] })?.message;
-      setActionError(Array.isArray(msg) ? msg.join(', ') : (msg ?? 'Erro ao processar ação.'));
-      return;
+    try {
+      const fn = modal.type === 'cancel' ? cancelInvoice : refundInvoice;
+      const res = await fn(modal.invoiceId, reason || undefined, accessToken);
+      if (!res.ok) {
+        const msg = (res.data as { message?: string | string[] })?.message;
+        setActionError(Array.isArray(msg) ? msg.join(', ') : (msg ?? 'Erro ao processar ação.'));
+        return;
+      }
+      setModal(null);
+      router.refresh();
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : 'Erro inesperado. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
-    setModal(null);
-    router.refresh();
   }
 
   return (

@@ -70,11 +70,14 @@ export class InvoicePdfService {
   }
 
   private buildHtml(invoice: InvoiceForPdf): string {
+    const tz = 'America/Sao_Paulo';
     const currency = (n: number): string =>
       new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL',
       }).format(n);
+    const fmtDate = (d: Date): string =>
+      d.toLocaleDateString('pt-BR', { timeZone: tz });
 
     const rows = invoice.items
       .map(
@@ -138,8 +141,8 @@ export class InvoicePdfService {
       </div>
       <div class="meta">
         <div><strong>Número:</strong> ${escapeHtml(invoice.number)}</div>
-        <div><strong>Emissão:</strong> ${invoice.issuedAt.toLocaleDateString('pt-BR')}</div>
-        <div><strong>Vencimento:</strong> ${invoice.dueDate.toLocaleDateString('pt-BR')}</div>
+        <div><strong>Emissão:</strong> ${fmtDate(invoice.issuedAt)}</div>
+        <div><strong>Vencimento:</strong> ${fmtDate(invoice.dueDate)}</div>
         <div class="status">${escapeHtml(invoice.status)}</div>
       </div>
     </header>

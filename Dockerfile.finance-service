@@ -1,0 +1,85 @@
+# syntax=docker/dockerfile:1.6
+#
+# =============================================================================
+# SZDevs — finance-service image (extends Dockerfile.service with Chromium)
+#
+# Identical to Dockerfile.service except the runtime stage also installs
+# the Alpine chromium package so Puppeteer can render invoice PDFs without
+# downloading a separate browser bundle at start-up.
+# =============================================================================
+
+ARG NODE_VERSION=20-alpine
+
+# ---------------------------------------------------------------------------
+# Stage 1: base
+# ---------------------------------------------------------------------------
+FROM node:${NODE_VERSION} AS base
+ENV PNPM_HOME=/pnpm
+ENV PATH="${PNPM_HOME}:${PATH}"
+RUN corepack enable && corepack prepare pnpm@9 --activate
+RUN apk add --no-cache libc6-compat openssl
+WORKDIR /repo
+
+# ---------------------------------------------------------------------------
+# Stage 2: builder
+# ---------------------------------------------------------------------------
+FROM base AS builder
+ARG PACKAGE_NAME="@szdevs/finance-service"
+
+ENV NODE_ENV=development
+ENV TURBO_TELEMETRY_DISABLED=1
+
+COPY . .
+
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile --ignore-scripts
+
+RUN pnpm --filter @szdevs/database prisma:generate
+
+RUN pnpm --filter "${PACKAGE_NAME}^..." build \
+    && pnpm --filter "${PACKAGE_NAME}" build
+
+RUN pnpm --filter "${PACKAGE_NAME}" --prod deploy /app
+RUN cp -r /repo/node_modules/.pnpm/@prisma+client@5.22.0_prisma@5.22.0/node_modules/.prisma \
+         /app/node_modules/.pnpm/@prisma+client@5.22.0_prisma@5.22.0/node_modules/
+
+# ---------------------------------------------------------------------------
+# Stage 3: runtime (with Chromium for Puppeteer PDF rendering)
+# ---------------------------------------------------------------------------
+FROM node:${NODE_VERSION} AS runtime
+ENV NODE_ENV=production
+
+RUN apk add --no-cache \
+        dumb-init \
+        libc6-compat \
+        openssl \
+        chromium \
+        nss \
+        freetype \
+        harfbuzz \
+        ca-certificates \
+        ttf-freefont \
+    && rm -rf /var/cache/apk/*
+
+# Tell Puppeteer to use the system Chromium instead of downloading its own.
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+WORKDIR /app
+
+COPY --from=builder --chown=node:node /app /app
+
+USER root
+RUN mkdir -p /packages && \
+    for pkg in $(ls /app/node_modules/@szdevs/ 2>/dev/null | sed "s/@szdevs\///"); do \
+        ln -sf /app/node_modules/@szdevs/$pkg /packages/$pkg; \
+    done
+USER node
+
+EXPOSE 3003
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 3003) + '/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "dist/main.js"]

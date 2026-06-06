@@ -1,242 +1,274 @@
-# SZDevs monorepo
+# SZDevs — Monorepo
 
-Turborepo + pnpm workspaces hosting every SZDevs app, service, and
-shared package under a single source tree.
+Turborepo + pnpm workspaces hospedando todos os apps, serviços e pacotes compartilhados do SZDevs em uma única árvore de código.
 
 ```
-apps/          # Next.js frontends:
-               #   - web   (institutional + admin/perfil routes)
-               #   - store (public planos / checkout SaaS)
-services/      # NestJS backends (auth-service, rh-service, ...)
-packages/      # Shared libraries (ui, database, storage, types, ...)
-infra/         # docker-compose, nginx gateway, deploy scaffolding
+apps/          → Next.js frontends (web, store)
+services/      → NestJS backends (10 microserviços)
+packages/      → Bibliotecas compartilhadas (ui, database, storage, types…)
+infra/         → docker-compose, nginx gateway, TLS, guia de deploy
+docs/          → Documentação técnica e guias de setup
 ```
 
 ---
 
-## Frontend architecture: one app, two surfaces
+## Setup rápido
 
-Earlier iterations of SZDevs shipped one Next.js app per business
-module (`apps/rh`, `apps/financeiro`, `apps/projetos`, `apps/devops`,
-`apps/suporte`, `apps/developer`) running on ports 3001-3007. That
-fan-out had two problems:
+### Opção A — Script automático (recomendado)
 
-1. **No auth gate.** Each module was a public Next.js app with its own
-   port, reachable anonymously. Anyone who knew the port could browse
-   the (stub) UI without a session.
-2. **Cookie / session split.** NextAuth issues cookies per-origin, so
-   each port held its own session. Logging into `:3000` did nothing
-   on `:3001`. Sharing would require custom middleware on every app
-   plus a shared-domain cookie.
+**Linux / macOS:**
+```bash
+chmod +x setup.sh && ./setup.sh
+```
 
-The chosen fix (Approach A in the migration prompt) consolidates every
-module into the main `apps/web` app:
+**Windows:**
+```bat
+setup.bat
+```
+
+Os scripts verificam pré-requisitos, geram segredos, instalam dependências, sobem o banco via Docker e executam as migrations automaticamente.
+
+### Opção B — Manual
+
+```bash
+# 1. Copie e configure o .env
+cp .env.example .env
+# Edite o .env: POSTGRES_PASSWORD, JWT_SECRET, ENCRYPTION_KEY, NEXTAUTH_SECRET…
+
+# 2. Instale dependências
+pnpm install
+
+# 3. Suba a infra (PostgreSQL + Redis)
+cd infra && docker compose up -d postgres redis && cd ..
+
+# 4. Execute as migrations
+pnpm db:migrate
+
+# 5. Inicie em modo dev
+pnpm dev
+```
+
+Guia completo: [`docs/SETUP.md`](docs/SETUP.md)
+
+---
+
+## Pré-requisitos
+
+| Ferramenta | Versão mínima |
+|------------|--------------|
+| Node.js | ≥ 18.17.0 |
+| pnpm | ≥ 9.0.0 |
+| Docker + Compose v2 | Docker 24+ |
+
+---
+
+## Arquitetura
+
+### Serviços NestJS (ports 3001–3010)
+
+| Serviço | Porta | Responsabilidade |
+|---------|-------|-----------------|
+| `auth-service` | 3001 | Autenticação, JWT, 2FA, OAuth, sessões, audit log |
+| `rh-service` | 3002 | RH: funcionários, departamentos, férias, folha |
+| `finance-service` | 3003 | Financeiro: transações, faturas, DRE, contas |
+| `projects-service` | 3004 | Projetos: kanban, sprints, tarefas, time tracking |
+| `devops-service` | 3005 | Ferramentas de infraestrutura |
+| `support-service` | 3006 | Tickets de suporte + chat em tempo real (Socket.IO) |
+| `payments-service` | 3007 | Assinaturas, pagamentos, Stripe, Mercado Pago |
+| `notification-service` | 3008 | Feed de notificações, SSE, pub/sub Redis, e-mail |
+| `license-service` | 3009 | Licenças de software: produtos, ativações, assinatura Ed25519 |
+| `developer-service` | 3010 | Console DevOps: operações Docker, filas, logs, VPS (Hostinger) |
+
+### Frontends Next.js
+
+| App | Porta | Superfície |
+|-----|-------|-----------|
+| `web` | 4000 | Site institucional + portal admin (`/admin/*`) + área do cliente (`/perfil/*`) |
+| `store` | 4006 | SaaS público: planos, checkout, conta |
+
+### Pacotes compartilhados
+
+| Pacote | Descrição |
+|--------|-----------|
+| `@szdevs/database` | Prisma schema + client (compartilhado por todos os serviços) |
+| `@szdevs/auth` | Utilitários JWT/sessão |
+| `@szdevs/storage` | Adaptador de storage S3-compatível (R2 / MinIO / filesystem) |
+| `@szdevs/ui` | Design system: React + Tailwind CSS + shadcn/ui |
+| `@szdevs/types` | TypeScript types compartilhados |
+| `@szdevs/utils` | Utilitários comuns |
+| `@szdevs/config` | Gerenciamento de configuração |
+| `@szdevs/license-sdk` | SDK cliente para o sistema de licenças |
+
+### Infraestrutura Docker
+
+| Container | Imagem | Função |
+|-----------|--------|--------|
+| `SZDevs-postgres` | `postgres:16-alpine` | Banco de dados (compartilhado) |
+| `SZDevs-redis` | `redis:7-alpine` | Cache, filas, pub/sub |
+| `SZDevs-nginx` | `nginx:alpine` | Reverse proxy + API gateway (prod) |
+
+Rede Docker: `SZDevs` (bridge, subnet `172.16.1.0/24`)
+
+---
+
+## Arquitetura de frontend: um app, duas superfícies
+
+O `apps/web` consolida todos os módulos de negócio em um único app Next.js:
 
 ```
 apps/web/src/app/
-â”œâ”€â”€ page.tsx                    â† public institutional landing
-â”œâ”€â”€ login / register / ...      â† auth pages
-â”œâ”€â”€ perfil/                     â† client portal (protected)
-â”‚   â”œâ”€â”€ page.tsx
-â”‚   â”œâ”€â”€ tickets/...
-â”‚   â””â”€â”€ faturas / notificacoes / configuracoes
-â””â”€â”€ admin/                      â† admin / agent portal (protected)
-    â”œâ”€â”€ page.tsx
-    â”œâ”€â”€ rh / financeiro / projetos / devops / configuracoes
-    â”œâ”€â”€ suporte/                â† ticket queue + agent detail
-    â””â”€â”€ developer/              â† container ops + logs + queues
-        â”œâ”€â”€ page.tsx
-        â”œâ”€â”€ logs / config / queues
-        â””â”€â”€ api/proxy           â† server-side bridge to developer-service
+├── page.tsx                    ← landing institucional pública
+├── login / register / ...      ← páginas de auth
+├── perfil/                     ← portal do cliente (protegido)
+│   ├── tickets/
+│   └── faturas / notificacoes / configuracoes
+└── admin/                      ← portal admin / agente (protegido)
+    ├── rh / financeiro / projetos / devops / configuracoes
+    ├── suporte/                ← fila de tickets + detalhes
+    └── developer/              ← ops de containers + logs + filas
 ```
 
-Everything under `/admin/*` and `/perfil/*` is gated by
-`apps/web/src/middleware.ts`:
+Tudo sob `/admin/*` e `/perfil/*` é protegido pelo middleware em `apps/web/src/middleware.ts`:
 
-- Anonymous user hitting any protected prefix â†’ bounced to
-  `/login?callbackUrl=<original-path>`
-- Authenticated user with **unverified email** â†’ bounced to
-  `/verificar-email`
-- Already-authenticated user hitting `/login` or `/register` â†’
-  bounced to `/perfil` (or `/verificar-email`)
+- Usuário não autenticado → redirect para `/login?callbackUrl=...`
+- Usuário com e-mail não verificado → redirect para `/verificar-email`
+- Usuário autenticado em `/login` ou `/register` → redirect para `/perfil`
 
-`apps/store` stays separate because it's a public SaaS surface
-(planos / checkout / conta) intentionally reachable without login on
-its first pages. Sub-routes (`/conta/*`, `/checkout/*`) carry their
-own NextAuth gate.
-
-Permission-level access control happens server-side inside each page
-(via `session.user.permissions.includes(...)` + `redirect('/perfil')`)
-â€” the middleware only enforces session + email-verified.
+O `apps/store` permanece separado por ser uma superfície SaaS pública (planos/checkout) acessível sem login nas primeiras páginas.
 
 ---
 
-## Getting started
+## Comandos principais
 
 ```bash
-pnpm install
-pnpm --filter @szdevs/database prisma:generate
-pnpm dev                        # turbo-fans out all dev servers
-pnpm --filter @szdevs/web dev # or run a single app
+# Desenvolvimento
+pnpm dev                    # Todos os servidores em paralelo
+pnpm dev:web                # Só frontend web
+pnpm dev:services           # Só backends NestJS
+
+# Build
+pnpm build                  # Build completo via Turborepo
+pnpm build:packages         # Só os pacotes compartilhados
+
+# Banco de dados
+pnpm db:generate            # Gerar Prisma Client
+pnpm db:migrate             # Criar/aplicar migrations
+pnpm db:seed                # Popular com dados de exemplo
+pnpm db:studio              # Abrir Prisma Studio (GUI)
+
+# Qualidade de código
+pnpm lint                   # ESLint
+pnpm typecheck              # TypeScript (sem emitir)
+pnpm test                   # Jest (unitários)
+pnpm test:e2e               # Playwright (E2E)
+
+# Infraestrutura Docker
+cd infra
+docker compose up -d                     # Só PostgreSQL + Redis (modo dev)
+docker compose --profile prod up -d     # Stack completo
+docker compose --profile dev-tools up -d # Adminer + Mailhog + MinIO
+docker compose --profile migrate run --rm migrate  # Executar migrations
 ```
 
-Requirements: **Node.js â‰¥ 18.17**, **pnpm â‰¥ 9**.
+Filtrar para um workspace específico:
+```bash
+pnpm turbo run build --filter=@szdevs/auth-service
+pnpm turbo run dev   --filter=@szdevs/web
+```
+
+---
+
+## Variáveis de ambiente chave
+
+Copie `.env.example` para `.env` e preencha os valores marcados. Os mais críticos:
+
+| Variável | Descrição | Como gerar |
+|----------|-----------|-----------|
+| `POSTGRES_PASSWORD` | Senha do PostgreSQL | Senha forte qualquer |
+| `JWT_SECRET` | Assinar tokens JWT | `openssl rand -base64 48 \| tr -d '/+=' \| cut -c1-64` |
+| `ENCRYPTION_KEY` | Criptografar secrets 2FA (AES) | Exatamente 32 chars |
+| `NEXTAUTH_SECRET` | Sessões NextAuth | `openssl rand -base64 36 \| tr -d '/+=' \| cut -c1-48` |
+| `AUTH_INTERNAL_SECRET` | Auth entre microserviços | `openssl rand -base64 36 \| ...` |
+
+> ⚠️ `ENCRYPTION_KEY` deve ser **idêntica** em `.env` e `infra/.env`. Chaves diferentes causam falha silenciosa no 2FA.
+
+---
+
+## Dockerfiles
+
+| Arquivo | Uso |
+|---------|-----|
+| `Dockerfile.service` | Build de qualquer serviço NestJS |
+| `Dockerfile.app` | Build dos apps Next.js (standalone output) |
+| `Dockerfile.migrate` | Executar migrations Prisma em CI/CD |
+| `Dockerfile.finance-service` | Build customizado do finance-service |
+
+```bash
+# Build manual de um serviço
+docker build \
+  --file Dockerfile.service \
+  --build-arg PACKAGE_NAME=@szdevs/auth-service \
+  --tag szdevs/auth-service:local \
+  .
+
+# Build manual de um app
+docker build \
+  --file Dockerfile.app \
+  --build-arg PACKAGE_NAME=@szdevs/web \
+  --build-arg APP_NAME=web \
+  --tag szdevs/web:local \
+  .
+```
 
 ---
 
 ## CI/CD
 
-Three GitHub Actions workflows sit under `.github/workflows/`:
+Três workflows em `.github/workflows/`:
 
-| Workflow | Trigger | Purpose |
-|---|---|---|
-| `ci.yml` | every PR + push to `main`/`develop` | Parallel lint / typecheck / test / build via `turbo run` with the shared remote cache |
-| `deploy-staging.yml` | push to `develop` | Detect affected packages with `turbo ... --dry-run=json`, matrix-build Docker images for changed services + apps, push to GHCR, SSH staging VPS, pull + up, health-check, Slack-notify |
-| `deploy-prod.yml` | push to `main` | Same pipeline, plus Postgres backup, `environment: production` approval gate, and a semver tag + GitHub Release generated from conventional commits |
+| Workflow | Trigger | Função |
+|----------|---------|--------|
+| `ci.yml` | Todo PR + push em `main`/`develop` | Lint, typecheck, test, build em paralelo via Turborepo |
+| `deploy-staging.yml` | Push em `develop` | Detecta pacotes afetados, build matrix Docker → GHCR, deploy SSH staging, health-check, notifica Slack |
+| `deploy-prod.yml` | Push em `main` (aprovação manual) | Igual staging + backup Postgres + semver tag + GitHub Release |
 
-All three share a composite action at `.github/actions/setup/` that
-installs pnpm, Node, and the lockfile-hashed `node_modules` cache.
+### Segredos necessários no GitHub
 
-### Required secrets
+| Secret | Escopo | Uso |
+|--------|--------|-----|
+| `TURBO_TOKEN` | Repositório | Cache remoto Turborepo |
+| `TURBO_TEAM` | Repositório | Namespace do cache Turbo |
+| `GHCR_TOKEN` | Repositório | Push de imagens Docker para GHCR |
+| `STAGING_HOST` | Ambiente `staging` | IP/DNS da VPS de staging |
+| `STAGING_SSH_KEY` | Ambiente `staging` | Chave SSH (PEM) do servidor de staging |
+| `PROD_HOST` | Ambiente `production` | IP/DNS da VPS de produção |
+| `PROD_SSH_KEY` | Ambiente `production` | Chave SSH (PEM) do servidor de produção |
+| `SLACK_WEBHOOK` | Repositório | Notificações de deploy |
 
-Configure these in **Settings â†’ Secrets and variables â†’ Actions**.
-Deploy-specific secrets live under their respective environments
-(**Settings â†’ Environments â†’ staging / production**) so production
-credentials are never reachable from the staging workflow.
+### Versionamento automático (prod)
 
-| Secret | Scope | Used by | Purpose |
-|---|---|---|---|
-| `TURBO_TOKEN` | Repository | All workflows | Bearer token for the Turborepo remote cache. Generate via `pnpm dlx turbo login` or copy from Vercel's Turbo dashboard. |
-| `TURBO_TEAM` | Repository | All workflows | Turbo team slug â€” identifies which remote cache namespace to read/write. |
-| `GHCR_TOKEN` | Repository | `deploy-*` | Classic PAT with `write:packages` scope. The workflows login to `ghcr.io` as `${{ github.actor }}` with this token to push images. (Alternatively use `GITHUB_TOKEN` if the repo permissions allow it â€” `GHCR_TOKEN` is here so private-package orgs have an override.) |
-| `STAGING_HOST` | `staging` environment | `deploy-staging` | DNS name or IP of the staging VPS (e.g. `staging.SZDevs.io`). |
-| `STAGING_SSH_KEY` | `staging` environment | `deploy-staging` | PEM-encoded private key for the `deploy` user on the staging VPS. Corresponding public key must be in `/home/deploy/.ssh/authorized_keys`. |
-| `PROD_HOST` | `production` environment | `deploy-prod` | DNS name or IP of the production VPS. |
-| `PROD_SSH_KEY` | `production` environment | `deploy-prod` | PEM-encoded private key for the `deploy` user on production. Keep this tightly-scoped; rotate on every operator offboarding. |
-| `SLACK_WEBHOOK` | Repository | `deploy-*` | Incoming webhook URL for the Slack channel that receives deploy notifications. |
+O workflow de produção usa conventional commits para calcular o próximo semver:
 
-### Production environment protection
-
-`deploy-prod.yml` declares `environment: production` on its `deploy`
-job. Configure the protection rules in **Settings â†’ Environments â†’
-production**:
-
-1. **Required reviewers** â€” at least one release manager must approve
-   before the job starts running.
-2. **Wait timer** â€” optional cool-down (e.g. 5 min) between approval
-   and execution so the approver can still cancel.
-3. **Deployment branches** â€” restrict to `main` only.
-
-Without these, a force-push to `main` would deploy without human
-oversight. The workflow file itself doesn't â€” and can't â€” enforce
-them; they are a repo-level setting.
-
-### How the deploy workflow decides what to build
-
-Both deploy workflows start with a `detect-changes` job:
-
-```bash
-pnpm turbo run build --filter='...[HEAD^1]' --dry-run=json
-```
-
-The `...[HEAD^1]` filter resolves to "every package changed in the
-latest commit, PLUS every package that depends on one of them". The
-JSON output is then jq-split into two arrays:
-
-- `services` â€” any package whose name ends in `-service`
-- `apps` â€” any package matching the fixed list of Next.js apps (web,
-  rh, financeiro, projetos, devops, suporte, store, developer)
-
-Both arrays feed a `strategy.matrix` on the subsequent `build-services`
-and `build-apps` jobs, so each affected package builds on its own
-runner in parallel, and a commit that only touches one service only
-spins up one builder.
-
-### Semver tagging (prod only)
-
-`deploy-prod.yml` uses
-[`mathieudutour/github-tag-action`](https://github.com/mathieudutour/github-tag-action)
-to walk the conventional-commit history since the last tag and compute
-the next semver version:
-
-- `fix: â€¦` â†’ **patch** bump
-- `feat: â€¦` â†’ **minor** bump
-- `feat!: â€¦` or `BREAKING CHANGE:` â†’ **major** bump
-
-The tag is computed in a `version` job before builds run (so Docker
-images can be tagged with the upcoming version), but only pushed after
-the deploy job succeeds. A failed deploy never burns a version number.
+- `fix:` → patch bump
+- `feat:` → minor bump
+- `feat!:` ou `BREAKING CHANGE:` → major bump
 
 ---
 
-## Docker images
+## Documentação
 
-Two multi-stage Dockerfiles live at the repo root. Both use the repo
-root as build context and select the target workspace via build args:
-
-### `Dockerfile.service` â€” NestJS services
-
-```bash
-docker build \
-  --file Dockerfile.service \
-  --build-arg PACKAGE_NAME=@szdevs/auth-service \
-  --tag ghcr.io/your-org/auth-service:local \
-  .
-```
-
-Multi-stage: `base` â†’ `builder` (pnpm install + prisma generate +
-`turbo build` + `pnpm --prod deploy /app`) â†’ `runtime` (alpine + `node`
-user + `dumb-init`). The `pnpm deploy` step produces a self-contained
-prod-only directory â€” workspace `workspace:*` links are resolved into
-real files, dev dependencies are stripped, and the final runtime image
-copies just that directory.
-
-### `Dockerfile.app` â€” Next.js apps
-
-```bash
-docker build \
-  --file Dockerfile.app \
-  --build-arg PACKAGE_NAME=@szdevs/web \
-  --build-arg APP_NAME=web \
-  --tag ghcr.io/your-org/web:local \
-  .
-```
-
-Relies on Next's `output: 'standalone'` mode (set in each app's
-`next.config.js`). The standalone bundle includes a hand-picked
-`node_modules` subset and a `server.js` entrypoint, so the runtime
-image is ~50MB instead of ~800MB.
-
-**Important:** any Next.js app built with `Dockerfile.app` must have
-both of these in its `next.config.js`:
-
-```js
-output: 'standalone',
-outputFileTracingRoot: path.join(__dirname, '../../'),
-```
-
-The second flag is what makes standalone output follow
-`transpilePackages` out of the app folder and into `packages/*`
-workspaces â€” without it, the trace walker stops at the app boundary
-and produces a broken image.
+| Arquivo | Conteúdo |
+|---------|---------|
+| [`docs/SETUP.md`](docs/SETUP.md) | Guia de setup manual detalhado |
+| [`infra/DEPLOY.md`](infra/DEPLOY.md) | Deploy em VPS (Hostinger + Cloudflare) |
+| [`docs/DESENVOLVIMENTO.md`](docs/DESENVOLVIMENTO.md) | Padrões e fluxo de desenvolvimento |
+| [`docs/LICENCIAMENTO.md`](docs/LICENCIAMENTO.md) | Sistema de licenciamento de software |
 
 ---
 
-## Workspace commands
+## Notas de segurança importantes
 
-Every command is `pnpm turbo run <task>` at the root, which fans out to
-the matching script in every workspace that defines one. Tasks defined
-in `turbo.json`:
-
-- `dev` â€” start all dev servers
-- `build` â€” production build
-- `lint` â€” ESLint
-- `typecheck` â€” `tsc --noEmit`
-- `test` â€” Jest
-
-Filter to a single workspace with `--filter`:
-
-```bash
-pnpm turbo run build --filter=@szdevs/auth-service
-pnpm turbo run dev   --filter=@szdevs/web
-```
+1. **`ENCRYPTION_KEY`** — deve ser idêntica em `.env` e `infra/.env`. Divergência → 2FA silenciosamente quebrado.
+2. **Docker socket** — `developer-service` monta `/var/run/docker.sock`. Em produção, restrinja o acesso a essa rota.
+3. **Portas internas** — serviços NestJS (3001-3010), PostgreSQL (5432) e Redis (6379) **não devem ser expostos** externamente. Apenas nginx expõe 80/443.
+4. **Cloudflare** — configure SSL/TLS no modo **Full (strict)** e ative "Always Use HTTPS".

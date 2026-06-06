@@ -57,7 +57,13 @@ export class LoginRateLimitGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
     const res = context.switchToHttp().getResponse<Response>();
-    const ip = req.ip ?? 'unknown';
+    const xRealIp = req.headers['x-real-ip'];
+    const xFwdFor = req.headers['x-forwarded-for'];
+    const ip =
+      (typeof xRealIp === 'string' ? xRealIp.trim() : null) ??
+      (typeof xFwdFor === 'string' ? xFwdFor.split(',')[0].trim() : null) ??
+      req.ip ??
+      'unknown';
 
     // 1. Already blocked?
     const blocked = await this.redis.get(BLOCK_KEY(ip));

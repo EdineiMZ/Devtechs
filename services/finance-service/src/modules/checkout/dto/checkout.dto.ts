@@ -1,9 +1,10 @@
+import { Type } from 'class-transformer';
 import {
+  IsEmail,
   IsEnum,
   IsOptional,
   IsString,
-  IsEmail,
-  IsObject,
+  ValidateNested,
 } from 'class-validator';
 
 export const CHECKOUT_METHODS = ['pix', 'card'] as const;
@@ -34,6 +35,7 @@ export class CheckoutInvoiceDto {
   payerEmail?: string;
 
   @IsOptional()
-  @IsObject()
+  @ValidateNested()
+  @Type(() => CardDetailsDto)
   card?: CardDetailsDto;
 }

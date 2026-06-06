@@ -16,9 +16,11 @@ export async function POST(req: Request): Promise<Response> {
       { status: 400, headers: { 'Content-Type': 'application/json' } },
     );
   }
+  const ip = req.headers.get('x-real-ip') ?? req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? undefined;
   const res = await disable2FAViaEmailOtp(
     { currentPassword: body.currentPassword, emailOtp: body.emailOtp },
     session.accessToken,
+    ip,
   );
   return new Response(JSON.stringify(res.data), {
     status: res.status,

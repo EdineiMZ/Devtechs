@@ -3,16 +3,16 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
-  Ip,
   Post,
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { IsNumberString, IsString, Length, MaxLength, MinLength } from 'class-validator';
+import { IsNumberString, IsString, Length, Matches, MaxLength, MinLength } from 'class-validator';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 
+import { RealIp } from '../../common/decorators/real-ip.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
@@ -37,8 +37,11 @@ interface RequestWithTempUser extends Request {
 }
 
 class VerifySessionDto {
+  // Accepts the 6 TOTP digits with optional whitespace/dashes
+  // ("123 456", "123-456"); the service normalises before verifying.
   @IsString()
-  @Length(6, 8)
+  @MaxLength(12)
+  @Matches(/^[\d\s-]{6,12}$/)
   code!: string;
 }
 
@@ -92,7 +95,7 @@ export class TwoFactorController {
   enable(
     @CurrentUser() user: CurrentUserPayload,
     @Body() dto: Enable2FADto,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<Enable2FAResponse> {
     return this.twoFactorService.enable(user.id, dto.code, ip);
   }
@@ -111,7 +114,7 @@ export class TwoFactorController {
   disable(
     @CurrentUser() user: CurrentUserPayload,
     @Body() dto: Disable2FADto,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<Disable2FAResponse> {
     return this.twoFactorService.disable(user.id, dto.currentPassword, dto.code, ip);
   }
@@ -186,7 +189,7 @@ export class TwoFactorController {
   verify(
     @Body() dto: Verify2FADto,
     @Req() req: RequestWithTempUser,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<LoginSuccessResponse> {
     const ctx = req.user;
     if (!ctx) {
@@ -226,7 +229,7 @@ export class TwoFactorController {
   verifySession(
     @CurrentUser() user: CurrentUserPayload,
     @Body() dto: VerifySessionDto,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<{ verified: true }> {
     return this.twoFactorService.verifySession(user.id, dto.code, ip);
   }
@@ -252,7 +255,7 @@ export class TwoFactorController {
   disableWithEmailOtp(
     @CurrentUser() user: CurrentUserPayload,
     @Body() dto: DisableWithEmailOtpDto,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<Disable2FAResponse> {
     return this.twoFactorService.disableWithEmailOtp(
       user.id,
@@ -273,7 +276,7 @@ export class TwoFactorController {
   })
   regenerateRecoveryCodes(
     @CurrentUser() user: CurrentUserPayload,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<RecoveryCodesResponse> {
     return this.twoFactorService.regenerateRecoveryCodes(user.id, ip);
   }

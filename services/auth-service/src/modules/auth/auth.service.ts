@@ -36,8 +36,8 @@ const EVENT_CHANNEL_EMAIL = 'notifications:email';
 
 /** Duration of the short-lived token used to hold the login state between
  *  password verification and TOTP verification. */
-const TWO_FA_TEMP_EXPIRES_IN = '5m';
-const TWO_FA_TEMP_EXPIRES_MS = 5 * 60 * 1000;
+const TWO_FA_TEMP_EXPIRES_IN = '15m';
+const TWO_FA_TEMP_EXPIRES_MS = 15 * 60 * 1000;
 
 export interface LoginContext {
   ipAddress?: string | null;

@@ -34,11 +34,11 @@ import { RedisModule } from './redis/redis.module';
     PermissionResolverModule,
     DockerModule,
     ServicesModule,
-    LogsModule,
     MonitorModule,
     DeveloperConfigModule,
     QueuesModule,
     HealthModule,
+    LogsModule,
     VpsModule,
   ],
   providers: [

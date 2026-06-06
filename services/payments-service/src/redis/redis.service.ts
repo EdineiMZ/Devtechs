@@ -117,4 +117,8 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async publish(channel: string, message: string): Promise<number> {
     return this.run(() => this.client.publish(channel, message), 0);
   }
+
+  async hgetall(key: string): Promise<Record<string, string>> {
+    return this.run(() => this.client.hgetall(key), {});
+  }
 }

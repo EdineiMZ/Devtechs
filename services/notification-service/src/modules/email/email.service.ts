@@ -18,6 +18,10 @@ export const EMAIL_TEMPLATES = [
   'vacation-rejected',
   'payment-due',
   'welcome',
+  'password-reset',
+  'subscription-created',
+  'subscription-cancelled',
+  'subscription-payment-due',
 ] as const;
 export type EmailTemplate = (typeof EMAIL_TEMPLATES)[number];
 
@@ -47,6 +51,7 @@ export type EmailProviderName = 'resend' | 'gmail';
 
 const REDIS_PROVIDER_KEY    = 'SZDevs:config:email_provider';
 const REDIS_GMAIL_CREDS_KEY = 'SZDevs:config:gmail_creds';
+const REDIS_API_KEYS_KEY    = 'SZDevs:config:api_keys';
 
 /**
  * EmailService â€” templated email delivery.

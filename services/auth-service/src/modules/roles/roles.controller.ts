@@ -5,7 +5,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Ip,
   Param,
   Post,
   Put,
@@ -20,6 +19,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import { RealIp } from '../../common/decorators/real-ip.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../../common/decorators/current-user.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
@@ -131,7 +131,7 @@ export class RolesController {
   create(
     @Body() dto: CreateRoleDto,
     @CurrentUser() actor: CurrentUserPayload,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<RoleResponse> {
     return this.rolesService.create(dto, actor.id, ip);
   }
@@ -154,7 +154,7 @@ export class RolesController {
     @Param('id') id: string,
     @Body() dto: UpdateRoleDto,
     @CurrentUser() actor: CurrentUserPayload,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<RoleResponse> {
     return this.rolesService.update(id, dto, actor.id, ip);
   }
@@ -164,7 +164,7 @@ export class RolesController {
   async remove(
     @Param('id') id: string,
     @CurrentUser() actor: CurrentUserPayload,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<void> {
     await this.rolesService.remove(id, actor.id, ip);
   }
@@ -179,7 +179,7 @@ export class RolesController {
     @Param('id') roleId: string,
     @Param('userId') userId: string,
     @CurrentUser() actor: CurrentUserPayload,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<AssignRoleResponse> {
     return this.rolesService.assignToUser(roleId, userId, actor.id, ip);
   }
@@ -190,7 +190,7 @@ export class RolesController {
     @Param('id') roleId: string,
     @Param('userId') userId: string,
     @CurrentUser() actor: CurrentUserPayload,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<UnassignRoleResponse> {
     return this.rolesService.unassignFromUser(roleId, userId, actor.id, ip);
   }

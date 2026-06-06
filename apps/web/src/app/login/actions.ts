@@ -1,5 +1,6 @@
 'use server';
 
+import { headers as nextHeaders } from 'next/headers';
 import {
   authServiceFetch,
   extractErrorMessage,
@@ -27,8 +28,14 @@ export async function preflightLogin(
   email: string,
   password: string,
 ): Promise<PreflightResult> {
+  const h = await nextHeaders();
+  const clientIp =
+    h.get('x-real-ip') ??
+    h.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    undefined;
   const res = await authServiceFetch<LoginResponseDto>('/auth/login', {
     body: { email, password },
+    headers: clientIp ? { 'x-real-ip': clientIp } : undefined,
   });
 
   if (!res.ok) {

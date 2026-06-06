@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import { useState } from 'react';
+import { type ChangeEvent, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { Button, Input } from '@szdevs/ui';
@@ -50,7 +50,7 @@ export function LoginForm(): JSX.Element {
 
   const [mode, setMode] = useState<FormMode>('credentials');
   const [phase, setPhase] = useState<CredentialsPhase>('credentials');
-  const [tempToken, setTempToken] = useState<string | null>(null);
+  const [, setTempToken] = useState<string | null>(null);
   const [banner, setBanner] = useState<BannerState>(() =>
     initialError === AUTH_ERRORS.OAUTH_LINK_FAILED
       ? {
@@ -85,29 +85,39 @@ export function LoginForm(): JSX.Element {
   const onSubmit = handleSubmit(async (data) => {
     setBanner({ kind: 'none' });
 
-    // ── Two-factor phase: tempToken already in state ──────────────────────
-    // The user obtained a tempToken via preflight after the first submit.
-    // Call signIn with tempToken+code so authorize uses the fast path
-    // (/auth/2fa/verify) without re-checking the password.
+    // ── Two-factor phase ──────────────────────────────────────────────────
+    // Always refresh the tempToken before verifying — this ensures it hasn't
+    // expired even if the user took more than the original 5-minute window.
     if (phase === 'two-factor') {
-      if (!tempToken) {
-        // Token expired — send them back to start
-        setBanner({
-          kind: 'error',
-          title: 'Sessão expirou',
-          message: 'O código temporário expirou. Inicie o login novamente.',
-        });
+      const refresh = await preflightLogin(data.email, data.password);
+
+      if ('error' in refresh) {
+        mapAuthorizeError(refresh.error);
         setPhase('credentials');
         setTempToken(null);
         return;
       }
+
+      if (!('requires2FA' in refresh)) {
+        // 2FA was removed or disabled — log in normally without the code.
+        const result = await signIn('credentials', {
+          redirect: false,
+          email:    data.email,
+          password: data.password,
+        } as Parameters<typeof signIn>[1]);
+        if (!result?.error) await redirectAfterLogin();
+        return;
+      }
+
+      const freshToken = refresh.tempToken;
+      setTempToken(freshToken);
 
       const result = await signIn('credentials', {
         redirect: false,
         email:     data.email,
         password:  data.password,
         code:      data.code?.trim() || undefined,
-        tempToken,
+        tempToken: freshToken,
       } as Parameters<typeof signIn>[1]);
 
       if (!result) {
@@ -118,7 +128,7 @@ export function LoginForm(): JSX.Element {
         setBanner({
           kind: 'error',
           title: 'Código inválido',
-          message: 'O código de verificação está incorreto ou expirou. Tente novamente.',
+          message: 'O código de verificação está incorreto. Tente novamente.',
         });
         return;
       }
@@ -127,29 +137,9 @@ export function LoginForm(): JSX.Element {
     }
 
     // ── Credentials phase ─────────────────────────────────────────────────
-    const result = await signIn('credentials', {
-      redirect: false,
-      email:    data.email,
-      password: data.password,
-    });
-
-    if (!result) {
-      setBanner({
-        kind: 'error',
-        title: 'Erro inesperado',
-        message: 'Não foi possível completar o login. Tente novamente.',
-      });
-      return;
-    }
-
-    if (!result.error) {
-      await redirectAfterLogin();
-      return;
-    }
-
-    // signIn failed — NextAuth v5 normalises all authorize() errors to
-    // 'CredentialsSignin', so we can't branch on result.error alone.
-    // Use preflightLogin to determine the real cause.
+    // Preflight first: single backend hit that returns structured errors.
+    // This avoids consuming 2 rate-limit slots per failed attempt (the old
+    // flow called /auth/login inside both signIn→authorize AND here).
     const preflight = await preflightLogin(data.email, data.password);
 
     if ('requires2FA' in preflight) {
@@ -168,8 +158,24 @@ export function LoginForm(): JSX.Element {
       return;
     }
 
-    // Preflight said ok but signIn still failed — unexpected
-    mapAuthorizeError(result.error);
+    // Credentials are valid — establish the NextAuth session.
+    const result = await signIn('credentials', {
+      redirect: false,
+      email:    data.email,
+      password: data.password,
+    });
+
+    if (!result?.error) {
+      await redirectAfterLogin();
+      return;
+    }
+
+    // Preflight said ok but signIn still failed (unexpected race condition).
+    setBanner({
+      kind: 'error',
+      title: 'Erro inesperado',
+      message: 'Não foi possível completar o login. Tente novamente.',
+    });
   });
 
   const mapAuthorizeError = (error: string): void => {
@@ -550,7 +556,7 @@ export function LoginForm(): JSX.Element {
               Lembrar de mim
             </label>
             <Link
-              href="/forgot-password"
+              href="/esqueci-a-senha"
               className="text-xs font-medium text-copper/80 underline-offset-4 hover:text-copper"
             >
               Esqueci minha senha
@@ -566,10 +572,15 @@ export function LoginForm(): JSX.Element {
             autoComplete="one-time-code"
             placeholder="000000"
             maxLength={6}
+            autoFocus
             disabled={loading}
             hint="6 dígitos do seu aplicativo autenticador"
             error={errors.code?.message}
-            {...register('code')}
+            {...register('code', {
+              onChange: (e: ChangeEvent<HTMLInputElement>) => {
+                e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+              },
+            })}
           />
         ) : null}
 

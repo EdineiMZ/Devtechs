@@ -18,7 +18,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     this.devMode = (process.env.NODE_ENV ?? 'development') !== 'production';
   }
 
-  onModuleInit(): void {
+  async onModuleInit(): Promise<void> {
     const url = this.config.get<string>('REDIS_URL');
     const host = this.config.get<string>('REDIS_HOST', 'redis');
     const port = Number(this.config.get<string>('REDIS_PORT', '6379'));
@@ -51,8 +51,29 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       }
     });
 
+    // In production, block module init until the client is ready. Without
+    // this, downstream modules whose onModuleInit issues commands (e.g.
+    // MonitorService loading auto-restart flags) hit ioredis while it is
+    // still 'connecting' and crash with "Stream isn't writeable" because
+    // enableOfflineQueue is false. Dev mode keeps the lazy/non-blocking
+    // connect so a missing Redis doesn't block local iteration.
     if (!this.devMode) {
-      this.client.connect().catch(() => {});
+      await new Promise<void>((resolve) => {
+        if (this.client.status === 'ready') return resolve();
+        const onReady = (): void => {
+          this.client.off('error', onError);
+          resolve();
+        };
+        const onError = (): void => {
+          // Errors during initial connect are already logged by the
+          // 'error' handler above; resolve so the service still boots
+          // and downstream `run()` calls degrade per command.
+          this.client.off('ready', onReady);
+          resolve();
+        };
+        this.client.once('ready', onReady);
+        this.client.once('error', onError);
+      });
     }
   }
 

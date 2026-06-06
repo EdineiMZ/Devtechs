@@ -10,7 +10,7 @@ Copy `.env.example` at the repo root and set the keys below. The service exits w
 
 | Var | Default | Notes |
 | --- | --- | --- |
-| `LICENSE_SERVICE_PORT` / `PORT` | `3009` | TCP port to bind. |
+| `LICENSE_SERVICE_PORT` / `PORT` | `4007` | TCP port to bind. |
 | `DATABASE_URL` | â€” | Postgres connection string. Schema in [packages/database](../../packages/database). |
 | `REDIS_URL` | â€” | Used by rate-limit + cache. Dev-tolerated when offline. |
 | `LICENSE_SIGNING_KEY` | â€” | Ed25519 private key (PEM) |
@@ -33,15 +33,15 @@ pnpm --filter @szdevs/license-service dev
 pnpm --filter @szdevs/license-service start
 ```
 
-Swagger UI is mounted at `http://localhost:3009/license/docs` (disabled when `NODE_ENV=production` unless `EXPOSE_SWAGGER_IN_PROD=true`).
+Swagger UI is mounted at `http://localhost:4007/license/docs` (disabled when `NODE_ENV=production` unless `EXPOSE_SWAGGER_IN_PROD=true`).
 
 ## Endpoints
 
-- GET POST /products â€” registered products (`licenses:audit:view`)
-- POST /clients/:userId/products â€” bind a product to a client (`licenses:clients:bind`)
-- POST /tokens â€” issue activation token (`licenses:tokens:generate`)
-- POST /tokens/:id/revoke â€” `licenses:tokens:revoke`
-- POST /activations â€” verify a token (called by client SDK)
+- GET/POST /products -- registered products (`licenses:audit:view`)
+- POST /clients/:userId/bind -- bind a product to a client (`licenses:clients:bind`)
+- POST /tokens -- issue activation token (`licenses:tokens:generate`)
+- PUT /tokens/:id/revoke -- `licenses:tokens:revoke`
+- POST /tokens/verify -- verify a token (public, called by client SDK, rate-limited 30 req/min/IP)
 
 Full reference (request/response shapes, examples) lives at `/docs` (Redoc, unified across all services) or `/license/docs` (this service's Swagger UI).
 

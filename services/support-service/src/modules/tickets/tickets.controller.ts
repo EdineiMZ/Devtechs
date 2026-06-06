@@ -222,9 +222,11 @@ export class TicketsController {
     @Param('id') ticketId: string,
     @UploadedFile() file: Express.Multer.File,
     @Query('messageId') messageId: string | undefined,
+    @Query('isPrivate') isPrivateParam: string | undefined,
     @CurrentUser() user: CurrentUserPayload,
   ): Promise<unknown> {
-    return this.tickets.uploadAttachment(ticketId, user.id, file, messageId);
+    const isPrivate = isPrivateParam === 'true' || isPrivateParam === '1';
+    return this.tickets.uploadAttachment(ticketId, user.id, file, messageId, isPrivate);
   }
 
   @Get(':id/attachments/:attachmentId')

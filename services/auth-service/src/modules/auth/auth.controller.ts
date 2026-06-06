@@ -5,7 +5,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Ip,
   Post,
   Query,
   Req,
@@ -28,6 +27,7 @@ import type { CurrentUserPayload } from '../../common/decorators/current-user.de
 import { Public } from '../../common/decorators/public.decorator';
 import { RequireEmailVerified } from '../../common/decorators/require-email-verified.decorator';
 import { EmailVerifiedGuard } from '../../common/guards/email-verified.guard';
+import { RealIp } from '../../common/decorators/real-ip.decorator';
 import { LoginRateLimitGuard } from '../../common/rate-limit/login-rate-limit.guard';
 import { THROTTLERS } from '../../common/rate-limit/rate-limit.module';
 
@@ -46,6 +46,8 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { VerifyEmailQueryDto } from './dto/verify-email.dto';
 import { EmailVerificationService } from './email-verification.service';
+import { PasswordResetService } from './password-reset.service';
+import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
 import type { RefreshTokenContext } from './strategies/jwt-refresh.strategy';
 
 interface RequestWithRefresh extends Request {
@@ -58,6 +60,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly emailVerificationService: EmailVerificationService,
+    private readonly passwordResetService: PasswordResetService,
   ) {}
 
   // -------------------------------------------------------------------
@@ -79,7 +82,12 @@ export class AuthController {
   // We skip the `default` global throttler here because the login guard
   // already provides stricter protection against brute-force attempts.
   @UseGuards(LoginRateLimitGuard)
-  @SkipThrottle({ [THROTTLERS.DEFAULT]: true })
+  @SkipThrottle({
+    [THROTTLERS.DEFAULT]: true,
+    [THROTTLERS.REGISTER]: true,
+    [THROTTLERS.EMAIL_VERIFICATION]: true,
+    [THROTTLERS.TWO_FA_VERIFY]: true,
+  })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -151,7 +159,7 @@ export class AuthController {
   @ApiResponse({ status: 429, description: 'Too many failed attempts â€” IP blocked.' })
   login(
     @Body() dto: LoginDto,
-    @Ip() ip: string,
+    @RealIp() ip: string,
     @Req() req: Request,
   ): Promise<LoginResponse> {
     const userAgent = req.headers['user-agent'] ?? null;
@@ -181,7 +189,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   logout(
     @CurrentUser() user: CurrentUserPayload,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<LogoutResponse> {
     return this.authService.logout(user.sessionId, ip);
   }
@@ -225,7 +233,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   verifyEmail(
     @Query() query: VerifyEmailQueryDto,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<VerifyEmailResponse> {
     return this.emailVerificationService.verify(query.token, ip);
   }
@@ -286,7 +294,7 @@ export class AuthController {
   @ApiResponse({ status: 403, description: 'Email not verified.' })
   exportMyData(
     @CurrentUser() user: CurrentUserPayload,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<Record<string, unknown>> {
     return this.authService.exportMyData(user.id, ip);
   }
@@ -332,8 +340,53 @@ export class AuthController {
   deleteMyAccount(
     @CurrentUser() user: CurrentUserPayload,
     @Body('currentPassword') currentPassword: string,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<{ message: string }> {
     return this.authService.deleteMyAccount(user.id, currentPassword, ip);
+  }
+
+  // -------------------------------------------------------------------
+  // Password reset
+  // -------------------------------------------------------------------
+
+  @Public()
+  @SkipThrottle({
+    [THROTTLERS.DEFAULT]: true,
+    [THROTTLERS.REGISTER]: true,
+    [THROTTLERS.EMAIL_VERIFICATION]: true,
+    [THROTTLERS.TWO_FA_VERIFY]: true,
+  })
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.ACCEPTED)
+  forgotPassword(@Body() dto: ForgotPasswordDto): Promise<{ message: string }> {
+    return this.passwordResetService.forgotPassword(dto.email);
+  }
+
+  @Public()
+  @SkipThrottle({
+    [THROTTLERS.DEFAULT]: true,
+    [THROTTLERS.REGISTER]: true,
+    [THROTTLERS.EMAIL_VERIFICATION]: true,
+    [THROTTLERS.TWO_FA_VERIFY]: true,
+  })
+  @Get('reset-password/info')
+  @HttpCode(HttpStatus.OK)
+  getResetInfo(
+    @Query('token') token: string,
+  ): Promise<{ valid: boolean; requires2FA: boolean; expiresAt: string }> {
+    return this.passwordResetService.getResetInfo(token);
+  }
+
+  @Public()
+  @SkipThrottle({
+    [THROTTLERS.DEFAULT]: true,
+    [THROTTLERS.REGISTER]: true,
+    [THROTTLERS.EMAIL_VERIFICATION]: true,
+    [THROTTLERS.TWO_FA_VERIFY]: true,
+  })
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  resetPassword(@Body() dto: ResetPasswordDto, @RealIp() ip: string): Promise<{ message: string; requires2FA?: boolean }> {
+    return this.passwordResetService.resetPassword(dto.token, dto.newPassword, dto.totpCode, ip);
   }
 }

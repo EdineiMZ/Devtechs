@@ -7,14 +7,18 @@
  *
  * @example
  * ```ts
- * import { LicenseClient } from '@szdevs/license-sdk';
+ * import { LicenseClient, MemoryCache } from '@szdevs/license-sdk';
  *
  * const client = new LicenseClient({
  *   baseUrl: 'https://api.szdevs.com',
  *   appId: 'my-saas-app',
+ *   cache: new MemoryCache({ ttlSeconds: 300 }),
  * });
  *
- * const result = await client.verify('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx');
+ * const result = await client.verify('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', {
+ *   hardwareId: 'AA:BB:CC:DD:EE:FF',
+ *   appVersion: '1.2.3',
+ * });
  * if (result.valid) {
  *   console.log('License valid for client:', result.clientId);
  * } else {
@@ -30,3 +34,4 @@ export {
   type LicenseProductInfo,
 } from './types';
 export { hashKey, verifyOffline } from './offline';
+export { MemoryCache, type VerificationCache, type MemoryCacheOptions } from './cache';

@@ -167,6 +167,7 @@ export interface NotificationPreferences {
     support:       boolean;
     rh:            boolean;
     system:        boolean;
+    subscription:  boolean;
   };
   inapp: {
     invoice:       boolean;
@@ -175,6 +176,7 @@ export interface NotificationPreferences {
     support:       boolean;
     rh:            boolean;
     system:        boolean;
+    subscription:  boolean;
   };
 }
 
@@ -185,7 +187,7 @@ export async function getNotificationPreferences(
 }
 
 export async function updateNotificationPreferences(
-  prefs: Partial<Record<string, boolean>>,
+  prefs: { email?: Partial<NotificationPreferences['email']>; inapp?: Partial<NotificationPreferences['inapp']> },
   accessToken?: string,
 ): Promise<ApiResult<NotificationPreferences>> {
   return request<NotificationPreferences>('/notifications/preferences', {

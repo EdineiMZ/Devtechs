@@ -20,7 +20,7 @@ export default async function TermosPage(): Promise<JSX.Element> {
 
   const name    = company?.name  ?? 'SZDevs Tecnologia Ltda.';
   const cnpj    = company?.cnpj  ?? '[CNPJ não cadastrado]';
-  const email   = company?.email ?? 'contato@SZDevs.io';
+  const email   = company?.email ?? 'contato@szdevs.com';
   const city    = company?.city  ?? null;
   const state   = company?.state ?? null;
   const address = formatAddress(company);
@@ -518,12 +518,12 @@ export default async function TermosPage(): Promise<JSX.Element> {
           <section>
             <H2 n="15">Canais de Atendimento</H2>
             <dl className="mt-4 space-y-2 rounded-xl border border-white/8 bg-white/[0.02] p-5 font-mono text-xs">
-              <Row label="Suporte técnico"        value="suporte@SZDevs.io" />
-              <Row label="Financeiro / cobrança"  value="financeiro@SZDevs.io" />
-              <Row label="Cancelamento"           value="cancelamento@SZDevs.io" />
-              <Row label="Segurança / incidentes" value="seguranca@SZDevs.io" />
-              <Row label="Privacidade / LGPD (DPO)" value="privacidade@SZDevs.io" />
-              <Row label="Jurídico"               value="juridico@SZDevs.io" />
+              <Row label="Suporte técnico"        value="suporte@szdevs.com" />
+              <Row label="Financeiro / cobrança"  value="financeiro@szdevs.com" />
+              <Row label="Cancelamento"           value="cancelamento@szdevs.com" />
+              <Row label="Segurança / incidentes" value="seguranca@szdevs.com" />
+              <Row label="Privacidade / LGPD (DPO)" value="privacidade@szdevs.com" />
+              <Row label="Jurídico"               value="juridico@szdevs.com" />
               <Row label="Consumidor.gov"         value="A Prestadora está cadastrada no consumidor.gov.br" />
             </dl>
           </section>

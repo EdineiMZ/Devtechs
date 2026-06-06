@@ -20,8 +20,8 @@ export default async function PrivacidadePage(): Promise<JSX.Element> {
 
   const name    = company?.name            ?? 'SZDevs Tecnologia Ltda.';
   const cnpj    = company?.cnpj            ?? '[CNPJ não cadastrado]';
-  const email   = company?.email           ?? 'privacidade@SZDevs.io';
-  const website = company?.website         ?? 'https://SZDevs.io';
+  const email   = company?.email           ?? 'privacidade@szdevs.com';
+  const website = company?.website         ?? 'https://szdevs.com';
   const address = formatAddress(company);
 
   return (
@@ -307,7 +307,7 @@ export default async function PrivacidadePage(): Promise<JSX.Element> {
             <H2 n="12">Contato e Canais de Atendimento</H2>
             <dl className="mt-4 space-y-2 rounded-xl border border-white/8 bg-white/[0.02] p-5 font-mono text-xs">
               <Row label="DPO / Encarregado"  value={email} />
-              <Row label="Suporte geral"       value="suporte@SZDevs.io" />
+              <Row label="Suporte geral"       value="suporte@szdevs.com" />
               <Row label="Portal do titular"   value={website} />
               <Row label="ANPD"                value="gov.br/anpd" />
             </dl>

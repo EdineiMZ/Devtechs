@@ -7,6 +7,7 @@ import MercadoPagoConfig, {
   PreApproval,
 } from 'mercadopago';
 
+import { RedisService } from '../redis/redis.service';
 import type {
   CreatePaymentInput,
   CreateSubscriptionInput,
@@ -21,40 +22,43 @@ export class MercadoPagoProvider implements PaymentProvider {
   readonly name = 'mercadopago';
 
   private readonly logger = new Logger(MercadoPagoProvider.name);
-  private readonly accessToken: string;
+  private readonly envAccessToken: string;
   private readonly webhookSecret: string;
-  private readonly devMode: boolean;
 
-  private readonly mpClient: MercadoPagoConfig;
-  private readonly payment: Payment;
-  private readonly preApproval: PreApproval;
-
-  constructor(config: ConfigService) {
+  constructor(config: ConfigService, private readonly redis: RedisService) {
     // Accepts both MP_ACCESS_TOKEN (config-panel managed key) and the legacy
     // MERCADOPAGO_ACCESS_TOKEN so existing .env files keep working.
-    this.accessToken =
+    this.envAccessToken =
       config.get<string>('MP_ACCESS_TOKEN') ??
       config.get<string>('MERCADOPAGO_ACCESS_TOKEN') ?? '';
     this.webhookSecret =
       config.get<string>('MP_WEBHOOK_SECRET') ??
       config.get<string>('MERCADOPAGO_WEBHOOK_SECRET') ?? '';
-    this.devMode = !this.accessToken;
 
-    if (this.devMode) {
+    if (!this.envAccessToken) {
       this.logger.warn(
-        'MERCADOPAGO_ACCESS_TOKEN is empty — running in stub/dev mode. All provider calls return stubs.',
+        'MERCADOPAGO_ACCESS_TOKEN is empty — will resolve from Redis on each request.',
       );
     }
+  }
 
-    this.mpClient = new MercadoPagoConfig({
-      accessToken: this.accessToken || 'TEST-stub',
-    });
-    this.payment = new Payment(this.mpClient);
-    this.preApproval = new PreApproval(this.mpClient);
+  private async resolveAccessToken(): Promise<string> {
+    try {
+      const keys = await this.redis.hgetall('SZDevs:config:api_keys');
+      if (keys['MP_ACCESS_TOKEN']) return keys['MP_ACCESS_TOKEN'];
+    } catch { /* fall through to env */ }
+    return this.envAccessToken;
+  }
+
+  private getMpResources(token: string): { payment: Payment; preApproval: PreApproval } {
+    const client = new MercadoPagoConfig({ accessToken: token });
+    return { payment: new Payment(client), preApproval: new PreApproval(client) };
   }
 
   async createPayment(input: CreatePaymentInput): Promise<PaymentProviderResult> {
-    if (this.devMode) {
+    const token = await this.resolveAccessToken();
+    if (!token) {
+      this.logger.warn('No MP access token — returning stub payment');
       return {
         externalId: `stub-payment-${Date.now()}`,
         status: 'pending',
@@ -62,6 +66,8 @@ export class MercadoPagoProvider implements PaymentProvider {
         metadata: { stub: true },
       };
     }
+
+    const { payment } = this.getMpResources(token);
 
     const body: Record<string, unknown> = {
       transaction_amount: input.amount,
@@ -74,7 +80,7 @@ export class MercadoPagoProvider implements PaymentProvider {
       body.notification_url = input.notificationUrl;
     }
 
-    const result = await this.payment.create({ body });
+    const result = await payment.create({ body });
 
     const metadata: Record<string, unknown> = {};
     if (input.method === 'pix') {
@@ -98,7 +104,9 @@ export class MercadoPagoProvider implements PaymentProvider {
   }
 
   async createSubscription(input: CreateSubscriptionInput): Promise<PaymentProviderResult> {
-    if (this.devMode) {
+    const token = await this.resolveAccessToken();
+    if (!token) {
+      this.logger.warn('No MP access token — returning stub subscription');
       return {
         externalId: `stub-sub-${Date.now()}`,
         status: 'pending',
@@ -106,6 +114,8 @@ export class MercadoPagoProvider implements PaymentProvider {
         metadata: { stub: true },
       };
     }
+
+    const { preApproval } = this.getMpResources(token);
 
     const body: Record<string, unknown> = {
       reason: input.planName,
@@ -123,7 +133,7 @@ export class MercadoPagoProvider implements PaymentProvider {
       body.back_url = input.backUrl;
     }
 
-    const result = await this.preApproval.create({ body });
+    const result = await preApproval.create({ body });
 
     return {
       externalId: String(result.id ?? ''),
@@ -134,11 +144,13 @@ export class MercadoPagoProvider implements PaymentProvider {
   }
 
   async cancelSubscription(externalId: string): Promise<void> {
-    if (this.devMode) {
+    const token = await this.resolveAccessToken();
+    if (!token) {
       this.logger.warn(`[stub] cancelSubscription(${externalId})`);
       return;
     }
-    await this.preApproval.update({
+    const { preApproval } = this.getMpResources(token);
+    await preApproval.update({
       id: externalId,
       body: { status: 'cancelled' },
     });
@@ -147,10 +159,12 @@ export class MercadoPagoProvider implements PaymentProvider {
   async getPaymentStatus(
     externalId: string,
   ): Promise<{ status: string; metadata?: Record<string, unknown> }> {
-    if (this.devMode) {
+    const token = await this.resolveAccessToken();
+    if (!token) {
       return { status: 'pending', metadata: { stub: true } };
     }
-    const result = await this.payment.get({ id: Number(externalId) });
+    const { payment } = this.getMpResources(token);
+    const result = await payment.get({ id: Number(externalId) });
     return {
       status: result.status ?? 'unknown',
       metadata: {},
@@ -216,13 +230,16 @@ export class MercadoPagoProvider implements PaymentProvider {
     const data = parsed['data'] as Record<string, unknown> | undefined;
     const externalId = String(data?.['id'] ?? '');
 
-    if (this.devMode) {
+    const token = await this.resolveAccessToken();
+    if (!token) {
       return { type: 'unknown', action, externalId, status: 'pending', metadata: { stub: true } };
     }
 
+    const { payment } = this.getMpResources(token);
+
     if (type === 'payment' && externalId) {
       try {
-        const result = await this.payment.get({ id: Number(externalId) });
+        const result = await payment.get({ id: Number(externalId) });
         return {
           type: 'payment',
           action,

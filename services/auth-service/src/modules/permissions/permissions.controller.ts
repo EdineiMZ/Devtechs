@@ -5,12 +5,12 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Ip,
   Param,
   Post,
   UseGuards,
 } from '@nestjs/common';
 
+import { RealIp } from '../../common/decorators/real-ip.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../../common/decorators/current-user.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
@@ -50,7 +50,7 @@ export class PermissionsController {
     @Param('userId') userId: string,
     @Body() dto: GrantPermissionDto,
     @CurrentUser() actor: CurrentUserPayload,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<GrantPermissionResponse> {
     return this.permissionsService.grantToUser(
       userId,
@@ -66,7 +66,7 @@ export class PermissionsController {
     @Param('userId') userId: string,
     @Param('permissionId') permissionId: string,
     @CurrentUser() actor: CurrentUserPayload,
-    @Ip() ip: string,
+    @RealIp() ip: string,
   ): Promise<RevokePermissionResponse> {
     return this.permissionsService.revokeFromUser(
       userId,

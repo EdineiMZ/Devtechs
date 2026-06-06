@@ -8,7 +8,8 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
-import { IsBoolean, IsOptional } from 'class-validator';
+import { IsBoolean, IsObject, IsOptional, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 
 import {
   CurrentUser,
@@ -29,6 +30,7 @@ export interface NotificationPreferences {
     support:        boolean;
     rh:             boolean;
     system:         boolean;
+    subscription:   boolean;
   };
   inapp: {
     invoice:        boolean;
@@ -37,22 +39,23 @@ export interface NotificationPreferences {
     support:        boolean;
     rh:             boolean;
     system:         boolean;
+    subscription:   boolean;
   };
 }
 
+class ChannelPrefsDto {
+  @IsOptional() @IsBoolean() invoice?:       boolean;
+  @IsOptional() @IsBoolean() login?:         boolean;
+  @IsOptional() @IsBoolean() accountChange?: boolean;
+  @IsOptional() @IsBoolean() support?:       boolean;
+  @IsOptional() @IsBoolean() rh?:            boolean;
+  @IsOptional() @IsBoolean() system?:        boolean;
+  @IsOptional() @IsBoolean() subscription?:  boolean;
+}
+
 class UpdatePrefsDto {
-  @IsOptional() @IsBoolean() 'email.invoice'?:       boolean;
-  @IsOptional() @IsBoolean() 'email.login'?:         boolean;
-  @IsOptional() @IsBoolean() 'email.accountChange'?: boolean;
-  @IsOptional() @IsBoolean() 'email.support'?:       boolean;
-  @IsOptional() @IsBoolean() 'email.rh'?:            boolean;
-  @IsOptional() @IsBoolean() 'email.system'?:        boolean;
-  @IsOptional() @IsBoolean() 'inapp.invoice'?:       boolean;
-  @IsOptional() @IsBoolean() 'inapp.login'?:         boolean;
-  @IsOptional() @IsBoolean() 'inapp.accountChange'?: boolean;
-  @IsOptional() @IsBoolean() 'inapp.support'?:       boolean;
-  @IsOptional() @IsBoolean() 'inapp.rh'?:            boolean;
-  @IsOptional() @IsBoolean() 'inapp.system'?:        boolean;
+  @IsOptional() @IsObject() @ValidateNested() @Type(() => ChannelPrefsDto) email?:  ChannelPrefsDto;
+  @IsOptional() @IsObject() @ValidateNested() @Type(() => ChannelPrefsDto) inapp?:  ChannelPrefsDto;
 }
 
 const DEFAULTS: Record<string, boolean> = {
@@ -62,12 +65,14 @@ const DEFAULTS: Record<string, boolean> = {
   'email.support':       true,
   'email.rh':            true,
   'email.system':        true,
+  'email.subscription':  true,
   'inapp.invoice':       true,
   'inapp.login':         true,
   'inapp.accountChange': true,
   'inapp.support':       true,
   'inapp.rh':            true,
   'inapp.system':        true,
+  'inapp.subscription':  true,
 };
 
 function prefsKey(userId: string): string {
@@ -87,6 +92,7 @@ function buildPrefsFromHash(hash: Record<string, string>): NotificationPreferenc
       support:       bool('email.support'),
       rh:            bool('email.rh'),
       system:        bool('email.system'),
+      subscription:  bool('email.subscription'),
     },
     inapp: {
       invoice:       bool('inapp.invoice'),
@@ -95,6 +101,7 @@ function buildPrefsFromHash(hash: Record<string, string>): NotificationPreferenc
       support:       bool('inapp.support'),
       rh:            bool('inapp.rh'),
       system:        bool('inapp.system'),
+      subscription:  bool('inapp.subscription'),
     },
   };
 }
@@ -157,8 +164,18 @@ export class NotificationController {
     @Body() dto: UpdatePrefsDto,
   ): Promise<NotificationPreferences> {
     const key = prefsKey(user.id);
-    const entries = Object.entries(dto).filter(([, v]) => v !== undefined) as [string, boolean][];
-    for (const [field, val] of entries) {
+    const flat: [string, boolean][] = [];
+    if (dto.email) {
+      for (const [k, v] of Object.entries(dto.email) as [string, boolean | undefined][]) {
+        if (v !== undefined) flat.push([`email.${k}`, v]);
+      }
+    }
+    if (dto.inapp) {
+      for (const [k, v] of Object.entries(dto.inapp) as [string, boolean | undefined][]) {
+        if (v !== undefined) flat.push([`inapp.${k}`, v]);
+      }
+    }
+    for (const [field, val] of flat) {
       await this.redis.hset(key, field, val ? 'true' : 'false');
     }
     const hash = await this.redis.hgetall(key);

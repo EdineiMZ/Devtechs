@@ -8,16 +8,16 @@ import { useForm } from 'react-hook-form';
 import { Button, Input } from '@szdevs/ui';
 
 import { registerSchema, type RegisterInput } from '@/lib/auth-schemas';
-import { authServiceFetch, extractErrorMessage } from '@/lib/auth-service';
 
+import { registerAction } from './register-action';
 import { RegisterSuccessView } from './register-success-view';
 
 /**
- * Register form → "check your email" success view.
+ * Register form -> "check your email" success view.
  *
- * Includes an explicit opt-in checkbox required by LGPD art. 7º, I:
- * "manifestação livre, informada e inequívoca" do titular antes do
- * tratamento dos dados. O simples texto passivo não é suficiente.
+ * Includes an explicit opt-in checkbox required by LGPD art. 7o, I:
+ * "manifestacao livre, informada e inequivoca" do titular antes do
+ * tratamento dos dados. O simples texto passivo nao e suficiente.
  */
 
 type SubmitStatus =
@@ -41,29 +41,22 @@ export function RegisterForm(): JSX.Element {
       email: '',
       password: '',
       confirmPassword: '',
-      // termsAccepted starts as undefined (falsy) — checkbox unchecked
     },
   });
 
   const onSubmit = handleSubmit(async (data) => {
     setStatus({ kind: 'loading' });
-    const res = await authServiceFetch<{ message: string; userId: string }>(
-      '/auth/register',
-      {
-        body: {
-          name: data.nome,
-          email: data.email,
-          password: data.password,
-          confirmPassword: data.confirmPassword,
-        },
-      },
-    );
-    if (!res.ok) {
-      setStatus({ kind: 'error', message: extractErrorMessage(res.data) });
+    const result = await registerAction({
+      name: data.nome,
+      email: data.email,
+      password: data.password,
+      confirmPassword: data.confirmPassword,
+    });
+    if (!result.ok) {
+      setStatus({ kind: 'error', message: result.error ?? 'Ocorreu um erro inesperado' });
       return;
     }
-    const body = res.data as { message: string; userId: string };
-    setStatus({ kind: 'success', email: data.email, userId: body.userId });
+    setStatus({ kind: 'success', email: data.email, userId: result.userId ?? '' });
   });
 
   if (status.kind === 'success') {
@@ -125,7 +118,6 @@ export function RegisterForm(): JSX.Element {
           {...register('confirmPassword')}
         />
 
-        {/* ── Consentimento explícito — LGPD art. 7º, I ─────────────── */}
         <div className="space-y-1">
           <label className="flex items-start gap-3 cursor-pointer group">
             <input

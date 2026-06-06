@@ -13,6 +13,7 @@ import {
   AUDIT_KEY,
   type AuditMetadata,
 } from '../../common/decorators/audit.decorator';
+import { getRealIp } from '../../common/utils/real-ip';
 import type { CurrentUserPayload } from '../../common/decorators/current-user.decorator';
 
 import { AuditService } from './audit.service';
@@ -63,7 +64,7 @@ export class AuditInterceptor implements NestInterceptor {
     const http = context.switchToHttp();
     const req = http.getRequest<RequestWithUser>();
     const user = req.user;
-    const ipAddress = req.ip ?? null;
+    const ipAddress = getRealIp(req);
     const userAgent = (req.headers['user-agent'] as string | undefined) ?? null;
     const sessionId = user?.sessionId ?? null;
     const method = req.method;

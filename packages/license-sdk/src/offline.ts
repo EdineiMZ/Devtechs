@@ -15,7 +15,7 @@ import { createHash } from 'crypto';
  * import { hashKey } from '@szdevs/license-sdk';
  *
  * const hash = hashKey('550e8400-e29b-41d4-a716-446655440000');
- * // â†’ 'a1b2c3d4...' (64 hex chars)
+ * // -> 'a1b2c3d4...' (64 hex chars)
  * ```
  */
 export function hashKey(key: string): string {
@@ -28,7 +28,7 @@ export function hashKey(key: string): string {
  *
  * Use this when the application cannot reach the license-service
  * (e.g., air-gapped environments). Note that offline verification
- * cannot check usage limits, expiration, or revocation status â€”
+ * cannot check usage limits, expiration, or revocation status --
  * it only confirms the key itself is authentic.
  *
  * @param key - The UUID v4 license key provided by the user

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsJWT, IsNumberString, IsString, Length } from 'class-validator';
+import { IsJWT, IsString, Matches, MaxLength } from 'class-validator';
 
 export class Verify2FADto {
   /** Short-lived JWT issued by /auth/login when the user has 2FA enabled. */
@@ -13,16 +13,21 @@ export class Verify2FADto {
   @IsJWT({ message: 'tempToken must be a valid JWT' })
   tempToken!: string;
 
-  /** Six-digit TOTP code shown by the authenticator app. */
+  /**
+   * Six-digit TOTP code shown by the authenticator app. Accepts the
+   * digits with optional whitespace/dashes ("123 456", "123-456",
+   * " 123456 ") — the service normalises before verifying with otplib.
+   */
   @ApiProperty({
-    description: 'Six-digit TOTP code shown by the authenticator app (Google Authenticator, 1Password…).',
+    description:
+      'TOTP code do app autenticador (Google Authenticator, 1Password…). Espaços e hífens são tolerados.',
     example: '482917',
     minLength: 6,
-    maxLength: 6,
-    pattern: '^[0-9]{6}$',
+    maxLength: 12,
+    pattern: '^[\\d\\s-]{6,12}$',
   })
   @IsString({ message: 'code must be a string' })
-  @Length(6, 6, { message: 'code must be exactly 6 digits' })
-  @IsNumberString({ no_symbols: true }, { message: 'code must contain only digits' })
+  @MaxLength(12, { message: 'code is too long' })
+  @Matches(/^[\d\s-]{6,12}$/, { message: 'code must be a 6-digit numeric code' })
   code!: string;
 }

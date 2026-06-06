@@ -32,6 +32,7 @@ export const loginSchema = z.object({
   code: z
     .string()
     .optional()
+    .transform((value) => value?.replace(/\D/g, '').slice(0, 6) || undefined)
     .refine((value) => !value || /^\d{6}$/.test(value), {
       message: 'O código deve ter 6 dígitos',
     }),

@@ -67,6 +67,32 @@ export const ADMIN_NAV_ITEMS: AppSidebarItem[] = [
     ),
   },
   {
+    href: '/admin/financeiro/produtos',
+    label: 'Produtos & Serviços',
+    description: 'Catálogo de produtos para cobranças',
+    permission: 'finance:products:view',
+    icon: icon(
+      <>
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <path d="M16 10a4 4 0 0 1-8 0" />
+      </>,
+    ),
+  },
+  {
+    href: '/admin/financeiro/assinaturas',
+    label: 'Assinaturas',
+    description: 'Cobranças recorrentes por cliente',
+    permission: 'finance:subscriptions:view',
+    icon: icon(
+      <>
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+        <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+        <line x1="12" y1="22.08" x2="12" y2="12" />
+      </>,
+    ),
+  },
+  {
     href: '/admin/projetos',
     label: 'Projetos',
     description: 'Kanban e sprints',
@@ -97,6 +123,18 @@ export const ADMIN_NAV_ITEMS: AppSidebarItem[] = [
       <>
         <polyline points="16 18 22 12 16 6" />
         <polyline points="8 6 2 12 8 18" />
+      </>,
+    ),
+  },
+  {
+    href: '/admin/integracoes',
+    label: 'Integrações & API',
+    description: 'API keys e integrações externas',
+    permission: 'integrations:manage',
+    icon: icon(
+      <>
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
       </>,
     ),
   },

@@ -9,6 +9,8 @@ import {
 } from 'react';
 import { io, type Socket } from 'socket.io-client';
 
+import { getDeveloperWsTarget } from '@/lib/developer-api';
+
 // ─── Types ────────────────────────────────────────────────────────────
 
 interface ServiceStatus {
@@ -39,7 +41,6 @@ interface AutoRestartedEvent {
 
 // ─── Constants ────────────────────────────────────────────────────────
 
-const MAX_LOG_LINES = 1000;
 const MAX_TOASTS = 5;
 
 const LEVEL_STYLE: Record<LogLine['level'], string> = {
@@ -122,12 +123,10 @@ function useToasts() {
 export function MonitorPanel({
   initial,
   accessToken,
-  wsUrl,
   canControl,
 }: {
   initial: ServiceStatus[];
   accessToken: string;
-  wsUrl: string;
   canControl: boolean;
 }): JSX.Element {
   const [services, setServices] = useState<Map<string, ServiceStatus>>(
@@ -143,7 +142,6 @@ export function MonitorPanel({
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
   const monitorSocketRef = useRef<Socket | null>(null);
-  const logsSocketRef = useRef<Socket | null>(null);
   const logRef = useRef<HTMLDivElement | null>(null);
   const subscribedLog = useRef<string | null>(null);
   const { toasts, push: pushToast } = useToasts();
@@ -151,7 +149,9 @@ export function MonitorPanel({
   // ─── Monitor WebSocket ─────────────────────────────────────────────
 
   useEffect(() => {
-    const socket = io(`${wsUrl}/monitor`, {
+    const target = getDeveloperWsTarget();
+    const socket = io(target.url, {
+      path: target.path,
       transports: ['websocket'],
       auth: { token: accessToken },
       reconnection: true,
@@ -188,53 +188,18 @@ export function MonitorPanel({
       socket.disconnect();
       monitorSocketRef.current = null;
     };
-  }, [accessToken, wsUrl, pushToast]);
+  }, [accessToken, pushToast]);
 
-  // ─── Logs WebSocket ────────────────────────────────────────────────
-
+  // ─── Log streaming ─────────────────────────────────────────────────
+  // The dedicated `/developer` socket.io namespace for live log streaming
+  // is not implemented on developer-service yet. Until it lands, the
+  // logs panel runs without a websocket so we don't spam the browser
+  // console with failed handshakes; "selecting a log" still works as a
+  // visual affordance, but no lines arrive until the gateway is added.
   useEffect(() => {
-    const socket = io(`${wsUrl}/developer`, {
-      transports: ['websocket'],
-      auth: { token: accessToken },
-      reconnection: true,
-    });
-
-    socket.on('logs:line', (line: LogLine) => {
-      if (!logPaused) {
-        setLogLines((prev) => {
-          const next = [...prev, line];
-          return next.length > MAX_LOG_LINES
-            ? next.slice(next.length - MAX_LOG_LINES)
-            : next;
-        });
-      }
-    });
-
-    logsSocketRef.current = socket;
-    return () => {
-      socket.disconnect();
-      logsSocketRef.current = null;
-    };
-  }, [accessToken, wsUrl, logPaused]);
-
-  // Subscribe / unsubscribe logs when selectedLog changes
-  useEffect(() => {
-    const socket = logsSocketRef.current;
-    if (!socket) return;
-    if (subscribedLog.current && subscribedLog.current !== selectedLog) {
-      socket.emit('logs:unsubscribe', { serviceName: subscribedLog.current });
-    }
-    if (selectedLog) {
-      setLogLines([]);
-      socket.emit('logs:subscribe', { serviceName: selectedLog }, (ack: { ok: boolean }) => {
-        if (!ack?.ok) pushToast(`Falha ao abrir logs de ${selectedLog}`, 'error');
-      });
-    }
+    if (!selectedLog) return;
+    setLogLines([]);
     subscribedLog.current = selectedLog;
-    return () => {
-      if (selectedLog) socket.emit('logs:unsubscribe', { serviceName: selectedLog });
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLog]);
 
   // Auto-scroll logs

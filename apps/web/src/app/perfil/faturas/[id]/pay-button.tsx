@@ -5,6 +5,17 @@ import Script from 'next/script';
 
 import { checkoutInvoice, type PixPaymentResponse } from '@/lib/finance-api';
 
+type InvoiceStatusResponse = { status: string };
+
+
+interface PaymentCondition {
+  id: string;
+  name: string;
+  installments: number;
+  interestRate: number;
+  active: boolean;
+}
+
 /* ---------- MP types ---------- */
 declare global {
   interface Window {
@@ -79,9 +90,7 @@ function maskCardNumber(raw: string): string {
 }
 
 /* ---------- Constants ---------- */
-const MP_PUBLIC_KEY =
-  process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ?? 'TEST-c6c55ecf-5f34-4034-b6e3-faac53bc9b95';
-const IS_SANDBOX = MP_PUBLIC_KEY.startsWith('TEST-');
+const SANDBOX_FALLBACK = 'TEST-c6c55ecf-5f34-4034-b6e3-faac53bc9b95';
 
 /* ---------- Brand icon ---------- */
 function CardBrandIcon({ brand }: { brand: string }): JSX.Element {
@@ -247,6 +256,9 @@ export function PayButton({
   const [pix, setPix] = useState<PixPaymentResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [checkingPix, setCheckingPix] = useState(false);
+  const [mpPublicKey, setMpPublicKey] = useState<string>(SANDBOX_FALLBACK);
+  const [isSandbox, setIsSandbox] = useState(true);
   const mpRef = useRef<MpInstance | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -258,17 +270,78 @@ export function PayButton({
   const [cardCvv, setCardCvv] = useState('');
   const [cardCpf, setCardCpf] = useState('');
   const [installments, setInstallments] = useState('1');
+  const [paymentConditions, setPaymentConditions] = useState<PaymentCondition[]>([]);
+  const pixPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  /* Initialise MP SDK */
+  /* Fetch the runtime MP public key and payment conditions once */
+  useEffect(() => {
+    void fetch('/api/payment/config')
+      .then((r) => r.json() as Promise<{ mpPublicKey: string }>)
+      .then(({ mpPublicKey: key }) => {
+        const resolvedKey = key || SANDBOX_FALLBACK;
+        setMpPublicKey(resolvedKey);
+        setIsSandbox(resolvedKey.startsWith('TEST-'));
+      })
+      .catch(() => { /* keep sandbox fallback */ });
+
+    void fetch('/api/payment/conditions', { cache: 'no-store' })
+      .then((r) => r.json() as Promise<PaymentCondition[]>)
+      .then((conditions) => {
+        if (Array.isArray(conditions) && conditions.length > 0) {
+          setPaymentConditions(conditions);
+          setInstallments(String(conditions[0]!.installments));
+        }
+      })
+      .catch(() => {
+        setPaymentConditions([
+          { id: 'f1', name: '1× sem juros', installments: 1, interestRate: 0, active: true },
+        ]);
+      });
+  }, []);
+
+  /* (Re-)initialise MP SDK whenever the public key is resolved */
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.MercadoPago) {
+      mpRef.current = new window.MercadoPago(mpPublicKey, { locale: 'pt-BR' });
+    }
+  }, [mpPublicKey]);
+
+  /* Initialise MP SDK on Script load */
   function handleMpLoad(): void {
-    if (typeof window !== 'undefined' && window.MercadoPago && !mpRef.current) {
-      mpRef.current = new window.MercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
+    if (typeof window !== 'undefined' && window.MercadoPago) {
+      mpRef.current = new window.MercadoPago(mpPublicKey, { locale: 'pt-BR' });
     }
   }
 
+  /* Poll invoice status every 5s while on the PIX QR step */
   useEffect(() => {
-    handleMpLoad();
-  });
+    if (step !== 'pix-qr') {
+      if (pixPollRef.current) {
+        clearInterval(pixPollRef.current);
+        pixPollRef.current = null;
+      }
+      return;
+    }
+    pixPollRef.current = setInterval(() => {
+      void fetch(`/api/payment/status/${encodeURIComponent(invoiceId)}`, { cache: 'no-store' })
+        .then((r) => r.json() as Promise<InvoiceStatusResponse>)
+        .then(({ status }) => {
+          if (status === 'PAID') {
+            clearInterval(pixPollRef.current!);
+            pixPollRef.current = null;
+            setStep('success');
+            setTimeout(() => window.location.reload(), 2500);
+          }
+        })
+        .catch(() => { /* silent retry */ });
+    }, 5000);
+    return () => {
+      if (pixPollRef.current) {
+        clearInterval(pixPollRef.current);
+        pixPollRef.current = null;
+      }
+    };
+  }, [step, invoiceId]);
 
   /* Close modal with Escape */
   const handleKeyDown = useCallback(
@@ -332,6 +405,25 @@ export function PayButton({
     await navigator.clipboard.writeText(pix.pixQrCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
+  }
+
+  async function manualCheckPix(): Promise<void> {
+    setCheckingPix(true);
+    try {
+      const res = await fetch(`/api/payment/check/${encodeURIComponent(invoiceId)}`, {
+        method: 'POST',
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { status: string };
+        if (data.status === 'PAID') {
+          setStep('success');
+          setTimeout(() => window.location.reload(), 2500);
+        }
+      }
+    } finally {
+      setCheckingPix(false);
+    }
   }
 
   /* ---- Card ---- */
@@ -419,7 +511,7 @@ export function PayButton({
     <>
       <Script
         src="https://sdk.mercadopago.com/js/v2"
-        strategy="lazyOnload"
+        strategy="afterInteractive"
         onLoad={handleMpLoad}
       />
 
@@ -674,9 +766,9 @@ export function PayButton({
                           onChange={(e) => setInstallments(e.target.value)}
                           className="w-full rounded-xl border border-white/10 bg-[#0d0d0f] px-2 py-3 text-sm text-white focus:border-violet-500/60 focus:outline-none"
                         >
-                          {[1, 2, 3, 6, 12].map((n) => (
-                            <option key={n} value={String(n)}>
-                              {n}×
+                          {paymentConditions.map((c) => (
+                            <option key={c.id} value={String(c.installments)}>
+                              {c.name || `${c.installments}×${c.interestRate > 0 ? ` (${(c.interestRate * 100).toFixed(2)}% a.m.)` : ' sem juros'}`}
                             </option>
                           ))}
                         </select>
@@ -708,7 +800,7 @@ export function PayButton({
                     </div>
 
                     {/* Sandbox hint */}
-                    {IS_SANDBOX && (
+                    {isSandbox && (
                       <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2.5">
                         <p className="text-[10px] font-semibold text-amber-400">
                           🧪 Ambiente de testes
@@ -834,17 +926,28 @@ export function PayButton({
                     </div>
                   )}
 
-                  <div className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-400/80">
-                    Após o pagamento PIX, aguarde alguns minutos para a confirmação automática.
+                  <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-xs text-emerald-400/80">
+                    <div className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-emerald-400" />
+                    Verificando automaticamente o pagamento a cada 5 segundos…
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setStep('choose')}
-                    className="mt-4 w-full rounded-xl border border-white/10 bg-white/5 py-2.5 text-sm text-white/60 transition hover:bg-white/10 hover:text-white"
-                  >
-                    ← Escolher outro método
-                  </button>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void manualCheckPix()}
+                      disabled={checkingPix}
+                      className="flex-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 py-2.5 text-sm font-medium text-emerald-400 transition hover:bg-emerald-500/20 disabled:opacity-50"
+                    >
+                      {checkingPix ? 'Verificando…' : 'Já paguei'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStep('choose')}
+                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white/60 transition hover:bg-white/10 hover:text-white"
+                    >
+                      ←
+                    </button>
+                  </div>
                 </div>
               )}
 

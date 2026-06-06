@@ -17,12 +17,20 @@ interface Project {
 }
 
 interface AttachVpsDialogProps {
-  accessToken: string;
+  /**
+   * Kept for API compatibility — the dialog used to inject this Bearer
+   * token into a direct `fetch(http://developer-service:4010/vps)` call
+   * from the browser, which leaked the credential and only worked from
+   * inside the docker network. The submit now goes through the
+   * server-side proxy at `/api/admin/vps`, which resolves the token
+   * from the NextAuth session, so this prop is unused at the call site.
+   */
+  accessToken?: string;
   clients: Client[];
   projects: Project[];
 }
 
-export function AttachVpsDialog({ accessToken, clients, projects }: AttachVpsDialogProps): JSX.Element {
+export function AttachVpsDialog({ clients, projects }: AttachVpsDialogProps): JSX.Element {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -61,17 +69,16 @@ export function AttachVpsDialog({ accessToken, clients, projects }: AttachVpsDia
     }
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_DEVELOPER_SERVICE_URL ?? 'http://127.0.0.1:4010'}/vps`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify(body),
-        },
-      );
+      // Proxy through the Next.js API route — same origin, runs
+      // server-side so it can reach developer-service on the internal
+      // docker network (`http://developer-service:3010`) and attach the
+      // Bearer token from the NextAuth session without exposing it to
+      // the browser.
+      const res = await fetch('/api/admin/vps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const msg = data?.message;

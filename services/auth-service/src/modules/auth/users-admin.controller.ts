@@ -21,6 +21,7 @@ interface UserAdminItem {
   emailVerified: boolean;
   twoFactorEnabled: boolean;
   banned: boolean;
+  status: string;
   roles: string[];
   createdAt: string;
   lastLoginAt: string | null;
@@ -93,6 +94,7 @@ export class UsersAdminController {
       emailVerified: u.emailVerified,
       twoFactorEnabled: u.twoFactorEnabled,
       banned: u.status === 'BANNED',
+      status: u.status,
       roles: u.roles.map((r) => r.role.name),
       createdAt: u.createdAt.toISOString(),
       lastLoginAt: u.lastLoginAt?.toISOString() ?? null,

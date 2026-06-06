@@ -6,7 +6,7 @@ version: "3.9"
 # Profiles
 # --------
 #   (none)        postgres + redis + (optional) dev tooling. This is the
-#                 stack you want when developing â€” the apps and services
+#                 stack you want when developing â€" the apps and services
 #                 themselves run natively on the host with `pnpm dev`,
 #                 talking to containerized infra on localhost ports.
 #   prod          The full production topology: nginx + every service +
@@ -111,6 +111,7 @@ services:
       - notification-service
       - license-service
       - developer-service
+      - api-service
       - web
       - store
     healthcheck:
@@ -127,16 +128,24 @@ services:
     container_name: SZDevs-auth-service
     build:
       context: ..
-      dockerfile: services/auth-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/auth-service"
     environment:
       PORT: 3001
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       JWT_SECRET: ${JWT_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
     expose:
       - "3001"
+    networks:
+      SZDevs:
+        ipv4_address: 172.16.1.7
+        aliases:
+          - auth-service
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3001/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -147,15 +156,19 @@ services:
     container_name: SZDevs-rh-service
     build:
       context: ..
-      dockerfile: services/rh-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/rh-service"
     environment:
       PORT: 3002
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
     expose:
       - "3002"
+    networks:
+      - SZDevs
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3002/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3002/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -166,15 +179,20 @@ services:
     container_name: SZDevs-finance-service
     build:
       context: ..
-      dockerfile: services/finance-service/Dockerfile
+      dockerfile: Dockerfile.finance-service
     environment:
       PORT: 3003
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
     expose:
       - "3003"
+    networks:
+      SZDevs:
+        ipv4_address: 172.16.1.14
+        aliases:
+          - finance-service
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3003/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3003/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -185,15 +203,19 @@ services:
     container_name: SZDevs-projects-service
     build:
       context: ..
-      dockerfile: services/projects-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/projects-service"
     environment:
       PORT: 3004
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
     expose:
       - "3004"
+    networks:
+      - SZDevs
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3004/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3004/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -204,15 +226,19 @@ services:
     container_name: SZDevs-devops-service
     build:
       context: ..
-      dockerfile: services/devops-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/devops-service"
     environment:
       PORT: 3005
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
     expose:
       - "3005"
+    networks:
+      - SZDevs
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3005/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3005/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -223,15 +249,24 @@ services:
     container_name: SZDevs-support-service
     build:
       context: ..
-      dockerfile: services/support-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/support-service"
     environment:
       PORT: 3006
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
+    volumes:
+      - support_uploads:/app/uploads
     expose:
       - "3006"
+    networks:
+      SZDevs:
+        ipv4_address: 172.16.1.10
+        aliases:
+          - support-service
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3006/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3006/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -242,7 +277,9 @@ services:
     container_name: SZDevs-payments-service
     build:
       context: ..
-      dockerfile: services/payments-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/payments-service"
     environment:
       PORT: 3007
       DATABASE_URL: ${DATABASE_URL}
@@ -251,8 +288,10 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
     expose:
       - "3007"
+    networks:
+      - SZDevs
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3007/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3007/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -263,7 +302,9 @@ services:
     container_name: SZDevs-notification-service
     build:
       context: ..
-      dockerfile: services/notification-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/notification-service"
     environment:
       PORT: 3008
       DATABASE_URL: ${DATABASE_URL}
@@ -274,8 +315,10 @@ services:
       SMTP_PASS: ${SMTP_PASS}
     expose:
       - "3008"
+    networks:
+      - SZDevs
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3008/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3008/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -286,7 +329,9 @@ services:
     container_name: SZDevs-license-service
     build:
       context: ..
-      dockerfile: services/license-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/license-service"
     environment:
       PORT: 3009
       DATABASE_URL: ${DATABASE_URL}
@@ -294,8 +339,10 @@ services:
       LICENSE_SIGNING_KEY: ${LICENSE_SIGNING_KEY}
     expose:
       - "3009"
+    networks:
+      - SZDevs
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3009/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3009/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -306,7 +353,9 @@ services:
     container_name: SZDevs-developer-service
     build:
       context: ..
-      dockerfile: services/developer-service/Dockerfile
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/developer-service"
     environment:
       PORT: 3010
       DATABASE_URL: ${DATABASE_URL}
@@ -320,11 +369,48 @@ services:
     # Mount the host Docker socket so dockerode can manage sibling
     # containers (start/stop/restart/logs). The developer-service
     # process must run as a user inside the host's `docker` group
-    # for this to work without root â€” see Dockerfile.
+    # for this to work without root â€" see Dockerfile.
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      SZDevs:
+        ipv4_address: 172.16.1.5
+        aliases:
+          - developer-service
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3010/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3010/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  api-service:
+    <<: *service-defaults
+    container_name: SZDevs-api-service
+    build:
+      context: ..
+      dockerfile: Dockerfile.service
+      args:
+        PACKAGE_NAME: "@szdevs/api-service"
+    environment:
+      PORT: 3011
+      API_SERVICE_PORT: 3011
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      SUPPORT_SERVICE_URL: http://support-service:3006
+      PROJECTS_SERVICE_URL: http://projects-service:3004
+      FINANCE_SERVICE_URL: http://finance-service:3003
+    expose:
+      - "3011"
+    networks:
+      SZDevs:
+        ipv4_address: 172.16.1.17
+        aliases:
+          - api-service
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3011/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -340,7 +426,22 @@ services:
       - prod
     build:
       context: ..
-      dockerfile: apps/web/Dockerfile
+      dockerfile: Dockerfile.app
+      args:
+        PACKAGE_NAME: "@szdevs/web"
+        APP_NAME: web
+        NEXT_PUBLIC_WEB_URL: ${NEXT_PUBLIC_WEB_URL}
+        NEXT_PUBLIC_AUTH_URL: ${NEXT_PUBLIC_AUTH_URL}
+        NEXT_PUBLIC_AUTH_SERVICE_URL: ${NEXT_PUBLIC_AUTH_SERVICE_URL}
+        NEXT_PUBLIC_RH_SERVICE_URL: ${NEXT_PUBLIC_RH_SERVICE_URL}
+        NEXT_PUBLIC_FINANCE_URL: ${NEXT_PUBLIC_FINANCE_URL}
+        NEXT_PUBLIC_PROJECTS_SERVICE_URL: ${NEXT_PUBLIC_PROJECTS_SERVICE_URL}
+        NEXT_PUBLIC_DEVOPS_SERVICE_URL: ${NEXT_PUBLIC_DEVOPS_SERVICE_URL}
+        NEXT_PUBLIC_SUPPORT_URL: ${NEXT_PUBLIC_SUPPORT_URL}
+        NEXT_PUBLIC_NOTIFICATION_URL: ${NEXT_PUBLIC_NOTIFICATION_URL}
+        NEXT_PUBLIC_LICENSE_URL: ${NEXT_PUBLIC_LICENSE_URL}
+        NEXT_PUBLIC_DEVELOPER_URL: ${NEXT_PUBLIC_DEVELOPER_URL}
+        NEXT_PUBLIC_MP_PUBLIC_KEY: ${NEXT_PUBLIC_MP_PUBLIC_KEY}
     env_file:
       - ../.env
     environment:
@@ -348,7 +449,8 @@ services:
     expose:
       - "4000"
     networks:
-      - SZDevs
+      SZDevs:
+        ipv4_address: 172.16.1.11
     depends_on:
       auth-service:
         condition: service_healthy
@@ -363,7 +465,10 @@ services:
       - prod
     build:
       context: ..
-      dockerfile: apps/store/Dockerfile
+      dockerfile: Dockerfile.app
+      args:
+        PACKAGE_NAME: "@szdevs/store"
+        APP_NAME: store
     env_file:
       - ../.env
     environment:
@@ -376,10 +481,40 @@ services:
       payments-service:
         condition: service_healthy
 
+  # ---------------------------------------------------------------------------
+  # One-shot Prisma migration runner
+  # Run with: docker compose --profile migrate run --rm migrate
+  # ---------------------------------------------------------------------------
+  migrate:
+    build:
+      context: ..
+      dockerfile: Dockerfile.migrate
+    container_name: SZDevs-migrate
+    env_file:
+      - ../.env
+    environment:
+      # Dockerfile.migrate uses WORKDIR /repo, not /app like the service images.
+      # The .env value points to /app/..., which doesn't exist here — let Prisma
+      # auto-discover the engine from the installed package instead.
+      PRISMA_QUERY_ENGINE_LIBRARY: ""
+    networks:
+      - SZDevs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    profiles:
+      - migrate
+
 networks:
   SZDevs:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.16.1.0/24
+          gateway: 172.16.1.1
 
 volumes:
   postgres_data:
   redis_data:
+  support_uploads:

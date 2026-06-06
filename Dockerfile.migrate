@@ -1,0 +1,39 @@
+# syntax=docker/dockerfile:1.6
+#
+# =============================================================================
+# SZDevs — Prisma migration runner
+#
+# One-shot container that runs `prisma migrate deploy` against the production
+# database. Built on the same base as Dockerfile.service so it shares the
+# pnpm BuildKit cache and the workspace node_modules layout.
+#
+# Usage (via deploy.sh or manually):
+#   docker compose --profile migrate run --rm migrate
+# =============================================================================
+
+ARG NODE_VERSION=20-alpine
+
+FROM node:${NODE_VERSION}
+
+ENV PNPM_HOME=/pnpm
+ENV PATH="${PNPM_HOME}:${PATH}"
+ENV NODE_ENV=production
+ENV TURBO_TELEMETRY_DISABLED=1
+
+# Same base setup as Dockerfile.service
+RUN corepack enable && corepack prepare pnpm@9 --activate \
+    && apk add --no-cache libc6-compat openssl \
+    && rm -rf /var/cache/apk/*
+
+WORKDIR /repo
+
+# Copy the full workspace (same context as the service images)
+COPY . .
+
+# Install workspace deps — reuses the shared BuildKit pnpm cache so this
+# layer is essentially free when the service images were just built.
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --frozen-lockfile --ignore-scripts
+
+# Run prisma migrate deploy against DATABASE_URL injected at runtime
+CMD ["pnpm", "--filter", "@szdevs/database", "prisma:migrate:deploy"]

@@ -74,26 +74,70 @@ const PERMISSIONS: PermissionSeed[] = [
   // ------------------------------------------------------------------
   {
     key: 'finance:reports:view',
-    name: 'View financial reports',
-    description: 'Read financial reports and dashboards',
+    name: 'Ver relatórios financeiros',
+    description: 'Acesso de leitura a relatórios, DRE e dashboard financeiro',
     module: PermissionModule.FINANCEIRO,
   },
   {
     key: 'finance:invoices:issue',
-    name: 'Issue invoices',
-    description: 'Create and send invoices to customers',
+    name: 'Emitir faturas',
+    description: 'Criar e enviar faturas para clientes',
+    module: PermissionModule.FINANCEIRO,
+  },
+  {
+    key: 'finance:invoices:manage',
+    name: 'Gerenciar Faturas',
+    description: 'Editar, cancelar e gerenciar faturas emitidas',
     module: PermissionModule.FINANCEIRO,
   },
   {
     key: 'finance:accounts:edit',
-    name: 'Edit accounts',
-    description: 'Update chart of accounts and account configuration',
+    name: 'Editar plano de contas',
+    description: 'Atualizar plano de contas e configuração de contas',
     module: PermissionModule.FINANCEIRO,
   },
   {
     key: 'finance:costs:manage',
-    name: 'Manage costs',
-    description: 'Register, categorize, and reconcile operating costs',
+    name: 'Gerenciar custos',
+    description: 'Registrar, categorizar e conciliar custos operacionais',
+    module: PermissionModule.FINANCEIRO,
+  },
+  // Produtos & Serviços (catálogo de cobrança recorrente)
+  {
+    key: 'finance:products:view',
+    name: 'Ver produtos/serviços',
+    description: 'Visualizar catálogo de produtos e serviços cadastrados para cobranças',
+    module: PermissionModule.FINANCEIRO,
+  },
+  {
+    key: 'finance:products:manage',
+    name: 'Gerenciar produtos/serviços',
+    description: 'Criar, editar, ativar/desativar e marcar como licenciado produtos do catálogo',
+    module: PermissionModule.FINANCEIRO,
+  },
+  // Assinaturas recorrentes
+  {
+    key: 'finance:subscriptions:view',
+    name: 'Ver assinaturas',
+    description: 'Visualizar assinaturas recorrentes e seus detalhes por cliente',
+    module: PermissionModule.FINANCEIRO,
+  },
+  {
+    key: 'finance:subscriptions:manage',
+    name: 'Gerenciar assinaturas',
+    description: 'Criar e editar assinaturas recorrentes vinculando produtos e clientes',
+    module: PermissionModule.FINANCEIRO,
+  },
+  {
+    key: 'finance:subscriptions:cancel',
+    name: 'Cancelar assinaturas',
+    description: 'Cancelar assinaturas recorrentes de clientes (imediato ou ao fim do período)',
+    module: PermissionModule.FINANCEIRO,
+  },
+  {
+    key: 'finance:subscriptions:billing:run',
+    name: 'Disparar ciclo de cobrança',
+    description: 'Executar manualmente o ciclo de cobrança recorrente (recuperação e testes)',
     module: PermissionModule.FINANCEIRO,
   },
 
@@ -162,6 +206,12 @@ const PERMISSIONS: PermissionSeed[] = [
     key: 'support:reports:view',
     name: 'View support reports',
     description: 'Read support analytics and team performance reports',
+    module: PermissionModule.SUPORTE,
+  },
+  {
+    key: 'support:attachments:private',
+    name: 'Anexos privados',
+    description: 'Enviar e visualizar anexos marcados como privados em chamados (invisíveis para o cliente)',
     module: PermissionModule.SUPORTE,
   },
 
@@ -247,6 +297,16 @@ const PERMISSIONS: PermissionSeed[] = [
     name: 'View logs',
     description: 'Read aggregated service logs and metrics',
     module: PermissionModule.DEVOPS,
+  },
+
+  // ------------------------------------------------------------------
+  // Integrações (API keys — api.szdevs.com gateway)
+  // ------------------------------------------------------------------
+  {
+    key: 'integrations:manage',
+    name: 'Gerenciar integrações',
+    description: 'Criar, editar, revogar e monitorar chaves de API (api.szdevs.com)',
+    module: PermissionModule.INTEGRATIONS,
   },
 
   // ------------------------------------------------------------------

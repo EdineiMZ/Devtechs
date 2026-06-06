@@ -11,6 +11,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 
 import {
@@ -20,6 +21,7 @@ import {
 import { Public } from '../../common/decorators/public.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { PermissionGuard } from '../../common/guards/permission.guard';
+import { THROTTLERS } from '../../common/rate-limit/rate-limit.module';
 import { CreateTokenDto, RevokeTokenDto, VerifyTokenDto } from './dto/token.dto';
 import { TokensService, type VerificationResult } from './tokens.service';
 
@@ -41,11 +43,13 @@ export class TokensController {
   @Post('verify')
   @Public()
   @HttpCode(HttpStatus.OK)
+  @Throttle({ [THROTTLERS.VERIFY]: { ttl: 60_000, limit: 30 } })
   verify(
     @Body() dto: VerifyTokenDto,
     @Req() req: Request,
   ): Promise<VerificationResult> {
     const ip =
+      (req.headers['x-real-ip'] as string) ??
       (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ??
       req.socket.remoteAddress ??
       null;

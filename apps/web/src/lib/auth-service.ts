@@ -104,6 +104,17 @@ export async function authServiceFetch<T>(
   return { ok: res.ok, status: res.status, data };
 }
 
+/** Extract the real client IP from a Web API Request (headers set by nginx proxy). */
+export function getClientIp(
+  req: { headers: { get(name: string): string | null } },
+): string | undefined {
+  return (
+    req.headers.get('x-real-ip') ??
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    undefined
+  );
+}
+
 /**
  * Normalize an auth-service error response into a single string
  * suitable for displaying to the user. The NestJS global filter

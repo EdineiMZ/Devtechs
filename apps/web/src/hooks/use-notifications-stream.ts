@@ -52,7 +52,31 @@ export interface UseNotificationsStreamResult {
   pushLocal: (notification: Notification) => void;
 }
 
-const DEFAULT_URL = 'http://127.0.0.1:4005';
+/**
+ * Resolve the socket.io endpoint for the `/notifications` namespace.
+ *
+ * Same shape as the support gateway: in production we connect to the
+ * page's own origin and route engine.io under `/api/notifications/socket.io/`
+ * so HTTPS pages naturally upgrade to `wss://` (no Mixed Content). The prod
+ * `NEXT_PUBLIC_NOTIFICATION_URL=https://szdevs.com/api/notifications`
+ * describes the REST gateway and would mangle the websocket path, so we
+ * ignore env values that contain `/api/` and only honor explicit dev
+ * overrides that point straight at the service.
+ */
+function resolveNotificationTarget(serviceUrl?: string): {
+  url: string;
+  path: string;
+} {
+  const override = serviceUrl ?? process.env.NEXT_PUBLIC_NOTIFICATION_URL;
+  if (
+    override &&
+    !override.includes('/api/') &&
+    (override.startsWith('http://') || override.startsWith('https://'))
+  ) {
+    return { url: `${override}/notifications`, path: '/socket.io/' };
+  }
+  return { url: '/notifications', path: '/api/notifications/socket.io/' };
+}
 
 export function useNotificationsStream({
   initialNotifications,
@@ -74,12 +98,9 @@ export function useNotificationsStream({
   useEffect(() => {
     if (!accessToken) return;
 
-    const baseUrl =
-      serviceUrl ??
-      process.env.NEXT_PUBLIC_NOTIFICATION_URL ??
-      DEFAULT_URL;
-
-    const socket = io(`${baseUrl}/notifications`, {
+    const target = resolveNotificationTarget(serviceUrl);
+    const socket = io(target.url, {
+      path: target.path,
       transports: ['websocket', 'polling'],
       auth: { token: accessToken },
       reconnection: true,

@@ -10,6 +10,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 
 import { Public } from '../../common/decorators/public.decorator';
 import { InternalSecretGuard } from '../../common/guards/internal-secret.guard';
+import { THROTTLERS } from '../../common/rate-limit/rate-limit.module';
 
 import { PermissionsService } from './permissions.service';
 
@@ -26,8 +27,9 @@ import { PermissionsService } from './permissions.service';
  * Guard stack:
  *   - `@Public()` skips the global JwtAuthGuard (the caller has no
  *     session — it's a service-to-service HTTP call).
- *   - `@SkipThrottle()` bypasses the global 100/min throttler because
- *     the callers are a fixed set of internal services, not end users.
+ *   - `@SkipThrottle()` bypasses ALL throttler buckets because the callers
+ *     are a fixed set of internal services, not end users. Using the
+ *     explicit map form because the no-arg default only skips 'default'.
  *   - `InternalSecretGuard` requires the `X-Internal-Secret` header
  *     to match `AUTH_INTERNAL_SECRET` — the same guard used by
  *     `/auth/oauth/login`. Fail-closed: a deployment without the
@@ -42,7 +44,12 @@ import { PermissionsService } from './permissions.service';
  */
 @Controller('auth/permissions')
 @Public()
-@SkipThrottle()
+@SkipThrottle({
+  [THROTTLERS.DEFAULT]: true,
+  [THROTTLERS.REGISTER]: true,
+  [THROTTLERS.EMAIL_VERIFICATION]: true,
+  [THROTTLERS.TWO_FA_VERIFY]: true,
+})
 @UseGuards(InternalSecretGuard)
 export class InternalPermissionsController {
   constructor(private readonly permissionsService: PermissionsService) {}

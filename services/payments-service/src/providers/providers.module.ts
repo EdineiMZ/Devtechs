@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+import { RedisService } from '../redis/redis.service';
 import { MercadoPagoProvider } from './mercadopago.provider';
 import { PAYMENT_PROVIDER } from './payment-provider.interface';
 import { StripeProvider } from './stripe.provider';
@@ -12,7 +13,12 @@ import { StripeProvider } from './stripe.provider';
 @Global()
 @Module({
   providers: [
-    MercadoPagoProvider,
+    {
+      provide: MercadoPagoProvider,
+      inject: [ConfigService, RedisService],
+      useFactory: (config: ConfigService, redis: RedisService) =>
+        new MercadoPagoProvider(config, redis),
+    },
     StripeProvider,
     {
       provide: PAYMENT_PROVIDER,

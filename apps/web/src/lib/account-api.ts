@@ -65,12 +65,14 @@ export interface RecoveryCodesResult {
 async function authedFetch<T>(
   path: string,
   accessToken: string,
-  init: { method?: string; body?: unknown } = {},
+  init: { method?: string; body?: unknown; realIp?: string } = {},
 ): ReturnType<typeof authServiceFetch<T>> {
+  const headers: Record<string, string> = { Authorization: `Bearer ${accessToken}` };
+  if (init.realIp) headers['x-real-ip'] = init.realIp;
   return authServiceFetch<T>(path, {
     method: init.method ?? 'GET',
     body: init.body,
-    headers: { Authorization: `Bearer ${accessToken}` },
+    headers,
   });
 }
 
@@ -83,10 +85,12 @@ export function getProfile(accessToken: string) {
 export function updateProfile(
   patch: { name?: string; avatarUrl?: string | null },
   accessToken: string,
+  realIp?: string,
 ) {
   return authedFetch<AccountProfile>('/auth/me', accessToken, {
     method: 'PATCH',
     body: patch,
+    realIp,
   });
 }
 
@@ -95,77 +99,86 @@ export function updateProfile(
 export function changePassword(
   body: { currentPassword: string; newPassword: string },
   accessToken: string,
+  realIp?: string,
 ) {
   return authedFetch<ChangePasswordResult>('/auth/me/password', accessToken, {
     method: 'POST',
     body,
+    realIp,
   });
 }
 
 // ---------- sessions ----------
 
-export function listSessions(accessToken: string) {
+export function listSessions(accessToken: string, realIp?: string) {
   return authedFetch<AccountSession[]>('/auth/me/sessions', accessToken, {
     method: 'GET',
+    realIp,
   });
 }
 
-export function revokeSession(sessionId: string, accessToken: string) {
+export function revokeSession(sessionId: string, accessToken: string, realIp?: string) {
   return authedFetch<{ ok: true }>(
     `/auth/me/sessions/${encodeURIComponent(sessionId)}`,
     accessToken,
-    { method: 'DELETE' },
+    { method: 'DELETE', realIp },
   );
 }
 
 // ---------- 2FA ----------
 
-export function setup2FA(accessToken: string) {
+export function setup2FA(accessToken: string, realIp?: string) {
   return authedFetch<Setup2FAResult>('/auth/2fa/setup', accessToken, {
     method: 'POST',
+    realIp,
   });
 }
 
-export function enable2FA(code: string, accessToken: string) {
+export function enable2FA(code: string, accessToken: string, realIp?: string) {
   return authedFetch<Enable2FAResult>('/auth/2fa/enable', accessToken, {
     method: 'POST',
     body: { code },
+    realIp,
   });
 }
 
 export function disable2FA(
   body: { currentPassword: string; code?: string },
   accessToken: string,
+  realIp?: string,
 ) {
   return authedFetch<Disable2FAResult>('/auth/2fa/disable', accessToken, {
     method: 'POST',
     body,
+    realIp,
   });
 }
 
-export function requestDisableEmailCode(accessToken: string) {
+export function requestDisableEmailCode(accessToken: string, realIp?: string) {
   return authedFetch<{ message: string }>(
     '/auth/2fa/request-disable-otp',
     accessToken,
-    { method: 'POST' },
+    { method: 'POST', realIp },
   );
 }
 
 export function disable2FAViaEmailOtp(
   body: { currentPassword: string; emailOtp: string },
   accessToken: string,
+  realIp?: string,
 ) {
   return authedFetch<Disable2FAResult>('/auth/2fa/disable-with-otp', accessToken, {
     method: 'POST',
     body,
+    realIp,
   });
 }
 
-export function regenerateRecoveryCodes(accessToken: string) {
+export function regenerateRecoveryCodes(accessToken: string, realIp?: string) {
   return authedFetch<RecoveryCodesResult>(
     '/auth/2fa/recovery-codes',
     accessToken,
-    { method: 'POST' },
+    { method: 'POST', realIp },
   );
 }
 

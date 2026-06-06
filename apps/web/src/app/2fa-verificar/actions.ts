@@ -1,5 +1,7 @@
 'use server';
 
+import { headers as nextHeaders } from 'next/headers';
+
 import { unstable_update } from '@/auth';
 import { authServiceFetch } from '@/lib/auth-service';
 
@@ -16,21 +18,30 @@ export async function verifyTwoFaSession(
     return { ok: false, message: 'Código inválido.' };
   }
 
+  const h = await nextHeaders();
+  const clientIp =
+    h.get('x-real-ip') ??
+    h.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    undefined;
+
   const res = await authServiceFetch<{ verified: boolean }>(
     '/auth/2fa/verify-session',
     {
       method: 'POST',
       body: { code },
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...(clientIp ? { 'x-real-ip': clientIp } : {}),
+      },
     },
   );
 
   if (!res.ok) {
     const data = res.data as Record<string, unknown>;
-    const msg =
-      typeof data.message === 'string'
-        ? data.message
-        : 'Código incorreto. Tente novamente.';
+    const raw = typeof data.message === 'string' ? data.message : '';
+    const msg = raw.toLowerCase().includes('decrypt') || raw.toLowerCase().includes('unable')
+      ? 'Erro interno ao verificar o código. Entre em contato com o suporte.'
+      : 'Código incorreto ou expirado. Verifique o código e tente novamente.';
     return { ok: false, message: msg };
   }
 

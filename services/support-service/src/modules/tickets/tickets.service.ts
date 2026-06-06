@@ -38,6 +38,9 @@ import type {
  *  can see another user's ticket. */
 const SUPPORT_AGENT_PERMISSION = 'support:tickets:close';
 
+/** Permission required to send or view private attachments on tickets. */
+const SUPPORT_PRIVATE_ATTACHMENT_PERMISSION = 'support:attachments:private';
+
 type TicketWithRelations = Prisma.TicketGetPayload<{
   include: {
     client: { select: { id: true; name: true; email: true } };
@@ -150,16 +153,14 @@ export class TicketsService {
 
   async get(id: string, requesterId: string): Promise<unknown> {
     const ticket = await this.loadOrThrow(id);
-    const isAgent = await this.permissions.has(
-      requesterId,
-      SUPPORT_AGENT_PERMISSION,
-    );
+    const isAgent = await this.permissions.has(requesterId, SUPPORT_AGENT_PERMISSION);
 
     if (!isAgent && ticket.clientId !== requesterId) {
       throw new ForbiddenException('You do not have access to this ticket');
     }
 
-    return this.serializeDetail(ticket, { hideInternal: !isAgent });
+    const canPrivate = await this.permissions.has(requesterId, SUPPORT_PRIVATE_ATTACHMENT_PERMISSION);
+    return this.serializeDetail(ticket, { hideInternal: !isAgent, hidePrivate: !canPrivate });
   }
 
   /**
@@ -710,6 +711,7 @@ export class TicketsService {
     uploaderId: string,
     file: Express.Multer.File,
     messageId?: string,
+    isPrivate?: boolean,
   ): Promise<unknown> {
     const ticket = await this.prisma.ticket.findUnique({
       where: { id: ticketId },
@@ -721,6 +723,10 @@ export class TicketsService {
     if (!isAgent && ticket.clientId !== uploaderId) {
       throw new ForbiddenException('You do not have access to this ticket');
     }
+
+    // Only users with the private-attachment permission can upload private files.
+    const canPrivate = await this.permissions.has(uploaderId, SUPPORT_PRIVATE_ATTACHMENT_PERMISSION);
+    const effectivePrivate = Boolean(isPrivate) && canPrivate;
 
     // Generate a unique storage key and copy the temp file there.
     const ext = path.extname(file.originalname);
@@ -738,6 +744,7 @@ export class TicketsService {
         filename: file.originalname,
         size: file.size,
         mimeType: file.mimetype,
+        isPrivate: effectivePrivate,
       },
     });
 
@@ -748,6 +755,7 @@ export class TicketsService {
       filename: attachment.filename,
       size: attachment.size,
       mimeType: attachment.mimeType,
+      isPrivate: attachment.isPrivate,
       uploadedAt: attachment.uploadedAt.toISOString(),
     };
   }
@@ -778,6 +786,12 @@ export class TicketsService {
       throw new ForbiddenException('You do not have access to this attachment');
     }
 
+    // Private attachments are only accessible by users with the explicit permission.
+    if (attachment.isPrivate) {
+      const canPrivate = await this.permissions.has(requesterId, SUPPORT_PRIVATE_ATTACHMENT_PERMISSION);
+      if (!canPrivate) throw new ForbiddenException('This attachment is private');
+    }
+
     const { filePath, exists } = this.getAttachmentFilePath(attachment.fileKey);
     if (!exists) throw new NotFoundException('File not found on storage');
 
@@ -793,8 +807,9 @@ export class TicketsService {
 
   private serializeDetail(
     row: TicketWithRelations,
-    opts: { hideInternal: boolean },
+    opts: { hideInternal: boolean; hidePrivate?: boolean },
   ): unknown {
+    const hidePrivate = opts.hidePrivate ?? opts.hideInternal;
     return {
       id: row.id,
       number: row.number,
@@ -822,20 +837,26 @@ export class TicketsService {
           body: m.body,
           isInternal: m.isInternal,
           author: m.author,
-          attachments: m.attachments.map((a) => ({
-            id: a.id,
-            filename: a.filename,
-            size: a.size,
-            mimeType: a.mimeType,
-          })),
+          attachments: m.attachments
+            .filter((a) => !(hidePrivate && a.isPrivate))
+            .map((a) => ({
+              id: a.id,
+              filename: a.filename,
+              size: a.size,
+              mimeType: a.mimeType,
+              isPrivate: a.isPrivate,
+            })),
           createdAt: m.createdAt.toISOString(),
         })),
-      attachments: row.attachments.map((a) => ({
-        id: a.id,
-        filename: a.filename,
-        size: a.size,
-        mimeType: a.mimeType,
-      })),
+      attachments: row.attachments
+        .filter((a) => !(hidePrivate && a.isPrivate))
+        .map((a) => ({
+          id: a.id,
+          filename: a.filename,
+          size: a.size,
+          mimeType: a.mimeType,
+          isPrivate: a.isPrivate,
+        })),
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

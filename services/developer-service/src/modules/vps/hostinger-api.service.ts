@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+import { RedisService } from '../../redis/redis.service';
+
 /**
  * Low-level HTTP client for the Hostinger VPS API.
  *
@@ -171,23 +173,44 @@ export type ActuatorOutcome =
 
 const DEFAULT_BASE_URL = 'https://developers.hostinger.com/api/vps/v1';
 const REQUEST_TIMEOUT_MS = 10_000;
+const API_KEYS_REDIS_KEY = 'SZDevs:config:api_keys';
 
 @Injectable()
 export class HostingerApiService {
   private readonly logger = new Logger(HostingerApiService.name);
-  private readonly baseUrl: string;
-  private readonly token: string | undefined;
   /** In-memory cache: data_center_id â†’ city name. Populated on first use. */
   private dcCache: Map<number, string> | null = null;
+  private warnedMissingToken = false;
 
-  constructor(private readonly config: ConfigService) {
-    this.baseUrl = this.config.get<string>('HOSTINGER_API_URL', DEFAULT_BASE_URL);
-    this.token = this.config.get<string>('HOSTINGER_API_TOKEN');
-    if (!this.token) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly redis: RedisService,
+  ) {}
+
+  /**
+   * Resolves the Hostinger API token: Redis override (config panel) takes
+   * precedence over the HOSTINGER_API_TOKEN env var. Looked up on every
+   * request so panel saves apply without a service restart.
+   */
+  private async resolveToken(): Promise<string | undefined> {
+    const overrides = await this.redis.hgetall(API_KEYS_REDIS_KEY);
+    const token = overrides['HOSTINGER_API_TOKEN'] ?? this.config.get<string>('HOSTINGER_API_TOKEN');
+    if (!token && !this.warnedMissingToken) {
       this.logger.warn(
-        'HOSTINGER_API_TOKEN is not set. Hostinger VPS routes will fail with 503 until it is configured.',
+        'HOSTINGER_API_TOKEN is not set (neither in Redis nor env). Hostinger VPS routes will fail with 503 until it is configured.',
       );
+      this.warnedMissingToken = true;
     }
+    return token || undefined;
+  }
+
+  /** Resolves the Hostinger API base URL with the same Redis-first precedence. */
+  private async resolveBaseUrl(): Promise<string> {
+    const overrides = await this.redis.hgetall(API_KEYS_REDIS_KEY);
+    return (
+      overrides['HOSTINGER_API_URL'] ||
+      this.config.get<string>('HOSTINGER_API_URL', DEFAULT_BASE_URL)
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -462,13 +485,14 @@ export class HostingerApiService {
     path: string,
     opts: { body?: unknown; allow404?: boolean; allow409?: boolean } = {},
   ): Promise<T> {
-    if (!this.token) {
+    const token = await this.resolveToken();
+    if (!token) {
       throw new ServiceUnavailableException(
-        'HOSTINGER_API_TOKEN is not configured on the developer-service',
+        'HOSTINGER_API_TOKEN is not configured. Salve o token no painel Developer ou defina HOSTINGER_API_TOKEN no ambiente.',
       );
     }
-
-    const url = `${this.baseUrl}${path}`;
+    const baseUrl = await this.resolveBaseUrl();
+    const url = `${baseUrl}${path}`;
     const startedAt = Date.now();
     let response: Response;
 
@@ -476,10 +500,9 @@ export class HostingerApiService {
       response = await fetch(url, {
         method,
         headers: {
-          // Bearer token authentication â€” the value comes from
-          // HOSTINGER_API_TOKEN and is the only way the Hostinger API
-          // identifies the calling account.
-          Authorization: `Bearer ${this.token}`,
+          // Bearer token authentication â€” the value comes from Redis
+          // (SZDevs:config:api_keys) with HOSTINGER_API_TOKEN env as fallback.
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
           Accept: 'application/json',
           'User-Agent': 'SZDevs-developer-service/1.0',

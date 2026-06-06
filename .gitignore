@@ -72,9 +72,29 @@ services/auth-service/create-client.cjs
 # E2E test scripts (local only)
 test-license-e2e.*
 
+# Temporary test/verify scripts (local debug helpers, may contain dev secrets)
+gen_nextauth_session.mjs
+verify_frontend*.mjs
+verify_assinaturas.mjs
+test_full_suite.mjs
+
+# Claude internal progress/scratch files
+.claude/ticket-attachments-progress.md
+
 # Local session state / credentials (never commit)
 .auth/
 dump.rdb
 
 # Upload scratch directory (runtime artifacts)
 services/support-service/uploads/
+
+# TLS certificates (production secrets — never commit)
+infra/certs/
+*.crt
+*.key
+*.pem
+
+# Database backups (operational, possibly sensitive)
+backups/
+backup-db.sh
+backup*-db.sh

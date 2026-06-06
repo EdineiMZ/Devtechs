@@ -47,7 +47,7 @@ export interface TicketAttachmentDto {
   filename: string;
   size: number;
   mimeType: string;
-  fileKey: string;
+  isPrivate?: boolean;
 }
 
 export interface TicketMessageDto {
@@ -290,11 +290,17 @@ export async function uploadAttachment(
   file: File,
   accessToken: string,
   messageId?: string,
+  isPrivate?: boolean,
 ): Promise<ApiResult<TicketAttachmentDto>> {
   const form = new FormData();
   form.append('file', file);
 
-  const url = `${getSupportServiceUrl()}/tickets/${encodeURIComponent(ticketId)}/attachments${messageId ? `?messageId=${encodeURIComponent(messageId)}` : ''}`;
+  const params = new URLSearchParams();
+  if (messageId) params.set('messageId', messageId);
+  if (isPrivate) params.set('isPrivate', 'true');
+  const qs = params.toString() ? `?${params.toString()}` : '';
+
+  const url = `${getSupportServiceUrl()}/tickets/${encodeURIComponent(ticketId)}/attachments${qs}`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -311,12 +317,14 @@ export async function uploadAttachment(
   return { ok: res.ok, status: res.status, data };
 }
 
-/** Download URL for an attachment (proxied via the support-service). */
-export function getAttachmentUrl(
-  ticketId: string,
-  attachmentId: string,
-): string {
-  return `${getSupportServiceUrl()}/tickets/${encodeURIComponent(ticketId)}/attachments/${encodeURIComponent(attachmentId)}`;
+/**
+ * Download URL for an attachment.
+ * Routes through the Next.js authenticated proxy at /api/download/
+ * so the browser session cookie is exchanged for a bearer token.
+ * (The /api/support/ path is intercepted by nginx before Next.js.)
+ */
+export function getAttachmentUrl(ticketId: string, attachmentId: string): string {
+  return `/api/download/${encodeURIComponent(ticketId)}/${encodeURIComponent(attachmentId)}`;
 }
 
 /**

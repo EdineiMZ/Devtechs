@@ -40,13 +40,29 @@ const RECOVERY_CODE_COUNT = 8;
  *  are random 16-char strings so 10 rounds is fine). */
 const RECOVERY_BCRYPT_ROUNDS = 10;
 
-// Configure otplib once at module load. 30-second steps with ±1 step
-// tolerance covers normal clock drift between the client and server
-// without widening the acceptance window to the point of being risky.
+// Configure otplib once at module load. 30-second steps with ±2 step
+// tolerance (so the verify accepts the previous, current, and next
+// two windows — ~150 seconds total). The narrower ±1 we shipped first
+// was too tight in practice: a phone whose clock had drifted ~45s would
+// hand the user a "valid" code that the server rejected, and users
+// retrying within the same window saw the failure repeat. ±2 is what
+// Google Authenticator's reference server uses for the same reason.
 authenticator.options = {
   step: 30,
-  window: 1,
+  window: 2,
 };
+
+/**
+ * Normalize a TOTP code coming off the wire. Authenticator apps
+ * sometimes display the digits with a space in the middle ("123 456")
+ * and users occasionally paste with leading/trailing whitespace; strip
+ * everything that isn't a digit before handing the value to otplib.
+ * Recovery codes (`XXXX-XXXX`) are NOT TOTPs and follow a separate
+ * verification path, so this helper is only used on the TOTP branches.
+ */
+function normalizeTotp(code: string): string {
+  return code.replace(/\D/g, '');
+}
 
 @Injectable()
 export class TwoFactorService {
@@ -139,7 +155,7 @@ export class TwoFactorService {
       );
     }
 
-    const valid = authenticator.verify({ token: code, secret });
+    const valid = authenticator.verify({ token: normalizeTotp(code), secret });
     if (!valid) {
       throw new BadRequestException('Invalid TOTP code');
     }
@@ -365,10 +381,20 @@ export class TwoFactorService {
     try {
       secret = this.crypto.decrypt(user.twoFactorSecret);
     } catch {
+      this.logger.error(
+        `Failed to decrypt TOTP secret for user ${user.id}; check ENCRYPTION_KEY rotation`,
+      );
+      await this.auditService.log({
+        userId: user.id,
+        action: AuditAction.TWO_FA_FAILED,
+        module: 'AUTH',
+        meta: { reason: 'decrypt_error' },
+        ipAddress: ipAddress ?? null,
+      });
       throw new UnauthorizedException('Unable to verify 2FA code');
     }
 
-    const valid = authenticator.verify({ token: code, secret });
+    const valid = authenticator.verify({ token: normalizeTotp(code), secret });
     if (!valid) {
       await this.auditService.log({
         userId: user.id,
@@ -568,7 +594,7 @@ export class TwoFactorService {
       } catch {
         throw new BadRequestException('Stored 2FA secret is corrupted');
       }
-      const valid = authenticator.verify({ token: code, secret });
+      const valid = authenticator.verify({ token: normalizeTotp(code), secret });
       if (!valid) {
         throw new BadRequestException('Invalid TOTP code');
       }
@@ -659,7 +685,7 @@ export class TwoFactorService {
       throw new UnauthorizedException('Unable to verify 2FA code');
     }
 
-    const valid = authenticator.verify({ token: code, secret });
+    const valid = authenticator.verify({ token: normalizeTotp(code), secret });
     if (!valid) {
       await this.auditService.log({
         userId: user.id,
