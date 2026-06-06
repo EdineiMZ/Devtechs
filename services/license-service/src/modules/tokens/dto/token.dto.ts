@@ -1,4 +1,4 @@
-import { IsDateString, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsDateString, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 export class CreateTokenDto {
   @IsString()
@@ -18,6 +18,7 @@ export class CreateTokenDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(120)
   hardwareId?: string;
 }
 
@@ -27,14 +28,21 @@ export class VerifyTokenDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(120)
   hardwareId?: string;
 
   @IsString()
   appId!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  appVersion?: string;
 }
 
 export class RevokeTokenDto {
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   reason?: string;
 }

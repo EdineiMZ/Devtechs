@@ -146,7 +146,7 @@ export default async function LicensasPage(): Promise<JSX.Element> {
       </div>
 
       {/* Tokens */}
-      <TokensSection tokens={tokens} products={products} />
+      <TokensSection tokens={tokens} products={products} clients={clients} />
     </AppShell>
   );
 }

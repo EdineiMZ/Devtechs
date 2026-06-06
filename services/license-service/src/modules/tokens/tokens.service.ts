@@ -147,6 +147,7 @@ export class TokensService {
         data: {
           tokenId: token.id,
           hardwareId: dto.hardwareId ?? null,
+          appVersion: dto.appVersion ?? null,
           ipAddress,
         },
       }),

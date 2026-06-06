@@ -7,6 +7,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AuthClientModule } from './auth-client/auth-client.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionResolverModule } from './common/permissions/permission-resolver.module';
+import { RateLimitModule } from './common/rate-limit/rate-limit.module';
+import { LicenseThrottlerGuard } from './common/rate-limit/throttler.guard';
 import { JwtStrategy } from './common/strategies/jwt.strategy';
 import { HealthModule } from './modules/health/health.module';
 import { ProductsModule } from './modules/products/products.module';
@@ -24,6 +26,7 @@ import { RedisModule } from './redis/redis.module';
     }),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     ScheduleModule.forRoot(),
+    RateLimitModule,
     PrismaModule,
     RedisModule,
     AuthClientModule,
@@ -38,6 +41,10 @@ import { RedisModule } from './redis/redis.module';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: LicenseThrottlerGuard,
     },
   ],
 })

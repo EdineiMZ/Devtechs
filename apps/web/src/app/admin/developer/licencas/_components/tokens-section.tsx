@@ -7,9 +7,16 @@ import type { ActivationToken, LicensedProduct, TokenStatus } from '@/lib/licens
 
 import { RevokeTokenDialog } from './revoke-token-dialog';
 
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+}
+
 interface TokensSectionProps {
   tokens: ActivationToken[];
   products: LicensedProduct[];
+  clients?: Client[];
 }
 
 const STATUS_LABEL: Record<TokenStatus, string> = {
@@ -24,21 +31,26 @@ const STATUS_CLASS: Record<TokenStatus, string> = {
   EXPIRED: 'bg-white/5 text-ash',
 };
 
-export function TokensSection({ tokens, products }: TokensSectionProps): JSX.Element {
+export function TokensSection({ tokens, products, clients = [] }: TokensSectionProps): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<TokenStatus | 'ALL'>('ALL');
   const [productFilter, setProductFilter] = useState('');
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const clientMap = new Map(clients.map((c) => [c.id, c]));
 
   const filtered = tokens.filter((t) => {
     if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
     if (productFilter && t.productId !== productFilter) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
+      const client = clientMap.get(t.clientId);
       return (
         t.key.toLowerCase().includes(q) ||
         t.clientId.toLowerCase().includes(q) ||
-        t.product?.name.toLowerCase().includes(q)
+        (client?.name.toLowerCase().includes(q) ?? false) ||
+        (client?.email.toLowerCase().includes(q) ?? false) ||
+        (t.product?.name.toLowerCase().includes(q) ?? false)
       );
     }
     return true;
@@ -89,6 +101,7 @@ export function TokensSection({ tokens, products }: TokensSectionProps): JSX.Ele
             <thead>
               <tr className="border-b border-white/8 bg-white/[0.04] text-left text-xs font-medium text-ash">
                 <th className="px-4 py-3">Produto</th>
+                <th className="px-4 py-3">Cliente</th>
                 <th className="px-4 py-3">Key (prefixo)</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Ativações</th>
@@ -98,7 +111,9 @@ export function TokensSection({ tokens, products }: TokensSectionProps): JSX.Ele
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
-              {filtered.map((t) => (
+              {filtered.map((t) => {
+                const client = clientMap.get(t.clientId);
+                return (
                 <Fragment key={t.id}>
                   <tr
                     key={t.id}
@@ -107,6 +122,16 @@ export function TokensSection({ tokens, products }: TokensSectionProps): JSX.Ele
                   >
                     <td className="px-4 py-3 font-medium text-foreground">
                       {t.product?.name ?? t.productId}
+                    </td>
+                    <td className="px-4 py-3">
+                      {client ? (
+                        <div>
+                          <p className="font-medium text-foreground">{client.name}</p>
+                          <p className="text-[11px] text-ash">{client.email}</p>
+                        </div>
+                      ) : (
+                        <code className="text-[11px] text-ash">{t.clientId.substring(0, 8)}…</code>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <code className="rounded bg-white/[0.03] px-1.5 py-0.5 text-xs text-foreground/80">
@@ -140,7 +165,7 @@ export function TokensSection({ tokens, products }: TokensSectionProps): JSX.Ele
                   {/* Expanded row */}
                   {expandedId === t.id && (
                     <tr key={`${t.id}-detail`} className="bg-white/[0.02]">
-                      <td colSpan={7} className="px-6 py-4">
+                      <td colSpan={8} className="px-6 py-4">
                         <div className="grid gap-4 sm:grid-cols-2">
                           <div>
                             <p className="text-[11px] font-medium uppercase tracking-wider text-ash">
@@ -184,6 +209,7 @@ export function TokensSection({ tokens, products }: TokensSectionProps): JSX.Ele
                                     {fmtDateTime(a.activatedAt)}
                                     {a.ipAddress ? ` — IP: ${a.ipAddress}` : ''}
                                     {a.hardwareId ? ` — HW: ${a.hardwareId}` : ''}
+                                    {a.appVersion ? ` — v${a.appVersion}` : ''}
                                   </p>
                                 ))}
                               </div>
@@ -194,7 +220,8 @@ export function TokensSection({ tokens, products }: TokensSectionProps): JSX.Ele
                     </tr>
                   )}
                 </Fragment>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
