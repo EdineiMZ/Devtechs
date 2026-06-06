@@ -84,7 +84,12 @@ function buildProviders(): AnyProvider[] {
           undefined;
         const email     = String(credentials?.email     ?? '').trim().toLowerCase();
         const password  = String(credentials?.password  ?? '');
-        const code      = credentials?.code      ? String(credentials.code)      : undefined;
+        // NextAuth v5 serialises credentials via URLSearchParams: passing
+        // code:undefined produces the literal string "undefined". Normalise
+        // it back to undefined so the 2FA fast-path is not triggered with
+        // a bogus value that would fail backend validation.
+        const _rawCode = credentials?.code;
+        const code = (_rawCode && _rawCode !== 'undefined') ? String(_rawCode).trim() || undefined : undefined;
         const tempToken = credentials?.tempToken ? String(credentials.tempToken) : undefined;
 
         if (!email || !password) {

@@ -89,6 +89,19 @@ export function LoginForm(): JSX.Element {
     // Always refresh the tempToken before verifying — this ensures it hasn't
     // expired even if the user took more than the original 5-minute window.
     if (phase === 'two-factor') {
+      // Validate code before hitting the backend. NextAuth v5 serialises
+      // credentials via URLSearchParams, so passing code:undefined produces
+      // the literal string "undefined" which fails the backend regex.
+      const code = data.code?.trim();
+      if (!code || !/^\d{6}$/.test(code)) {
+        setBanner({
+          kind: 'error',
+          title: 'Código obrigatório',
+          message: 'Digite o código de 6 dígitos do seu aplicativo autenticador.',
+        });
+        return;
+      }
+
       const refresh = await preflightLogin(data.email, data.password);
 
       if ('error' in refresh) {
@@ -116,7 +129,7 @@ export function LoginForm(): JSX.Element {
         redirect: false,
         email:     data.email,
         password:  data.password,
-        code:      data.code?.trim() || undefined,
+        code,
         tempToken: freshToken,
       } as Parameters<typeof signIn>[1]);
 
