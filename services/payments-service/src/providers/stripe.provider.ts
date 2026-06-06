@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 
 import type {
   CreatePaymentInput,
@@ -8,41 +8,37 @@ import type {
   WebhookResult,
 } from './payment-provider.interface';
 
-// TODO: install the `stripe` npm package and implement each method.
-/** Stripe adapter — stub only. All methods throw until implemented. */
+/** Stripe adapter — stub only. Returns HTTP 503 until fully implemented. */
 @Injectable()
 export class StripeProvider implements PaymentProvider {
   readonly name = 'stripe';
 
-  // TODO: inject ConfigService and initialise the Stripe client.
   createSubscription(_input: CreateSubscriptionInput): Promise<PaymentProviderResult> {
-    throw new Error('Stripe provider not yet implemented');
+    throw new ServiceUnavailableException('Stripe integration is not yet available');
   }
 
   cancelSubscription(_externalId: string): Promise<void> {
-    throw new Error('Stripe provider not yet implemented');
+    throw new ServiceUnavailableException('Stripe integration is not yet available');
   }
 
   createPayment(_input: CreatePaymentInput): Promise<PaymentProviderResult> {
-    throw new Error('Stripe provider not yet implemented');
+    throw new ServiceUnavailableException('Stripe integration is not yet available');
   }
 
   getPaymentStatus(
     _externalId: string,
   ): Promise<{ status: string; metadata?: Record<string, unknown> }> {
-    throw new Error('Stripe provider not yet implemented');
+    throw new ServiceUnavailableException('Stripe integration is not yet available');
   }
 
   verifyWebhookSignature(
     _rawBody: Buffer,
     _headers: Record<string, string | string[] | undefined>,
   ): boolean {
-    // TODO: use stripe.webhooks.constructEvent for signature verification.
-    throw new Error('Stripe provider not yet implemented');
+    throw new ServiceUnavailableException('Stripe integration is not yet available');
   }
 
   parseWebhook(_body: unknown): Promise<WebhookResult> {
-    // TODO: map Stripe event types to WebhookResult.
-    throw new Error('Stripe provider not yet implemented');
+    throw new ServiceUnavailableException('Stripe integration is not yet available');
   }
 }

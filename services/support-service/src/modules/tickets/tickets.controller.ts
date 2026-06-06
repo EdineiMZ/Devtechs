@@ -2,6 +2,7 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -18,6 +19,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { fromBuffer } from 'file-type';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import type { Response } from 'express';
@@ -39,6 +41,15 @@ import {
   UpdateStatusDto,
 } from './dto/ticket.dto';
 import { TicketsService } from './tickets.service';
+
+const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'application/pdf',
+  'text/plain',
+]);
 
 /**
  * Ticket REST endpoints. Permissions per spec:
@@ -216,15 +227,35 @@ export class TicketsController {
         },
       }),
       limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB
+      fileFilter: (_req, file, cb) => {
+        if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
+          return cb(new BadRequestException(`File type "${file.mimetype}" is not allowed`), false);
+        }
+        cb(null, true);
+      },
     }),
   )
-  uploadAttachment(
+  async uploadAttachment(
     @Param('id') ticketId: string,
     @UploadedFile() file: Express.Multer.File,
     @Query('messageId') messageId: string | undefined,
     @Query('isPrivate') isPrivateParam: string | undefined,
     @CurrentUser() user: CurrentUserPayload,
   ): Promise<unknown> {
+    if (!file) {
+      throw new BadRequestException('No file provided or file type rejected');
+    }
+
+    // Magic bytes verification — rejects files with spoofed Content-Type
+    const fileBuffer = fs.readFileSync(file.path);
+    const detected = await fromBuffer(fileBuffer);
+    if (detected && !ALLOWED_MIME_TYPES.has(detected.mime)) {
+      fs.unlinkSync(file.path);
+      throw new BadRequestException(
+        `File content type "${detected.mime}" does not match allowed types`,
+      );
+    }
+
     const isPrivate = isPrivateParam === 'true' || isPrivateParam === '1';
     return this.tickets.uploadAttachment(ticketId, user.id, file, messageId, isPrivate);
   }

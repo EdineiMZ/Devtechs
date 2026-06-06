@@ -29,7 +29,8 @@ import { StripeProvider } from './stripe.provider';
         stripe: StripeProvider,
       ) => {
         const name = config.get<string>('PAYMENT_PROVIDER_NAME') ?? 'mercadopago';
-        if (name === 'stripe') return stripe;
+        const stripeEnabled = config.get<string>('STRIPE_ENABLED') === 'true';
+        if (name === 'stripe' && stripeEnabled) return stripe;
         return mercadopago;
       },
     },
