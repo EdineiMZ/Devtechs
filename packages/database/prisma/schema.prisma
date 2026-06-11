@@ -2080,6 +2080,58 @@ model ApiKeyAuditLog {
 }
 
 // =============================================================================
+// Activation Keys (JWT RS256) — issued by license-service for RuralPro clients.
+//
+// Migration name: add_activation_keys
+//
+// Design notes:
+//   - `jwt` stores the full signed JWT so we can re-deliver it without
+//     re-signing and audit every issued key.
+//   - `ProcessedWebhook` provides idempotency for MercadoPago webhook
+//     deliveries — `mpPaymentId` is unique so a re-delivered payment
+//     notification is a no-op.
+// =============================================================================
+
+model ActivationKey {
+  id           String    @id @default(cuid())
+  /// Internal customer/user ID (matches external_reference in MP preference).
+  customerId   String
+  /// Signed JWT RS256 delivered to the client.
+  jwt          String    @db.Text
+  /// Module codes included in this key, e.g. ["RH","FINANCEIRO"].
+  modules      String[]
+  issuedAt     DateTime  @default(now())
+  expiresAt    DateTime
+  /// "webhook:mercadopago" or the admin user ID that issued it.
+  issuedBy     String    @default("webhook:mercadopago")
+  revokedAt    DateTime?
+  revokedBy    String?
+  revokeReason String?
+
+  @@index([customerId])
+  @@index([expiresAt])
+  @@index([customerId, expiresAt])
+  @@map("activation_keys")
+}
+
+/// Idempotency log for MercadoPago webhook deliveries.
+/// One row per unique `mpPaymentId` — duplicate notifications are rejected.
+model ProcessedWebhook {
+  id          String   @id @default(cuid())
+  /// MercadoPago payment_id — unique to prevent duplicate processing.
+  mpPaymentId String   @unique
+  customerId  String?
+  action      String
+  /// Raw `status` field from the MP payment object.
+  mpStatus    String?
+  result      Json     @default("{}")
+  processedAt DateTime @default(now())
+
+  @@index([processedAt])
+  @@map("processed_webhooks")
+}
+
+// =============================================================================
 // Company Settings — legal data shown on invoices, pages and documents.
 //
 // Migration name: add_company_settings

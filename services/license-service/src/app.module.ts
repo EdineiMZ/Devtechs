@@ -10,10 +10,12 @@ import { PermissionResolverModule } from './common/permissions/permission-resolv
 import { RateLimitModule } from './common/rate-limit/rate-limit.module';
 import { LicenseThrottlerGuard } from './common/rate-limit/throttler.guard';
 import { JwtStrategy } from './common/strategies/jwt.strategy';
+import { ActivationModule } from './modules/activation/activation.module';
 import { HealthModule } from './modules/health/health.module';
 import { ProductsModule } from './modules/products/products.module';
 import { ClientsModule } from './modules/clients/clients.module';
 import { TokensModule } from './modules/tokens/tokens.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 
@@ -34,6 +36,8 @@ import { RedisModule } from './redis/redis.module';
     ProductsModule,
     ClientsModule,
     TokensModule,
+    ActivationModule,
+    WebhooksModule,
     HealthModule,
   ],
   providers: [
