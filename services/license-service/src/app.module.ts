@@ -11,6 +11,7 @@ import { RateLimitModule } from './common/rate-limit/rate-limit.module';
 import { LicenseThrottlerGuard } from './common/rate-limit/throttler.guard';
 import { JwtStrategy } from './common/strategies/jwt.strategy';
 import { ActivationModule } from './modules/activation/activation.module';
+import { AgrivorAdminModule } from './modules/admin/agrivor/agrivor-admin.module';
 import { HealthModule } from './modules/health/health.module';
 import { ProductsModule } from './modules/products/products.module';
 import { ClientsModule } from './modules/clients/clients.module';
@@ -38,6 +39,7 @@ import { RedisModule } from './redis/redis.module';
     TokensModule,
     ActivationModule,
     WebhooksModule,
+    AgrivorAdminModule,
     HealthModule,
   ],
   providers: [
