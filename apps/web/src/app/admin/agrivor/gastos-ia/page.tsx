@@ -5,7 +5,7 @@ import { AppShell } from '@/components/app/app-shell';
 import { ADMIN_NAV_ITEMS } from '@/components/app/nav-config';
 import {
   currentPeriod,
-  fetchAiSpendingReport,
+  fetchAiBillingTenants,
   type TenantAiSpendingRow,
 } from '@/lib/agrivor-api';
 
@@ -21,11 +21,8 @@ const fmtBrl = new Intl.NumberFormat('pt-BR', {
 
 function QuotaBar({ percent, blocked }: { percent: number; blocked: boolean }): JSX.Element {
   const capped = Math.min(percent, 100);
-  const color = blocked || percent >= 100
-    ? 'bg-red-500'
-    : percent >= 80
-      ? 'bg-amber-400'
-      : 'bg-emerald-500';
+  const color =
+    blocked || percent >= 100 ? 'bg-red-500' : percent >= 80 ? 'bg-amber-400' : 'bg-emerald-500';
 
   return (
     <div className="flex items-center gap-2">
@@ -65,19 +62,16 @@ export default async function GastosIaPage(): Promise<JSX.Element> {
   if (!session.accessToken) redirect('/login?callbackUrl=/admin/agrivor/gastos-ia');
 
   const user = session.user as typeof session.user & { permissions: string[] };
-  if (!user.permissions.includes('agrivor:report:view')) {
-    redirect('/admin');
-  }
+  if (!user.permissions.includes('agrivor:report:view')) redirect('/admin');
 
   const period = currentPeriod();
-  const report = await fetchAiSpendingReport(period);
-  const tenants = report?.tenants ?? [];
+  const tenants = await fetchAiBillingTenants();
+  const tenantList = tenants ?? [];
 
-  const totalCents = tenants.reduce((s, t) => s + t.consumedCents, 0);
-  const alertCount = tenants.filter((t) => t.percentUsed >= 80 && t.percentUsed < 100).length;
-  const blockedCount = tenants.filter((t) => t.hardBlock && t.percentUsed >= 100).length;
-
-  const apiUnavailable = report === null;
+  const totalCents = tenantList.reduce((s, t) => s + t.consumedCents, 0);
+  const alertCount = tenantList.filter((t) => t.percentUsed >= 80 && t.percentUsed < 100).length;
+  const blockedCount = tenantList.filter((t) => t.hardBlock && t.percentUsed >= 100).length;
+  const apiUnavailable = tenants === null;
 
   return (
     <AppShell
@@ -99,7 +93,7 @@ export default async function GastosIaPage(): Promise<JSX.Element> {
             Consumo por empresa
           </h1>
           <p className="mt-1 text-sm text-ash">
-            Gasto de IA e chamadas de API — período{' '}
+            Gasto de IA por tenant — período{' '}
             <span className="font-mono text-foreground">{period}</span>
           </p>
         </div>
@@ -108,9 +102,8 @@ export default async function GastosIaPage(): Promise<JSX.Element> {
       {apiUnavailable && (
         <div className="mb-6 rounded-xl border border-amber-500/20 bg-amber-500/8 p-4 text-sm text-amber-300">
           <strong>API AGRIVOR indisponível.</strong> Verifique se{' '}
-          <code className="font-mono">AGRIVOR_SERVICE_TOKEN</code> e{' '}
-          <code className="font-mono">AGRIVOR_API_URL</code> estão configurados.
-          Os dados abaixo são placeholders — a integração real depende do WS1 (SZD-689).
+          <code className="font-mono">SZDEVS_M2M_TOKEN</code> e{' '}
+          <code className="font-mono">AGRIVOR_API_URL</code> estão configurados no VPS.
         </div>
       )}
 
@@ -119,24 +112,24 @@ export default async function GastosIaPage(): Promise<JSX.Element> {
         <div className="rounded-xl border border-white/8 bg-white/[0.02] p-5">
           <p className="text-xs text-ash">Gasto total no período</p>
           <p className="mt-2 text-2xl font-bold text-foreground">
-            {tenants.length > 0 ? fmtBrl.format(totalCents / 100) : '—'}
+            {tenantList.length > 0 ? fmtBrl.format(totalCents / 100) : '—'}
           </p>
-          <p className="mt-1 text-[10px] text-ash/50">{tenants.length} empresa(s) ativa(s)</p>
+          <p className="mt-1 text-[10px] text-ash/50">{tenantList.length} empresa(s) com dados</p>
         </div>
         <div className="rounded-xl border border-amber-500/20 bg-white/[0.02] p-5">
-          <p className="text-xs text-ash">Empresas em alerta (≥ 80%)</p>
+          <p className="text-xs text-ash">Em alerta (≥ 80% da cota)</p>
           <p className="mt-2 text-2xl font-bold text-amber-400">{alertCount}</p>
-          <p className="mt-1 text-[10px] text-ash/50">Próximas do limite de cota</p>
+          <p className="mt-1 text-[10px] text-ash/50">Próximas do limite máximo</p>
         </div>
         <div className="rounded-xl border border-red-500/20 bg-white/[0.02] p-5">
-          <p className="text-xs text-ash">Empresas bloqueadas</p>
+          <p className="text-xs text-ash">Bloqueadas (cota esgotada)</p>
           <p className="mt-2 text-2xl font-bold text-red-400">{blockedCount}</p>
-          <p className="mt-1 text-[10px] text-ash/50">Cota esgotada — IA suspensa</p>
+          <p className="mt-1 text-[10px] text-ash/50">IA suspensa até próximo período</p>
         </div>
       </div>
 
       {/* Bar chart */}
-      {tenants.length > 0 && (
+      {tenantList.length > 0 && (
         <section className="mb-8 rounded-xl border border-white/8 bg-white/[0.02] p-5">
           <h2 className="mb-1 text-sm font-semibold text-foreground">
             Gasto vs. cota por empresa
@@ -144,7 +137,7 @@ export default async function GastosIaPage(): Promise<JSX.Element> {
           <p className="mb-4 text-[11px] text-ash/60">
             Verde = OK · Amarelo = alerta ≥ 80% · Vermelho = bloqueado
           </p>
-          <AiSpendingChart tenants={tenants} />
+          <AiSpendingChart tenants={tenantList} />
         </section>
       )}
 
@@ -154,7 +147,7 @@ export default async function GastosIaPage(): Promise<JSX.Element> {
           <h2 className="text-sm font-semibold text-foreground">Detalhamento por empresa</h2>
         </div>
 
-        {tenants.length === 0 ? (
+        {tenantList.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-ash">
             <svg
               viewBox="0 0 24 24"
@@ -167,7 +160,7 @@ export default async function GastosIaPage(): Promise<JSX.Element> {
             </svg>
             <p className="text-sm">
               {apiUnavailable
-                ? 'API AGRIVOR não configurada — sem dados para exibir.'
+                ? 'API AGRIVOR não configurada — configure SZDEVS_M2M_TOKEN.'
                 : 'Nenhum consumo registrado neste período.'}
             </p>
           </div>
@@ -179,28 +172,25 @@ export default async function GastosIaPage(): Promise<JSX.Element> {
                   <th className="px-5 py-3">Empresa</th>
                   <th className="px-5 py-3">Período</th>
                   <th className="px-5 py-3 text-right">Gasto</th>
-                  <th className="px-5 py-3 text-right">Cota</th>
+                  <th className="px-5 py-3 text-right">Cota máx.</th>
                   <th className="px-5 py-3">Uso</th>
-                  <th className="px-5 py-3 text-right">Chamadas API</th>
+                  <th className="px-5 py-3">Última ativ.</th>
                   <th className="px-5 py-3">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.04]">
-                {tenants
+                {tenantList
                   .slice()
                   .sort((a, b) => b.consumedCents - a.consumedCents)
                   .map((t) => (
-                    <tr
-                      key={t.tenantId}
-                      className="transition-colors hover:bg-white/[0.02]"
-                    >
+                    <tr key={t.tenantId} className="transition-colors hover:bg-white/[0.02]">
                       <td className="px-5 py-3 font-medium text-foreground">
-                        {t.tenantName}
+                        {t.name}
                         <span className="ml-1.5 font-mono text-[10px] text-ash/40">
                           {t.tenantId.slice(0, 8)}…
                         </span>
                       </td>
-                      <td className="px-5 py-3 font-mono text-xs text-ash">{t.period}</td>
+                      <td className="px-5 py-3 font-mono text-xs text-ash">{t.currentPeriod}</td>
                       <td className="px-5 py-3 text-right font-mono text-xs text-foreground">
                         {fmtBrl.format(t.consumedCents / 100)}
                       </td>
@@ -210,8 +200,15 @@ export default async function GastosIaPage(): Promise<JSX.Element> {
                       <td className="px-5 py-3">
                         <QuotaBar percent={t.percentUsed} blocked={t.hardBlock} />
                       </td>
-                      <td className="px-5 py-3 text-right font-mono text-xs text-ash">
-                        {t.apiCallCount.toLocaleString('pt-BR')}
+                      <td className="px-5 py-3 font-mono text-xs text-ash">
+                        {t.lastActivity
+                          ? new Date(t.lastActivity).toLocaleDateString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : '—'}
                       </td>
                       <td className="px-5 py-3">
                         <StatusBadge row={t} />

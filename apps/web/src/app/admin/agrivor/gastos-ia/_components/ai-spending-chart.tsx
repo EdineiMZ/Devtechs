@@ -29,7 +29,7 @@ export function AiSpendingChart({ tenants }: Props): JSX.Element {
     .sort((a, b) => b.consumedCents - a.consumedCents)
     .slice(0, 12)
     .map((t) => ({
-      name: t.tenantName.length > 14 ? `${t.tenantName.slice(0, 13)}…` : t.tenantName,
+      name: t.name.length > 14 ? `${t.name.slice(0, 13)}…` : t.name,
       gasto: t.consumedCents / 100,
       cota: t.hardQuotaCents / 100,
       percentUsed: t.percentUsed,

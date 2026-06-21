@@ -1,74 +1,106 @@
 /**
  * AGRIVOR M2M read-only API client for the SZDevs admin.
+ * Server-only — never import this in 'use client' components.
  *
- * Auth: service token (X-Agrivor-Service-Token header), NOT a user JWT.
- * This client is server-only — never import it in 'use client' components.
+ * Auth: HMAC-SHA256 signed requests (M2MGuard / SZD-689).
+ *   X-SZDevs-Timestamp: <unix seconds>
+ *   X-SZDevs-Signature: hex(HMAC-SHA256(SZDEVS_M2M_TOKEN, "METHOD\nPATH\nTIMESTAMP"))
  *
- * WS1 (SZD-689) will finalize the endpoint URL and auth contract.
- * Until then, AGRIVOR_API_URL defaults to the known prod base URL and
- * AGRIVOR_SERVICE_TOKEN must be set in the VPS environment.
+ * Env vars (must match AGRIVOR server):
+ *   AGRIVOR_API_URL     — base URL, e.g. https://apiagrivor.szdevs.com
+ *   SZDEVS_M2M_TOKEN    — shared secret (same value as in AGRIVOR .env)
  */
 
-export interface TenantAiSpendingRow {
+import { createHmac } from 'crypto';
+
+// ── Response types (mirror M2MBillingService in AGRIVOR) ─────────────────────
+
+export interface M2MBillingTenant {
   tenantId: string;
-  tenantName: string;
-  period: string;
+  name: string;
   consumedCents: number;
   softQuotaCents: number;
   hardQuotaCents: number;
-  percentUsed: number;
+  currentPeriod: string;
   hardBlock: boolean;
-  apiCallCount: number;
+  lastActivity: string | null;
 }
 
-export interface AiSpendingReport {
-  period: string;
+export interface M2MBillingListResult {
+  tenants: M2MBillingTenant[];
   generatedAt: string;
-  tenants: TenantAiSpendingRow[];
 }
+
+/** Computed view used by the dashboard — percentUsed derived here. */
+export interface TenantAiSpendingRow extends M2MBillingTenant {
+  percentUsed: number;
+}
+
+// ── HMAC signing ──────────────────────────────────────────────────────────────
+
+function signM2MRequest(
+  method: string,
+  path: string,
+  secret: string,
+): Record<string, string> {
+  const timestamp = Math.floor(Date.now() / 1000);
+  const message = `${method.toUpperCase()}\n${path}\n${timestamp}`;
+  const signature = createHmac('sha256', secret).update(message).digest('hex');
+  return {
+    'X-SZDevs-Timestamp': String(timestamp),
+    'X-SZDevs-Signature': signature,
+  };
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getAgrivorUrl(): string {
-  return process.env.AGRIVOR_API_URL ?? 'https://apiagrivor.szdevs.com';
+  return (process.env.AGRIVOR_API_URL ?? 'https://apiagrivor.szdevs.com').replace(/\/$/, '');
 }
 
-function getServiceToken(): string | undefined {
-  return process.env.AGRIVOR_SERVICE_TOKEN;
+function getM2MToken(): string | undefined {
+  return process.env.SZDEVS_M2M_TOKEN;
 }
+
+function computePercentUsed(consumed: number, hard: number): number {
+  if (hard <= 0) return 0;
+  return Math.round((consumed / hard) * 100);
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
 
 /**
- * Fetch AI spending report from AGRIVOR for a given period (YYYY-MM).
- * Returns null when the service is unreachable or the token is missing.
- *
- * TODO (WS1 / SZD-689): confirm exact endpoint path and auth header name
- * after the architecture gate (WS0 / SZD-687) closes.
+ * GET /m2m/billing/tenants — all tenants' AI billing summary.
+ * Returns null on config error or network failure.
  */
-export async function fetchAiSpendingReport(
-  period: string,
-): Promise<AiSpendingReport | null> {
-  const token = getServiceToken();
-  if (!token) {
-    console.warn('[agrivor-api] AGRIVOR_SERVICE_TOKEN not set — skipping fetch');
+export async function fetchAiBillingTenants(): Promise<TenantAiSpendingRow[] | null> {
+  const secret = getM2MToken();
+  if (!secret) {
+    console.warn('[agrivor-api] SZDEVS_M2M_TOKEN not set — skipping M2M fetch');
     return null;
   }
 
-  const url = `${getAgrivorUrl()}/admin/report/ai-usage?period=${encodeURIComponent(period)}`;
+  const path = '/m2m/billing/tenants';
+  const url = `${getAgrivorUrl()}${path}`;
+  const authHeaders = signM2MRequest('GET', path, secret);
 
   try {
     const res = await fetch(url, {
-      headers: {
-        'X-Agrivor-Service-Token': token,
-        'Content-Type': 'application/json',
-      },
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
       cache: 'no-store',
       signal: AbortSignal.timeout(8000),
     });
 
     if (!res.ok) {
-      console.error(`[agrivor-api] ${url} → ${res.status}`);
+      console.error(`[agrivor-api] GET ${path} → ${res.status}`);
       return null;
     }
 
-    return (await res.json()) as AiSpendingReport;
+    const data = (await res.json()) as M2MBillingListResult;
+    return data.tenants.map((t) => ({
+      ...t,
+      percentUsed: computePercentUsed(t.consumedCents, t.hardQuotaCents),
+    }));
   } catch (err) {
     console.error('[agrivor-api] fetch error', err);
     return null;
