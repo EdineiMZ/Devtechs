@@ -7,6 +7,55 @@ import type { ActivationToken, LicensedProduct, TokenStatus } from '@/lib/licens
 
 import { RevokeTokenDialog } from './revoke-token-dialog';
 
+function CopyKeyButton({ tokenKey }: { tokenKey: string }): JSX.Element {
+  const [confirming, setConfirming] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  function handleConfirm(): void {
+    void navigator.clipboard.writeText(tokenKey).then(() => {
+      setCopied(true);
+      setConfirming(false);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  }
+
+  if (copied) {
+    return <span className="text-[11px] font-medium text-emerald-400">✓ Copiado</span>;
+  }
+
+  if (confirming) {
+    return (
+      <span className="flex items-center gap-1">
+        <span className="text-[11px] text-ash">Copiar key?</span>
+        <button
+          type="button"
+          onClick={handleConfirm}
+          className="rounded px-1.5 py-0.5 text-[11px] font-semibold text-sky-400 hover:text-sky-300"
+        >
+          Sim
+        </button>
+        <button
+          type="button"
+          onClick={() => setConfirming(false)}
+          className="rounded px-1.5 py-0.5 text-[11px] text-ash hover:text-foreground"
+        >
+          Não
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setConfirming(true)}
+      className="rounded px-2 py-1 text-xs font-medium text-sky-400 hover:bg-sky-500/10"
+    >
+      Copiar key
+    </button>
+  );
+}
+
 interface Client {
   id: string;
   name: string;
@@ -158,7 +207,10 @@ export function TokensSection({ tokens, products, clients = [] }: TokensSectionP
                       {fmtDate(t.issuedAt)}
                     </td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <RevokeTokenDialog token={t} />
+                      <div className="flex flex-col items-start gap-1">
+                        <CopyKeyButton tokenKey={t.key} />
+                        <RevokeTokenDialog token={t} />
+                      </div>
                     </td>
                   </tr>
 
@@ -167,13 +219,17 @@ export function TokensSection({ tokens, products, clients = [] }: TokensSectionP
                     <tr key={`${t.id}-detail`} className="bg-white/[0.02]">
                       <td colSpan={8} className="px-6 py-4">
                         <div className="grid gap-4 sm:grid-cols-2">
+                          {/* Audit trail */}
                           <div>
                             <p className="text-[11px] font-medium uppercase tracking-wider text-ash">
-                              Hash SHA-256
+                              Emitido por
                             </p>
-                            <code className="mt-1 block break-all font-mono text-xs text-foreground/70">
-                              {t.hash}
-                            </code>
+                            <p className="mt-1 text-xs text-foreground">
+                              {clientMap.get(t.issuedBy)?.name ?? (
+                                <code className="font-mono text-ash">{t.issuedBy.substring(0, 12)}…</code>
+                              )}
+                            </p>
+                            <p className="text-[11px] text-ash">{fmtDateTime(t.issuedAt)}</p>
                           </div>
                           <div>
                             <p className="text-[11px] font-medium uppercase tracking-wider text-ash">
@@ -183,13 +239,26 @@ export function TokensSection({ tokens, products, clients = [] }: TokensSectionP
                               {t.hardwareId ?? <span className="italic opacity-50">Nenhum</span>}
                             </p>
                           </div>
+                          <div className="sm:col-span-2">
+                            <p className="text-[11px] font-medium uppercase tracking-wider text-ash">
+                              Hash SHA-256
+                            </p>
+                            <code className="mt-1 block break-all font-mono text-xs text-foreground/70">
+                              {t.hash}
+                            </code>
+                          </div>
                           {t.revokedAt && (
-                            <div>
+                            <div className="sm:col-span-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3">
                               <p className="text-[11px] font-medium uppercase tracking-wider text-ash">
-                                Revogado em
+                                Revogado
                               </p>
                               <p className="mt-1 text-xs text-foreground">
                                 {fmtDateTime(t.revokedAt)}
+                                {t.revokedBy ? (
+                                  <> — por <span className="font-medium">
+                                    {clientMap.get(t.revokedBy)?.name ?? t.revokedBy.substring(0, 12) + '…'}
+                                  </span></>
+                                ) : null}
                               </p>
                               {t.revokeReason && (
                                 <p className="mt-0.5 text-xs text-ash">
