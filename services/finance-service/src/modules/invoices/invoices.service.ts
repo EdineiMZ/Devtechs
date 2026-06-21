@@ -49,7 +49,7 @@ export class InvoicesService {
 
   async listClients(): Promise<{ id: string; name: string; email: string }[]> {
     const rows = await this.prisma.user.findMany({
-      where: { banned: false },
+      where: { status: { not: 'BANNED' } },
       select: { id: true, name: true, email: true },
       orderBy: { name: 'asc' },
     });

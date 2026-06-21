@@ -7,7 +7,7 @@
  *   - RecoveryCodes component (renders 8 codes, copy + acknowledge)
  */
 
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 
 import { RecoveryCodes } from '@/components/account/recovery-codes';
 import {
@@ -205,12 +205,14 @@ describe('<RecoveryCodes />', () => {
     expect(onAck).toHaveBeenCalledTimes(1);
   });
 
-  it('exposes a copy button that uses the clipboard API', () => {
+  it('exposes a copy button that uses the clipboard API', async () => {
     const onAck = jest.fn();
     const writeText = jest.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText } });
     render(<RecoveryCodes codes={codes} onAcknowledge={onAck} />);
-    fireEvent.click(screen.getByRole('button', { name: /copiar/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /copiar/i }));
+    });
     expect(writeText).toHaveBeenCalledWith(codes.join('\n'));
   });
 });
