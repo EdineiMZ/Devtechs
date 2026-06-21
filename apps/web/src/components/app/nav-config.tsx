@@ -216,6 +216,19 @@ export const ADMIN_NAV_ITEMS: AppSidebarItem[] = [
   },
   // ── AGRIVOR section (WS2–WS5 / SZD-690–693) ──────────────────────────────
   {
+    href: '/admin/agrivor',
+    label: 'AGRIVOR',
+    description: 'Keys, pagamentos e telemetria',
+    permission: 'agrivor:admin:view',
+    icon: icon(
+      <>
+        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+        <path d="M2 17l10 5 10-5" />
+        <path d="M2 12l10 5 10-5" />
+      </>,
+    ),
+  },
+  {
     href: '/admin/agrivor/gastos-ia',
     label: 'AGRIVOR · Gastos IA',
     description: 'Custo e consumo por empresa',
