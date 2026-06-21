@@ -33,6 +33,16 @@ export interface AgrivorPayment {
   paidAt: string;
 }
 
+export interface AgrivorTenantKey {
+  tenantId: string;
+  name: string;
+  key: string;
+  status: AgrivorKeyStatus;
+  expiresAt: string | null;
+  lastHeartbeatAt: string | null;
+  modules: string[];
+}
+
 export interface AgrivorTelemetry {
   customerId: string;
   isOnline: boolean;
