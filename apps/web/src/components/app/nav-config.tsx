@@ -163,6 +163,19 @@ export const ADMIN_NAV_ITEMS: AppSidebarItem[] = [
     ),
   },
   {
+    href: '/admin/agrivor',
+    label: 'AGRIVOR',
+    description: 'Keys, pagamentos e telemetria',
+    permission: 'agrivor:admin:view',
+    icon: icon(
+      <>
+        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+        <path d="M2 17l10 5 10-5" />
+        <path d="M2 12l10 5 10-5" />
+      </>,
+    ),
+  },
+  {
     href: '/admin/auditoria',
     label: 'Auditoria',
     description: 'Logs e relatórios de segurança',

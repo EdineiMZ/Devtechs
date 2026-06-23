@@ -68,7 +68,7 @@ services:
     image: redis:7-alpine
     container_name: SZDevs-redis
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}", "--bind", "0.0.0.0"]
     ports:
       - "6379:6379"
     volumes:
@@ -76,7 +76,7 @@ services:
     networks:
       - SZDevs
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
