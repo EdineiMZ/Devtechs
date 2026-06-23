@@ -5,14 +5,16 @@ import { useState } from 'react';
 import { EmpresasTab } from './empresas-tab';
 import { KeysTab } from './keys-tab';
 import { PaymentsTab } from './payments-tab';
+import { PrecosTab } from './precos-tab';
 import { TelemetryTab } from './telemetry-tab';
 
-type Tab = 'keys' | 'empresas' | 'payments' | 'telemetry';
+type Tab = 'keys' | 'empresas' | 'payments' | 'precos' | 'telemetry';
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'keys', label: 'Keys' },
   { id: 'empresas', label: 'Empresas' },
   { id: 'payments', label: 'Pagamentos' },
+  { id: 'precos', label: 'Preços' },
   { id: 'telemetry', label: 'Telemetria' },
 ];
 
@@ -43,6 +45,7 @@ export function AgrivorPanel(): JSX.Element {
       {activeTab === 'keys' && <KeysTab />}
       {activeTab === 'empresas' && <EmpresasTab />}
       {activeTab === 'payments' && <PaymentsTab />}
+      {activeTab === 'precos' && <PrecosTab />}
       {activeTab === 'telemetry' && <TelemetryTab />}
     </div>
   );

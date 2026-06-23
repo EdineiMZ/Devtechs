@@ -52,6 +52,22 @@ export interface AgrivorTelemetry {
   activeModules: string[];
 }
 
+export interface AgrivorPricePlan {
+  slug: string;
+  name: string;
+  priceReais: number;
+  aiQuotaCents: number;
+}
+
+export interface AgrivorPriceAuditEntry {
+  id: string;
+  changedAt: string;
+  changedBy: string | null;
+  field: string;
+  oldValue: number | null;
+  newValue: number;
+}
+
 export interface ApiResult<T> {
   ok: boolean;
   status: number;
