@@ -126,6 +126,15 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     await this.run(() => this.client.publish(channel, message).then(() => undefined), undefined);
   }
 
+  /**
+   * Expose the raw ioredis client for adapters that need direct access
+   * (e.g. ThrottlerStorageRedisService). The caller must not disconnect
+   * the returned client — lifecycle is owned by RedisService.
+   */
+  getClient(): Redis {
+    return this.client;
+  }
+
   async get(key: string): Promise<string | null> {
     return this.run(() => this.client.get(key), null);
   }
