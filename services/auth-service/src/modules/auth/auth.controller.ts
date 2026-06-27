@@ -41,11 +41,15 @@ import type {
   SendVerificationResponse,
   VerifyEmailResponse,
 } from './dto/auth-response.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ValidateResetTokenDto } from './dto/validate-reset-token.dto';
 import { VerifyEmailQueryDto } from './dto/verify-email.dto';
 import { EmailVerificationService } from './email-verification.service';
+import { PasswordResetService } from './password-reset.service';
 import type { RefreshTokenContext } from './strategies/jwt-refresh.strategy';
 
 interface RequestWithRefresh extends Request {
@@ -58,6 +62,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly emailVerificationService: EmailVerificationService,
+    private readonly passwordResetService: PasswordResetService,
   ) {}
 
   // -------------------------------------------------------------------
@@ -292,16 +297,80 @@ export class AuthController {
   }
 
   // -------------------------------------------------------------------
+  // Password reset
+  // -------------------------------------------------------------------
+
+  @Public()
+  @Throttle({
+    [THROTTLERS.PASSWORD_RESET]: { limit: 3, ttl: 60 * 60_000 },
+  })
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request a password-reset link via email.' })
+  @ApiResponse({ status: 200, description: 'Always returns success (anti-enumeration).' })
+  @ApiResponse({ status: 429, description: 'Too many requests.' })
+  forgotPassword(
+    @Body() dto: ForgotPasswordDto,
+    @Ip() ip: string,
+    @Req() req: Request,
+  ): Promise<{ message: string }> {
+    return this.passwordResetService.forgotPassword({
+      email: dto.email,
+      ip,
+      userAgent: req.headers['user-agent'],
+    });
+  }
+
+  @Public()
+  @Throttle({
+    [THROTTLERS.PASSWORD_RESET]: { limit: 10, ttl: 60 * 60_000 },
+  })
+  @Get('reset-password/validate')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Validate a password-reset token.' })
+  @ApiResponse({ status: 200, description: 'Token is valid.' })
+  @ApiResponse({ status: 400, description: 'Token invalid, expired, or already used.' })
+  validateResetToken(
+    @Query() query: ValidateResetTokenDto,
+    @Ip() ip: string,
+    @Req() req: Request,
+  ): Promise<{ valid: boolean }> {
+    return this.passwordResetService.validateResetToken({
+      token: query.token,
+      email: query.email,
+      ip,
+      userAgent: req.headers['user-agent'],
+    });
+  }
+
+  @Public()
+  @Throttle({
+    [THROTTLERS.PASSWORD_RESET]: { limit: 5, ttl: 60 * 60_000 },
+  })
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset the password using a valid token.' })
+  @ApiResponse({ status: 200, description: 'Password updated successfully.' })
+  @ApiResponse({ status: 400, description: 'Token invalid, expired, or already used.' })
+  @ApiResponse({ status: 429, description: 'Too many requests.' })
+  resetPassword(
+    @Body() dto: ResetPasswordDto,
+    @Ip() ip: string,
+    @Req() req: Request,
+  ): Promise<{ message: string }> {
+    return this.passwordResetService.resetPassword({
+      token: dto.token,
+      email: dto.email,
+      newPassword: dto.newPassword,
+      ip,
+      userAgent: req.headers['user-agent'],
+    });
+  }
+
+  // -------------------------------------------------------------------
   // LGPD art. 18, VI — Eliminação (excluir conta)
   // -------------------------------------------------------------------
 
-  /**
-   * Permanently deletes the authenticated user's account.
-   *
-   * Requires the current password as confirmation. Audit logs are
-   * retained (SET NULL on userId) per Marco Civil art. 15 and
-   * fraud-prevention obligations.
-   */
   @UseGuards(EmailVerifiedGuard)
   @RequireEmailVerified()
   @Delete('me')

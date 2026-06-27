@@ -20,6 +20,11 @@ export const THROTTLERS = {
    * is infeasible.
    */
   TWO_FA_VERIFY: '2fa-verify',
+  /**
+   * Used by /auth/forgot-password, /auth/reset-password/validate, and
+   * /auth/reset-password. Limits are defined per-endpoint in the controller.
+   */
+  PASSWORD_RESET: 'password-reset',
 } as const;
 
 /**
@@ -49,6 +54,7 @@ const devMultiplier = isDev ? 100 : 1;
       { name: THROTTLERS.REGISTER, limit: 10 * devMultiplier, ttl: 60 * 60_000 },
       { name: THROTTLERS.EMAIL_VERIFICATION, limit: 3 * devMultiplier, ttl: 60 * 60_000 },
       { name: THROTTLERS.TWO_FA_VERIFY, limit: 10 * devMultiplier, ttl: 5 * 60_000 },
+      { name: THROTTLERS.PASSWORD_RESET, limit: 10 * devMultiplier, ttl: 60 * 60_000 },
     ]),
   ],
   exports: [ThrottlerModule],

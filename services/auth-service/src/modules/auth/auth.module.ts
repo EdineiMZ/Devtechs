@@ -19,6 +19,7 @@ import { EmailOtpService } from './email-otp.service';
 import { EmailVerificationService } from './email-verification.service';
 import { OAuthAuthService } from './oauth-auth.service';
 import { OAuthController } from './oauth.controller';
+import { PasswordResetService } from './password-reset.service';
 import { Jwt2faTempStrategy } from './strategies/jwt-2fa-temp.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -58,6 +59,7 @@ import { TwoFactorService } from './two-factor.service';
     AuthService,
     AccountService,
     EmailVerificationService,
+    PasswordResetService,
     TwoFactorService,
     OAuthAuthService,
     EmailOtpService,
