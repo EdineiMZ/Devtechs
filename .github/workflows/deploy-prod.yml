@@ -1,4 +1,4 @@
-name: Deploy Â· Production
+name: Deploy · Production
 
 on:
   push:
@@ -6,6 +6,12 @@ on:
   # Manual fallback so release managers can redeploy main without a
   # no-op commit.
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force full deploy even when no service/app packages changed'
+        required: false
+        default: 'false'
+        type: boolean
 
 concurrency:
   group: deploy-prod
@@ -248,12 +254,7 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
-            cd /opt/SZDevs
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker compose pull
-            docker compose up -d --remove-orphans
-            docker logout ghcr.io
-            docker image prune -f
+            FORCE=1 bash /opt/szdevs/deploy.sh
 
       - name: Wait for /health (60s timeout each)
         env:
@@ -289,7 +290,32 @@ jobs:
           done
 
   # -------------------------------------------------------------------
-  # 5. release â€” tag the commit, push the tag, create a GitHub Release
+  # 4b. force-deploy — triggered by workflow_dispatch with force=true.
+  #     Skips detect-changes / build matrix and runs deploy.sh directly
+  #     on the VPS. Handles git pull, rebuild, Prisma migrations, and
+  #     container restart in one shot.
+  # -------------------------------------------------------------------
+  force-deploy:
+    name: Force deploy to production (manual)
+    if: github.event_name == 'workflow_dispatch' && inputs.force == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://szdevs.com
+    steps:
+      - name: SSH → run deploy.sh with FORCE=1
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            FORCE=1 bash /opt/szdevs/deploy.sh
+
+  # -------------------------------------------------------------------
+  # 5. release — tag the commit, push the tag, create a GitHub Release
   #    with the conventional-commits changelog. Runs ONLY when deploy
   #    succeeded so we never burn a version number on a rollback.
   # -------------------------------------------------------------------
