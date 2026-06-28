@@ -1,0 +1,23 @@
+name: Force Deploy NOW
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: SSH → FORCE=1 bash /opt/szdevs/deploy.sh
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://szdevs.com
+    steps:
+      - name: Run deploy.sh with FORCE=1
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            FORCE=1 bash /opt/szdevs/deploy.sh
