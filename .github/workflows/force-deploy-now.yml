@@ -15,9 +15,8 @@ jobs:
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.PROD_HOST }}
-          username: deploy
+          username: root
           key: ${{ secrets.PROD_SSH_KEY }}
-          script_stop: true
           script: |
             set -euo pipefail
             FORCE=1 bash /opt/szdevs/deploy.sh
