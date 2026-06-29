@@ -44,7 +44,7 @@ jobs:
           host: 76.13.165.130
           username: deploy
           key: ${{ secrets.PROD_SSH_KEY }}
-          command_timeout: 2m
+          command_timeout: 3m
           script: |
             set +e
 
@@ -56,14 +56,68 @@ jobs:
             ls -la /opt/szdevs/infra/certs/ 2>/dev/null || echo "CERTS_DIR_NOT_FOUND"
 
             echo ""
-            echo "=== Nginx container ==="
-            docker ps --filter name=SZDevs-nginx --format "{{.Names}} {{.Status}}" 2>/dev/null || echo "docker ps failed"
+            echo "=== Who owns port 80 ==="
+            ss -tlnp | grep ':80 ' || echo "nothing on port 80"
 
             echo ""
-            echo "=== Port 443 ==="
-            ss -tlnp 2>/dev/null | grep :443 || echo "PORT_443_NOT_LISTENING"
+            echo "=== Who owns port 443 ==="
+            ss -tlnp | grep ':443 ' || echo "nothing on port 443"
+
+            echo ""
+            echo "=== ALL running Docker containers ==="
+            docker ps --format "{{.Names}} | {{.Status}} | {{.Ports}}"
+
+            echo ""
+            echo "=== Stopped containers ==="
+            docker ps -a --filter status=exited --format "{{.Names}} | {{.Status}}" | head -10
+
+            echo ""
+            echo "=== SZDevs-nginx logs ==="
+            docker logs SZDevs-nginx --tail=20 2>&1 || echo "SZDevs-nginx: no such container"
+
+            echo ""
+            echo "=== Local TLS test on 127.0.0.1:443 ==="
+            echo | timeout 8 openssl s_client -connect 127.0.0.1:443 -servername szdevs.com 2>&1 | grep -E "CONNECTED|verify|issuer|subject|DONE|error|SSL|TLS" || echo "TLS test failed"
 
             exit 0
+
+      - name: Find and reload nginx (any container using nginx image)
+        if: inputs.mode == 'selfsigned' || inputs.mode == 'restore-nginx'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 76.13.165.130
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
+          command_timeout: 3m
+          script: |
+            set +e
+
+            echo "=== Find nginx container by image ==="
+            NGINX_ID=$(docker ps --filter ancestor=nginx --format "{{.ID}}" | head -1)
+            NGINX_NAME=$(docker ps --filter ancestor=nginx --format "{{.Names}}" | head -1)
+            echo "nginx container: ID=$NGINX_ID NAME=$NGINX_NAME"
+
+            if [ -n "$NGINX_ID" ]; then
+              echo "=== Test nginx config ==="
+              docker exec "$NGINX_ID" nginx -t 2>&1
+
+              echo "=== Reload nginx ==="
+              docker exec "$NGINX_ID" nginx -s reload 2>&1
+              echo "nginx reloaded in $NGINX_NAME"
+            else
+              echo "No running nginx container found by image filter"
+              echo "Trying by name pattern..."
+              NGINX_ID2=$(docker ps --format "{{.ID}} {{.Names}}" | grep -i nginx | awk '{print $1}' | head -1)
+              NGINX_NAME2=$(docker ps --format "{{.ID}} {{.Names}}" | grep -i nginx | awk '{print $2}' | head -1)
+              echo "by name: ID=$NGINX_ID2 NAME=$NGINX_NAME2"
+              if [ -n "$NGINX_ID2" ]; then
+                docker exec "$NGINX_ID2" nginx -t 2>&1
+                docker exec "$NGINX_ID2" nginx -s reload 2>&1
+                echo "reloaded $NGINX_NAME2"
+              else
+                echo "No nginx container found at all"
+              fi
+            fi
 
       - name: Install cert on VPS via SSH
         if: inputs.mode == 'selfsigned' || inputs.mode == 'restore-nginx'
@@ -101,54 +155,16 @@ jobs:
           CERT_B64: ${{ env.CERT_B64 }}
           KEY_B64: ${{ env.KEY_B64 }}
 
-      - name: Reload nginx (targeted - not all services)
-        if: inputs.mode == 'selfsigned' || inputs.mode == 'restore-nginx'
-        uses: appleboy/ssh-action@v1
-        with:
-          host: 76.13.165.130
-          username: deploy
-          key: ${{ secrets.PROD_SSH_KEY }}
-          command_timeout: 5m
-          script: |
-            set +e
-
-            echo "=== Cert files present ==="
-            ls -la /opt/szdevs/infra/certs/
-
-            echo ""
-            echo "=== Nginx container status ==="
-            docker ps --filter name=SZDevs-nginx --format "{{.Names}} {{.Status}}"
-
-            NGINX_RUNNING=$(docker ps --filter name=SZDevs-nginx --filter status=running -q)
-
-            if [ -n "$NGINX_RUNNING" ]; then
-              echo "=== nginx is running -- reloading config ==="
-              docker exec SZDevs-nginx nginx -t && docker exec SZDevs-nginx nginx -s reload
-              echo "nginx reloaded"
-            else
-              echo "=== nginx not running -- starting nginx only ==="
-              cd /opt/szdevs/infra
-              docker compose --profile prod up -d --no-deps nginx
-            fi
-
-            echo ""
-            echo "=== Port 443 after reload ==="
-            ss -tlnp | grep :443 || echo "PORT_443_STILL_NOT_LISTENING"
-
-            echo ""
-            echo "=== HTTP health check via localhost ==="
-            curl -sk -o /dev/null -w "localhost/health -> %{http_code}\n" http://localhost/health || echo "health check failed"
-
       - name: Verify HTTPS externally (from runner)
         run: |
           sleep 10
 
           echo "=== TLS direct to VPS IP ==="
-          echo | timeout 20 openssl s_client -connect 76.13.165.130:443 -servername szdevs.com 2>/dev/null \
-            | openssl x509 -noout -dates 2>/dev/null \
+          echo | timeout 20 openssl s_client -connect 76.13.165.130:443 -servername szdevs.com 2>&1 \
+            | grep -E "CONNECTED|subject|issuer|verify|error|SSL|notBefore|notAfter|DONE" \
             || echo "Direct TLS to VPS failed"
 
           echo ""
           echo "=== HTTP status via szdevs.com ==="
-          curl -fsS -o /dev/null -w "szdevs.com/health -> %{http_code}\n" --max-time 20 "https://szdevs.com/health" 2>/dev/null || echo "szdevs.com/health: failed"
-          curl -fsS -o /dev/null -w "szdevs.com/forgot-password -> %{http_code}\n" --max-time 20 "https://szdevs.com/forgot-password" 2>/dev/null || echo "szdevs.com/forgot-password: failed"
+          curl -sS -o /dev/null -w "szdevs.com/health -> %{http_code}\n" --max-time 20 "https://szdevs.com/health" 2>&1 || echo "szdevs.com/health: failed"
+          curl -sS -o /dev/null -w "szdevs.com/forgot-password -> %{http_code}\n" --max-time 20 "https://szdevs.com/forgot-password" 2>&1 || echo "szdevs.com/forgot-password: failed"
