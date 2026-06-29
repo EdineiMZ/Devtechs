@@ -5,12 +5,28 @@ on:
 
 jobs:
   deploy:
-    name: SSH deploy FORCE=1 bash /opt/szdevs/deploy.sh
+    name: SSH deploy user FORCE=1 deploy.sh
     runs-on: ubuntu-latest
     environment:
       name: production
       url: https://szdevs.com
     steps:
+      - name: Free disk space before build (safe prune — no volumes)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
+          command_timeout: 15m
+          script: |
+            set -uo pipefail
+            echo "=== disk BEFORE ==="; df -h / || true
+            echo "=== docker disk usage ==="; docker system df || true
+            echo "=== pruning build cache + unused images (NO volumes — DB safe) ==="
+            docker builder prune -af || true
+            docker image prune -af || true
+            echo "=== disk AFTER ==="; df -h / || true
+            echo "=== docker hub reachability ==="; timeout 30 docker pull docker/dockerfile:1.6 >/dev/null 2>&1 && echo "dockerhub OK" || echo "dockerhub SLOW/UNREACHABLE"
       - name: Run deploy.sh with FORCE=1
         uses: appleboy/ssh-action@v1
         with:
