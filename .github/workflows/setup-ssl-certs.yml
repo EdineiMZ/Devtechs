@@ -48,8 +48,8 @@ jobs:
         uses: appleboy/ssh-action@v1
         with:
           host: 76.13.165.130
-          username: root
-          password: ${{ secrets.PROD_ROOT_PASS }}
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
           command_timeout: 2m
           script: |
             set -euo pipefail
@@ -64,11 +64,11 @@ jobs:
 
             echo ""
             echo "=== Cert directory ==="
-            ls -la /opt/szdevs/infra/certs/ 2>/dev/null || echo "CERTS_DIR_NOT_FOUND"
+            sudo ls -la /opt/szdevs/infra/certs/ 2>/dev/null || echo "CERTS_DIR_NOT_FOUND"
 
             echo ""
             echo "=== Nginx container ==="
-            docker ps --filter name=SZDevs-nginx --format "Name={{.Names}} Status={{.Status}}"
+            sudo docker ps --filter name=SZDevs-nginx --format "Name={{.Names}} Status={{.Status}}"
 
             echo ""
             echo "=== Port 443 ==="
@@ -76,7 +76,7 @@ jobs:
 
             echo ""
             echo "=== Nginx last 10 log lines ==="
-            docker logs SZDevs-nginx --tail 10 2>/dev/null || echo "container not running"
+            sudo docker logs SZDevs-nginx --tail 10 2>/dev/null || echo "container not running"
 
       # -----------------------------------------------------------------------
       # Step 2: Install cert on VPS (pass base64-encoded from runner)
@@ -86,24 +86,24 @@ jobs:
         uses: appleboy/ssh-action@v1
         with:
           host: 76.13.165.130
-          username: root
-          password: ${{ secrets.PROD_ROOT_PASS }}
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
           command_timeout: 3m
           envs: CERT_B64,KEY_B64
           script: |
             set -euo pipefail
 
-            mkdir -p /opt/szdevs/infra/certs
+            sudo mkdir -p /opt/szdevs/infra/certs
 
-            echo "$CERT_B64" | base64 -d > /opt/szdevs/infra/certs/SZDevs.crt
-            echo "$KEY_B64"  | base64 -d > /opt/szdevs/infra/certs/SZDevs.key
+            echo "$CERT_B64" | base64 -d | sudo tee /opt/szdevs/infra/certs/SZDevs.crt > /dev/null
+            echo "$KEY_B64"  | base64 -d | sudo tee /opt/szdevs/infra/certs/SZDevs.key > /dev/null
 
-            chmod 644 /opt/szdevs/infra/certs/SZDevs.crt
-            chmod 600 /opt/szdevs/infra/certs/SZDevs.key
+            sudo chmod 644 /opt/szdevs/infra/certs/SZDevs.crt
+            sudo chmod 600 /opt/szdevs/infra/certs/SZDevs.key
 
             echo "Cert written:"
-            ls -la /opt/szdevs/infra/certs/
-            openssl x509 -in /opt/szdevs/infra/certs/SZDevs.crt -noout -dates -subject
+            sudo ls -la /opt/szdevs/infra/certs/
+            sudo openssl x509 -in /opt/szdevs/infra/certs/SZDevs.crt -noout -dates -subject
 
         env:
           CERT_B64: ${{ env.CERT_B64 }}
@@ -117,8 +117,8 @@ jobs:
         uses: appleboy/ssh-action@v1
         with:
           host: 76.13.165.130
-          username: root
-          password: ${{ secrets.PROD_ROOT_PASS }}
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
           command_timeout: 3m
           script: |
             set -euo pipefail
@@ -126,20 +126,20 @@ jobs:
             cd /opt/szdevs/infra
 
             echo "=== Testing nginx config ==="
-            docker compose --profile prod exec -T nginx nginx -t 2>&1 || true
+            sudo docker compose --profile prod exec -T nginx nginx -t 2>&1 || true
 
             echo "=== Ensuring nginx is up ==="
-            docker compose --profile prod up -d nginx 2>&1
+            sudo docker compose --profile prod up -d nginx 2>&1
             sleep 5
 
             echo "=== Reloading nginx ==="
-            docker compose --profile prod exec -T nginx nginx -s reload 2>&1 || true
+            sudo docker compose --profile prod exec -T nginx nginx -s reload 2>&1 || true
 
             echo "=== Port 443 after reload ==="
-            ss -tlnp | grep :443 || echo "PORT_443_STILL_NOT_LISTENING"
+            sudo ss -tlnp | grep :443 || echo "PORT_443_STILL_NOT_LISTENING"
 
             echo "=== Nginx status ==="
-            docker ps --filter name=SZDevs-nginx --format "Status: {{.Status}}"
+            sudo docker ps --filter name=SZDevs-nginx --format "Status: {{.Status}}"
 
       # -----------------------------------------------------------------------
       # Step 4: Verify HTTPS from runner (external)
