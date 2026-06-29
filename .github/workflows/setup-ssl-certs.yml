@@ -22,9 +22,6 @@ jobs:
       url: https://szdevs.com
 
     steps:
-      # -----------------------------------------------------------------------
-      # Step 0: Generate self-signed cert ON THE RUNNER (no VPS DNS needed)
-      # -----------------------------------------------------------------------
       - name: Generate self-signed cert (runner)
         if: inputs.mode == 'selfsigned' || inputs.mode == 'restore-nginx'
         run: |
@@ -41,9 +38,6 @@ jobs:
           echo "=== Generated cert info ==="
           openssl x509 -in /tmp/SZDevs.crt -noout -dates -subject
 
-      # -----------------------------------------------------------------------
-      # Step 1: Diagnose VPS state (informational, failures allowed)
-      # -----------------------------------------------------------------------
       - name: Diagnose VPS
         uses: appleboy/ssh-action@v1
         with:
@@ -55,29 +49,26 @@ jobs:
             set +e
 
             echo "=== System state ==="
-            hostname; uptime
+            hostname; uptime; id
 
             echo ""
             echo "=== Cert directory ==="
-            sudo ls -la /opt/szdevs/infra/certs/ 2>/dev/null || echo "CERTS_DIR_NOT_FOUND"
+            ls -la /opt/szdevs/infra/certs/ 2>/dev/null || echo "CERTS_DIR_NOT_FOUND"
 
             echo ""
             echo "=== Nginx container ==="
-            sudo docker ps --filter name=SZDevs-nginx --format "Name={{.Names}} Status={{.Status}}" 2>/dev/null || echo "docker error"
+            docker ps --filter name=SZDevs-nginx --format "Name={{.Names}} Status={{.Status}}" 2>/dev/null || echo "docker error"
 
             echo ""
             echo "=== Port 443 ==="
-            sudo ss -tlnp 2>/dev/null | grep :443 || echo "PORT_443_NOT_LISTENING"
+            ss -tlnp 2>/dev/null | grep :443 || echo "PORT_443_NOT_LISTENING"
 
             echo ""
             echo "=== Nginx last 10 log lines ==="
-            sudo docker logs SZDevs-nginx --tail 10 2>/dev/null || echo "container not running"
+            docker logs SZDevs-nginx --tail 10 2>/dev/null || echo "container not running"
 
             exit 0
 
-      # -----------------------------------------------------------------------
-      # Step 2: Install cert on VPS (pass base64-encoded from runner)
-      # -----------------------------------------------------------------------
       - name: Install cert on VPS via SSH
         if: inputs.mode == 'selfsigned' || inputs.mode == 'restore-nginx'
         uses: appleboy/ssh-action@v1
@@ -85,30 +76,35 @@ jobs:
           host: 76.13.165.130
           username: deploy
           key: ${{ secrets.PROD_SSH_KEY }}
-          command_timeout: 3m
+          command_timeout: 5m
           envs: CERT_B64,KEY_B64
           script: |
             set -euo pipefail
 
-            sudo mkdir -p /opt/szdevs/infra/certs
+            mkdir -p /home/deploy/szdevs-certs
+            echo "$CERT_B64" | base64 -d > /home/deploy/szdevs-certs/SZDevs.crt
+            echo "$KEY_B64"  | base64 -d > /home/deploy/szdevs-certs/SZDevs.key
+            chmod 644 /home/deploy/szdevs-certs/SZDevs.crt
+            chmod 600 /home/deploy/szdevs-certs/SZDevs.key
+            echo "Staging cert:"
+            openssl x509 -in /home/deploy/szdevs-certs/SZDevs.crt -noout -dates -subject
 
-            echo "$CERT_B64" | base64 -d | sudo tee /opt/szdevs/infra/certs/SZDevs.crt > /dev/null
-            echo "$KEY_B64"  | base64 -d | sudo tee /opt/szdevs/infra/certs/SZDevs.key > /dev/null
-
-            sudo chmod 644 /opt/szdevs/infra/certs/SZDevs.crt
-            sudo chmod 600 /opt/szdevs/infra/certs/SZDevs.key
-
-            echo "Cert written:"
-            sudo ls -la /opt/szdevs/infra/certs/
-            sudo openssl x509 -in /opt/szdevs/infra/certs/SZDevs.crt -noout -dates -subject
-
+            docker run --rm \
+              -v /home/deploy/szdevs-certs:/certs-src:ro \
+              -v /opt/szdevs/infra:/infra \
+              alpine sh -c "
+                mkdir -p /infra/certs &&
+                cp /certs-src/SZDevs.crt /infra/certs/SZDevs.crt &&
+                chmod 644 /infra/certs/SZDevs.crt &&
+                cp /certs-src/SZDevs.key /infra/certs/SZDevs.key &&
+                chmod 600 /infra/certs/SZDevs.key &&
+                echo 'Certs installed:' &&
+                ls -la /infra/certs/
+              "
         env:
           CERT_B64: ${{ env.CERT_B64 }}
           KEY_B64: ${{ env.KEY_B64 }}
 
-      # -----------------------------------------------------------------------
-      # Step 3: Start/reload nginx
-      # -----------------------------------------------------------------------
       - name: Start and reload nginx
         if: inputs.mode == 'selfsigned' || inputs.mode == 'restore-nginx'
         uses: appleboy/ssh-action@v1
@@ -123,30 +119,26 @@ jobs:
             cd /opt/szdevs/infra
 
             echo "=== Testing nginx config ==="
-            sudo docker compose --profile prod exec -T nginx nginx -t 2>&1 || true
+            docker compose --profile prod exec -T nginx nginx -t 2>&1 || true
 
             echo "=== Ensuring nginx is up ==="
-            sudo docker compose --profile prod up -d nginx 2>&1
+            docker compose --profile prod up -d nginx 2>&1
             sleep 5
 
             echo "=== Reloading nginx ==="
-            sudo docker compose --profile prod exec -T nginx nginx -s reload 2>&1 || true
+            docker compose --profile prod exec -T nginx nginx -s reload 2>&1 || true
 
             echo "=== Port 443 after reload ==="
-            sudo ss -tlnp | grep :443 || echo "PORT_443_STILL_NOT_LISTENING"
+            ss -tlnp | grep :443 || echo "PORT_443_STILL_NOT_LISTENING"
 
             echo "=== Nginx status ==="
-            sudo docker ps --filter name=SZDevs-nginx --format "Status: {{.Status}}"
+            docker ps --filter name=SZDevs-nginx --format "Status: {{.Status}}"
 
-      # -----------------------------------------------------------------------
-      # Step 4: Verify HTTPS from runner (external)
-      # -----------------------------------------------------------------------
       - name: Verify HTTPS externally (from runner)
         run: |
-          echo "=== Waiting 10s ==="
           sleep 10
 
-          echo "=== TLS direct to VPS IP (bypasses Cloudflare) ==="
+          echo "=== TLS direct to VPS IP ==="
           echo | timeout 20 openssl s_client -connect 76.13.165.130:443 -servername szdevs.com 2>/dev/null \
             | openssl x509 -noout -dates 2>/dev/null \
             || echo "Direct TLS to VPS failed"
