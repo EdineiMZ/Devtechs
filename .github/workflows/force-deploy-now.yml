@@ -5,7 +5,7 @@ on:
 
 jobs:
   deploy:
-    name: SSH → FORCE=1 bash /opt/szdevs/deploy.sh
+    name: SSH deploy FORCE=1 bash /opt/szdevs/deploy.sh
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -15,8 +15,9 @@ jobs:
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.PROD_HOST }}
-          username: root
+          username: deploy
           key: ${{ secrets.PROD_SSH_KEY }}
+          command_timeout: 45m
           script: |
             set -euo pipefail
             FORCE=1 bash /opt/szdevs/deploy.sh
