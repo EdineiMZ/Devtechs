@@ -1,211 +1,169 @@
-name: Fix SSL - Cloudflare Origin Cert or Self-Signed (SZD-818)
+name: Fix SSL - Emergency Cert Install (SZD-818)
 
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Cert mode: check | cloudflare | selfsigned'
+        description: 'Mode: diagnose | selfsigned | restore-nginx'
         required: false
-        default: 'check'
+        default: 'selfsigned'
         type: choice
         options:
-          - check
-          - cloudflare
+          - diagnose
           - selfsigned
+          - restore-nginx
 
 jobs:
   fix-ssl:
-    name: Fix SSL on VPS
+    name: Emergency SSL Fix
     runs-on: ubuntu-latest
     environment:
       name: production
       url: https://szdevs.com
 
     steps:
-      - name: Step 1 - Diagnose VPS SSL state
+      # -----------------------------------------------------------------------
+      # Step 0: Generate self-signed cert ON THE RUNNER (no VPS DNS needed)
+      # -----------------------------------------------------------------------
+      - name: Generate self-signed cert (runner)
+        if: inputs.mode == 'selfsigned' || inputs.mode == 'restore-nginx'
+        run: |
+          openssl req -x509 -nodes -newkey rsa:2048 \
+            -keyout /tmp/SZDevs.key \
+            -out /tmp/SZDevs.crt \
+            -days 365 \
+            -subj "/CN=szdevs.com/O=SZDevs/C=BR" \
+            -addext "subjectAltName=DNS:szdevs.com,DNS:*.szdevs.com"
+
+          echo "CERT_B64=$(base64 -w0 /tmp/SZDevs.crt)" >> "$GITHUB_ENV"
+          echo "KEY_B64=$(base64 -w0 /tmp/SZDevs.key)"  >> "$GITHUB_ENV"
+
+          echo "=== Generated cert info ==="
+          openssl x509 -in /tmp/SZDevs.crt -noout -dates -subject
+
+      # -----------------------------------------------------------------------
+      # Step 1: Fix VPS DNS + diagnose
+      # -----------------------------------------------------------------------
+      - name: Fix DNS and diagnose VPS
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.PROD_HOST }}
           username: root
           password: ${{ secrets.PROD_ROOT_PASS }}
+          command_timeout: 2m
           script_stop: false
           script: |
             set -euo pipefail
+
+            echo "=== Fixing DNS first (no external lookup needed) ==="
+            printf 'nameserver 8.8.8.8\nnameserver 1.1.1.1\n' > /etc/resolv.conf
+            echo "DNS fixed."
+
+            echo ""
+            echo "=== System state ==="
+            hostname; uptime
+
+            echo ""
             echo "=== Cert directory ==="
             ls -la /opt/szdevs/infra/certs/ 2>/dev/null || echo "CERTS_DIR_NOT_FOUND"
+
             echo ""
-            echo "=== Nginx container status ==="
+            echo "=== Nginx container ==="
             docker ps --filter name=SZDevs-nginx --format "Name={{.Names}} Status={{.Status}}"
+
             echo ""
             echo "=== Port 443 ==="
             ss -tlnp 2>/dev/null | grep :443 || echo "PORT_443_NOT_LISTENING"
-            echo ""
-            echo "=== Nginx last errors ==="
-            docker logs SZDevs-nginx --tail 20 2>/dev/null | grep -E "SSL|cert|error|warn" || echo "(no nginx SSL errors in last 20 lines)"
-            echo ""
-            echo "=== .env files present ==="
-            ls /opt/szdevs/.env /opt/szdevs/infra/.env 2>/dev/null || echo "no .env found at standard paths"
 
-      - name: Step 2 - Generate Cloudflare Origin Certificate via API
-        if: inputs.mode == 'cloudflare' || inputs.mode == 'check'
+            echo ""
+            echo "=== Nginx last 10 log lines ==="
+            docker logs SZDevs-nginx --tail 10 2>/dev/null || echo "container not running"
+
+      # -----------------------------------------------------------------------
+      # Step 2: Install cert on VPS (pass base64-encoded from runner)
+      # -----------------------------------------------------------------------
+      - name: Install cert on VPS via SSH
+        if: inputs.mode == 'selfsigned' || inputs.mode == 'restore-nginx'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.PROD_HOST }}
           username: root
           password: ${{ secrets.PROD_ROOT_PASS }}
+          command_timeout: 3m
+          envs: CERT_B64,KEY_B64
+          script_stop: true
+          script: |
+            set -euo pipefail
+
+            mkdir -p /opt/szdevs/infra/certs
+
+            echo "$CERT_B64" | base64 -d > /opt/szdevs/infra/certs/SZDevs.crt
+            echo "$KEY_B64"  | base64 -d > /opt/szdevs/infra/certs/SZDevs.key
+
+            chmod 644 /opt/szdevs/infra/certs/SZDevs.crt
+            chmod 600 /opt/szdevs/infra/certs/SZDevs.key
+
+            echo "Cert written:"
+            ls -la /opt/szdevs/infra/certs/
+            openssl x509 -in /opt/szdevs/infra/certs/SZDevs.crt -noout -dates -subject
+
+        env:
+          CERT_B64: ${{ env.CERT_B64 }}
+          KEY_B64: ${{ env.KEY_B64 }}
+
+      # -----------------------------------------------------------------------
+      # Step 3: Start/reload nginx
+      # -----------------------------------------------------------------------
+      - name: Start and reload nginx
+        if: inputs.mode == 'selfsigned' || inputs.mode == 'restore-nginx'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: root
+          password: ${{ secrets.PROD_ROOT_PASS }}
+          command_timeout: 3m
           script_stop: false
           script: |
             set -euo pipefail
 
-            # Search for Cloudflare API token in .env files
-            CF_TOKEN=""
-            for f in /opt/szdevs/.env /opt/szdevs/infra/.env /root/.env; do
-              if [ -f "$f" ]; then
-                V=$(grep -E '^(CLOUDFLARE_API_TOKEN|CF_API_TOKEN|CLOUDFLARE_TOKEN)=' "$f" 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"'"'"' ') || true
-                if [ -n "$V" ]; then
-                  CF_TOKEN="$V"
-                  echo "Found CF token in $f"
-                  break
-                fi
-              fi
-            done
-
-            if [ -z "$CF_TOKEN" ]; then
-              echo "CF_TOKEN_NOT_FOUND — will fall back to self-signed"
-              exit 0
-            fi
-
-            echo "Getting zone ID for szdevs.com ..."
-            ZONE_RESP=$(curl -s -H "Authorization: Bearer $CF_TOKEN" \
-              "https://api.cloudflare.com/client/v4/zones?name=szdevs.com")
-            ZONE_ID=$(echo "$ZONE_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result'][0]['id'])" 2>/dev/null || true)
-            if [ -z "$ZONE_ID" ]; then
-              echo "Could not get zone ID — check CF token permissions"
-              exit 0
-            fi
-            echo "Zone ID: $ZONE_ID"
-
-            echo "Generating Cloudflare Origin Certificate ..."
-            CERT_RESP=$(curl -s -X POST \
-              -H "Authorization: Bearer $CF_TOKEN" \
-              -H "Content-Type: application/json" \
-              "https://api.cloudflare.com/client/v4/certificates" \
-              -d "{\"hostnames\":[\"szdevs.com\",\"*.szdevs.com\"],\"requested_validity\":5475,\"request_type\":\"origin-rsa\",\"csr\":\"\"}")
-
-            SUCCESS=$(echo "$CERT_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('success','false'))" 2>/dev/null || echo "false")
-            if [ "$SUCCESS" != "True" ] && [ "$SUCCESS" != "true" ]; then
-              echo "Certificate generation failed:"
-              echo "$CERT_RESP" | python3 -m json.tool 2>/dev/null || echo "$CERT_RESP"
-              exit 0
-            fi
-
-            mkdir -p /opt/szdevs/infra/certs
-            echo "$CERT_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result']['certificate'])" \
-              > /opt/szdevs/infra/certs/SZDevs.crt
-            echo "$CERT_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['result']['private_key'])" \
-              > /opt/szdevs/infra/certs/SZDevs.key
-
-            chmod 644 /opt/szdevs/infra/certs/SZDevs.crt
-            chmod 600 /opt/szdevs/infra/certs/SZDevs.key
-
-            echo "Cert files written:"
-            ls -la /opt/szdevs/infra/certs/
-            echo "CLOUDFLARE_ORIGIN_CERT_INSTALLED=true"
-
-            # Set Cloudflare SSL mode to Full (strict)
-            echo "Setting Cloudflare SSL mode to Full (strict) ..."
-            SSL_RESP=$(curl -s -X PATCH \
-              -H "Authorization: Bearer $CF_TOKEN" \
-              -H "Content-Type: application/json" \
-              "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/settings/ssl" \
-              -d '{"value":"full"}')
-            echo "$SSL_RESP" | python3 -m json.tool 2>/dev/null || echo "$SSL_RESP"
-
-      - name: Step 3 - Generate self-signed cert (fallback / explicit mode)
-        if: inputs.mode == 'selfsigned'
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.PROD_HOST }}
-          username: root
-          password: ${{ secrets.PROD_ROOT_PASS }}
-          script_stop: true
-          script: |
-            set -euo pipefail
-            mkdir -p /opt/szdevs/infra/certs
-
-            # Skip if real cert already installed
-            if [ -f /opt/szdevs/infra/certs/SZDevs.crt ]; then
-              echo "Cert already exists:"
-              ls -la /opt/szdevs/infra/certs/
-              openssl x509 -in /opt/szdevs/infra/certs/SZDevs.crt -noout -dates 2>/dev/null || true
-              echo "Skipping self-signed (real cert present)."
-              exit 0
-            fi
-
-            echo "Generating self-signed cert for szdevs.com ..."
-            openssl req -x509 -nodes -newkey rsa:2048 \
-              -keyout /opt/szdevs/infra/certs/SZDevs.key \
-              -out /opt/szdevs/infra/certs/SZDevs.crt \
-              -days 90 \
-              -subj "/CN=szdevs.com/O=SZDevs/C=BR" \
-              -addext "subjectAltName=DNS:szdevs.com,DNS:*.szdevs.com"
-
-            chmod 644 /opt/szdevs/infra/certs/SZDevs.crt
-            chmod 600 /opt/szdevs/infra/certs/SZDevs.key
-
-            echo "Self-signed cert written (90-day temp, requires CF SSL mode=Full not strict):"
-            ls -la /opt/szdevs/infra/certs/
-            echo "SELF_SIGNED_CERT_INSTALLED=true"
-
-      - name: Step 4 - Reload nginx
-        if: inputs.mode != 'check'
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.PROD_HOST }}
-          username: root
-          password: ${{ secrets.PROD_ROOT_PASS }}
-          script_stop: true
-          script: |
-            set -euo pipefail
-
-            if [ ! -f /opt/szdevs/infra/certs/SZDevs.crt ]; then
-              echo "ERROR: No cert file found. Run cloudflare or selfsigned mode first."
-              exit 1
-            fi
-
-            echo "Testing nginx config ..."
             cd /opt/szdevs/infra
+
+            echo "=== Testing nginx config ==="
             docker compose --profile prod exec -T nginx nginx -t 2>&1 || true
 
-            echo "Ensuring nginx is running ..."
+            echo "=== Ensuring nginx is up ==="
             docker compose --profile prod up -d nginx 2>&1
+            sleep 5
 
-            sleep 3
+            echo "=== Reloading nginx ==="
+            docker compose --profile prod exec -T nginx nginx -s reload 2>&1 || true
 
-            echo "Reloading nginx ..."
-            docker compose --profile prod exec -T nginx nginx -s reload 2>&1
+            echo "=== Port 443 after reload ==="
+            ss -tlnp | grep :443 || echo "PORT_443_STILL_NOT_LISTENING"
 
-            echo "Nginx status:"
+            echo "=== Nginx status ==="
             docker ps --filter name=SZDevs-nginx --format "Status: {{.Status}}"
-            echo ""
-            echo "Port 443:"
-            ss -tlnp | grep :443 || echo "PORT_443_NOT_LISTENING"
 
-      - name: Step 5 - Verify HTTPS externally
-        if: inputs.mode != 'check'
+      # -----------------------------------------------------------------------
+      # Step 4: Verify HTTPS from runner (external)
+      # -----------------------------------------------------------------------
+      - name: Verify HTTPS externally (from runner)
         run: |
-          set -euo pipefail
-          echo "=== Waiting 10s for nginx to stabilize ==="
+          echo "=== Waiting 10s ==="
           sleep 10
 
-          echo "=== TLS handshake test ==="
-          echo | timeout 15 openssl s_client -connect szdevs.com:443 -servername szdevs.com 2>/dev/null \
+          echo "=== TLS handshake to szdevs.com ==="
+          echo | timeout 20 openssl s_client -connect szdevs.com:443 -servername szdevs.com 2>/dev/null \
             | openssl x509 -noout -dates -subject 2>/dev/null \
-            || echo "TLS handshake FAILED (522 or timeout)"
+            || echo "TLS FAILED (may still be 522 if CF mode is Full strict with self-signed)"
 
           echo ""
-          echo "=== HTTP smoke tests ==="
-          for URL in "https://szdevs.com/health" "https://szdevs.com/forgot-password"; do
-            CODE=$(curl -fsS -o /dev/null -w "%{http_code}" --max-time 20 "$URL" 2>/dev/null || echo "FAILED")
-            echo "$URL -> $CODE"
-          done
+          echo "=== TLS direct to VPS IP (bypasses Cloudflare) ==="
+          echo | timeout 20 openssl s_client -connect ${{ secrets.PROD_HOST }}:443 -servername szdevs.com 2>/dev/null \
+            | openssl x509 -noout -dates 2>/dev/null \
+            || echo "Direct TLS to VPS also failed"
+
+          echo ""
+          echo "=== HTTP status via szdevs.com ==="
+          curl -fsS -o /dev/null -w "szdevs.com/health -> %{http_code}\n" --max-time 20 "https://szdevs.com/health" 2>/dev/null || true
+          curl -fsS -o /dev/null -w "szdevs.com/forgot-password -> %{http_code}\n" --max-time 20 "https://szdevs.com/forgot-password" 2>/dev/null || true
