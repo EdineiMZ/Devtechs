@@ -1,0 +1,116 @@
+name: Setup SSL Certificates (SZD-818)
+
+on:
+  workflow_dispatch:
+    inputs:
+      check_only:
+        description: 'Only check cert status (no install)'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  setup-ssl:
+    name: Install Cloudflare Origin Cert on VPS
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://szdevs.com
+
+    steps:
+      - name: Check cert status on VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script_stop: false
+          script: |
+            set -euo pipefail
+            echo "=== Cert directory status ==="
+            ls -la /opt/szdevs/infra/certs/ 2>/dev/null || echo "CERTS_DIR_NOT_FOUND"
+            echo ""
+            echo "=== Nginx container status ==="
+            docker ps --filter name=SZDevs-nginx --format "{{.Status}}"
+            echo ""
+            echo "=== Port 443 listener ==="
+            ss -tlnp | grep :443 || echo "PORT_443_NOT_LISTENING"
+            echo ""
+            echo "=== Nginx error log (last 20 lines) ==="
+            docker logs SZDevs-nginx --tail 20 2>/dev/null || echo "Container not running"
+
+      - name: Install SSL certs from GitHub Secrets
+        if: inputs.check_only != 'true' && secrets.SSL_CERT != '' && secrets.SSL_KEY != ''
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
+          envs: SSL_CERT,SSL_KEY
+          script_stop: true
+          script: |
+            set -euo pipefail
+
+            mkdir -p /opt/szdevs/infra/certs
+
+            printf '%s' "$SSL_CERT" > /opt/szdevs/infra/certs/SZDevs.crt
+            printf '%s' "$SSL_KEY"  > /opt/szdevs/infra/certs/SZDevs.key
+
+            chmod 644 /opt/szdevs/infra/certs/SZDevs.crt
+            chmod 600 /opt/szdevs/infra/certs/SZDevs.key
+
+            echo "Cert files written:"
+            ls -la /opt/szdevs/infra/certs/
+
+            echo "Testing nginx config..."
+            docker exec SZDevs-nginx nginx -t
+
+            echo "Reloading nginx..."
+            docker exec SZDevs-nginx nginx -s reload
+
+            echo "Nginx reloaded successfully."
+        env:
+          SSL_CERT: ${{ secrets.SSL_CERT }}
+          SSL_KEY: ${{ secrets.SSL_KEY }}
+
+      - name: Start nginx if it was stopped
+        if: inputs.check_only != 'true' && secrets.SSL_CERT != '' && secrets.SSL_KEY != ''
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script_stop: false
+          script: |
+            set -euo pipefail
+            cd /opt/szdevs/infra
+            if ! docker ps --filter name=SZDevs-nginx --filter status=running -q | grep -q .; then
+              echo "nginx container not running, starting..."
+              docker compose --profile prod up -d nginx
+              sleep 5
+            fi
+            docker ps --filter name=SZDevs-nginx --format "Status: {{.Status}}"
+
+      - name: Verify HTTPS externally
+        if: inputs.check_only != 'true'
+        run: |
+          echo "=== External HTTPS verification ==="
+          sleep 5
+
+          for URL in \
+            "https://szdevs.com/health" \
+            "https://szdevs.com/forgot-password"; do
+            echo "Checking $URL ..."
+            HTTP_CODE=$(curl -fsS -o /dev/null -w "%{http_code}" --max-time 15 "$URL" 2>/dev/null || echo "FAILED")
+            echo "  → $HTTP_CODE"
+            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302" ]; then
+              echo "  ✓ OK"
+            else
+              echo "  ✗ Unexpected response: $HTTP_CODE"
+            fi
+          done
+
+          echo ""
+          echo "=== TLS handshake check ==="
+          echo | openssl s_client -connect szdevs.com:443 -servername szdevs.com 2>/dev/null | \
+            openssl x509 -noout -dates 2>/dev/null || echo "TLS handshake failed — cert not yet active"
