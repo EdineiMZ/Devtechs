@@ -56,8 +56,8 @@ jobs:
             ls -la /opt/szdevs/infra/certs/ 2>/dev/null || echo "CERTS_DIR_NOT_FOUND"
 
             echo ""
-            echo "=== Containers (all) ==="
-            docker ps -a --format "{{.Names}} {{.Status}}" 2>/dev/null || echo "docker ps failed"
+            echo "=== Nginx container ==="
+            docker ps --filter name=SZDevs-nginx --format "{{.Names}} {{.Status}}" 2>/dev/null || echo "docker ps failed"
 
             echo ""
             echo "=== Port 443 ==="
@@ -101,7 +101,7 @@ jobs:
           CERT_B64: ${{ env.CERT_B64 }}
           KEY_B64: ${{ env.KEY_B64 }}
 
-      - name: Start all services (including nginx)
+      - name: Reload nginx (targeted - not all services)
         if: inputs.mode == 'selfsigned' || inputs.mode == 'restore-nginx'
         uses: appleboy/ssh-action@v1
         with:
@@ -110,24 +110,34 @@ jobs:
           key: ${{ secrets.PROD_SSH_KEY }}
           command_timeout: 5m
           script: |
-            set -euo pipefail
+            set +e
 
-            cd /opt/szdevs/infra
+            echo "=== Cert files present ==="
+            ls -la /opt/szdevs/infra/certs/
 
-            echo "=== Starting all prod services (no rebuild) ==="
-            docker compose --profile prod up -d --remove-orphans 2>&1
+            echo ""
+            echo "=== Nginx container status ==="
+            docker ps --filter name=SZDevs-nginx --format "{{.Names}} {{.Status}}"
 
-            echo "=== Waiting 15s for nginx to start ==="
-            sleep 15
+            NGINX_RUNNING=$(docker ps --filter name=SZDevs-nginx --filter status=running -q)
 
-            echo "=== Port 443 after start ==="
+            if [ -n "$NGINX_RUNNING" ]; then
+              echo "=== nginx is running -- reloading config ==="
+              docker exec SZDevs-nginx nginx -t && docker exec SZDevs-nginx nginx -s reload
+              echo "nginx reloaded"
+            else
+              echo "=== nginx not running -- starting nginx only ==="
+              cd /opt/szdevs/infra
+              docker compose --profile prod up -d --no-deps nginx
+            fi
+
+            echo ""
+            echo "=== Port 443 after reload ==="
             ss -tlnp | grep :443 || echo "PORT_443_STILL_NOT_LISTENING"
 
-            echo "=== Nginx status ==="
-            docker ps --filter name=SZDevs-nginx --format "Status: {{.Status}}"
-
-            echo "=== HTTP health check ==="
-            curl -s -o /dev/null -w "localhost/health -> %{http_code}\n" http://localhost/health 2>/dev/null || echo "health check failed"
+            echo ""
+            echo "=== HTTP health check via localhost ==="
+            curl -sk -o /dev/null -w "localhost/health -> %{http_code}\n" http://localhost/health || echo "health check failed"
 
       - name: Verify HTTPS externally (from runner)
         run: |
@@ -140,5 +150,5 @@ jobs:
 
           echo ""
           echo "=== HTTP status via szdevs.com ==="
-          curl -fsS -o /dev/null -w "szdevs.com/health -> %{http_code}\n" --max-time 20 "https://szdevs.com/health" 2>/dev/null || true
-          curl -fsS -o /dev/null -w "szdevs.com/forgot-password -> %{http_code}\n" --max-time 20 "https://szdevs.com/forgot-password" 2>/dev/null || true
+          curl -fsS -o /dev/null -w "szdevs.com/health -> %{http_code}\n" --max-time 20 "https://szdevs.com/health" 2>/dev/null || echo "szdevs.com/health: failed"
+          curl -fsS -o /dev/null -w "szdevs.com/forgot-password -> %{http_code}\n" --max-time 20 "https://szdevs.com/forgot-password" 2>/dev/null || echo "szdevs.com/forgot-password: failed"
