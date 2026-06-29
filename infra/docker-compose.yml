@@ -135,6 +135,10 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_2FA_TEMP_SECRET: ${JWT_2FA_TEMP_SECRET:-}
+      AUTH_INTERNAL_SECRET: ${AUTH_INTERNAL_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://szdevs.com,http://localhost:4000}
     expose:
       - "3001"
     healthcheck:
