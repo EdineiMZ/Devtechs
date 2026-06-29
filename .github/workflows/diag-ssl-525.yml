@@ -1,0 +1,77 @@
+name: Diagnose SSL 525 (SZD-818)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diag:
+    name: Diagnose and Fix
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Diagnose VPS ports and processes
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 76.13.165.130
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
+          command_timeout: 3m
+          script: |
+            set +e
+
+            echo "=== Who owns port 80 ==="
+            ss -tlnp | grep ':80 '
+
+            echo ""
+            echo "=== Who owns port 443 ==="
+            ss -tlnp | grep ':443 '
+
+            echo ""
+            echo "=== All Docker containers (running) ==="
+            docker ps --format "{{.Names}} | {{.Status}} | {{.Ports}}"
+
+            echo ""
+            echo "=== All Docker containers (all including stopped) ==="
+            docker ps -a --format "{{.Names}} | {{.Status}}" | head -20
+
+            echo ""
+            echo "=== Certs directory ==="
+            ls -la /opt/szdevs/infra/certs/
+
+            echo ""
+            echo "=== Nginx container logs (last 20 lines) ==="
+            docker logs SZDevs-nginx --tail=20 2>/dev/null || echo "SZDevs-nginx container not found or no logs"
+
+            echo ""
+            echo "=== Test local TLS on port 443 ==="
+            echo | timeout 5 openssl s_client -connect 127.0.0.1:443 -servername szdevs.com 2>&1 | head -20 || echo "TLS connect failed"
+
+      - name: Reload nginx in existing container
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 76.13.165.130
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
+          command_timeout: 3m
+          script: |
+            set +e
+
+            echo "=== Find nginx container (any name) ==="
+            NGINX_ID=$(docker ps --filter ancestor=nginx --format "{{.ID}}" | head -1)
+            NGINX_NAME=$(docker ps --filter ancestor=nginx --format "{{.Names}}" | head -1)
+            echo "nginx image containers: ID=$NGINX_ID NAME=$NGINX_NAME"
+
+            if [ -n "$NGINX_ID" ]; then
+              echo "=== Test config in running nginx ==="
+              docker exec "$NGINX_ID" nginx -t 2>&1
+
+              echo "=== Reload nginx ==="
+              docker exec "$NGINX_ID" nginx -s reload 2>&1 || true
+              echo "Done"
+            else
+              echo "No running nginx-image container found"
+            fi
+
+            echo ""
+            echo "=== All containers with port 80 or 443 ==="
+            docker ps --format "{{.Names}} {{.Ports}}" | grep -E "80|443" || echo "None found via docker ps"
