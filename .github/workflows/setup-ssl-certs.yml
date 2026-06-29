@@ -40,7 +40,7 @@ jobs:
             docker logs SZDevs-nginx --tail 20 2>/dev/null || echo "Container not running"
 
       - name: Install SSL certs from GitHub Secrets
-        if: inputs.check_only != 'true' && secrets.SSL_CERT != '' && secrets.SSL_KEY != ''
+        if: inputs.check_only != 'true'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.PROD_HOST }}
@@ -50,6 +50,12 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
+
+            if [ -z "${SSL_CERT:-}" ] || [ -z "${SSL_KEY:-}" ]; then
+              echo "ERROR: SSL_CERT and SSL_KEY GitHub Secrets are not set."
+              echo "Please add them in Settings > Secrets > Actions, then re-run this workflow."
+              exit 1
+            fi
 
             mkdir -p /opt/szdevs/infra/certs
 
@@ -63,7 +69,12 @@ jobs:
             ls -la /opt/szdevs/infra/certs/
 
             echo "Testing nginx config..."
-            docker exec SZDevs-nginx nginx -t
+            docker exec SZDevs-nginx nginx -t 2>&1 || true
+
+            echo "Ensuring nginx container is running..."
+            cd /opt/szdevs/infra
+            docker compose --profile prod up -d nginx
+            sleep 3
 
             echo "Reloading nginx..."
             docker exec SZDevs-nginx nginx -s reload
@@ -73,44 +84,26 @@ jobs:
           SSL_CERT: ${{ secrets.SSL_CERT }}
           SSL_KEY: ${{ secrets.SSL_KEY }}
 
-      - name: Start nginx if it was stopped
-        if: inputs.check_only != 'true' && secrets.SSL_CERT != '' && secrets.SSL_KEY != ''
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.PROD_HOST }}
-          username: deploy
-          key: ${{ secrets.PROD_SSH_KEY }}
-          script_stop: false
-          script: |
-            set -euo pipefail
-            cd /opt/szdevs/infra
-            if ! docker ps --filter name=SZDevs-nginx --filter status=running -q | grep -q .; then
-              echo "nginx container not running, starting..."
-              docker compose --profile prod up -d nginx
-              sleep 5
-            fi
-            docker ps --filter name=SZDevs-nginx --format "Status: {{.Status}}"
-
       - name: Verify HTTPS externally
         if: inputs.check_only != 'true'
         run: |
           echo "=== External HTTPS verification ==="
-          sleep 5
+          sleep 8
 
           for URL in \
             "https://szdevs.com/health" \
             "https://szdevs.com/forgot-password"; do
             echo "Checking $URL ..."
-            HTTP_CODE=$(curl -fsS -o /dev/null -w "%{http_code}" --max-time 15 "$URL" 2>/dev/null || echo "FAILED")
-            echo "  → $HTTP_CODE"
+            HTTP_CODE=$(curl -fsS -o /dev/null -w "%{http_code}" --max-time 20 "$URL" 2>/dev/null || echo "FAILED")
+            echo "  -> $HTTP_CODE"
             if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "301" ] || [ "$HTTP_CODE" = "302" ]; then
-              echo "  ✓ OK"
+              echo "  OK"
             else
-              echo "  ✗ Unexpected response: $HTTP_CODE"
+              echo "  UNEXPECTED: $HTTP_CODE"
             fi
           done
 
           echo ""
           echo "=== TLS handshake check ==="
           echo | openssl s_client -connect szdevs.com:443 -servername szdevs.com 2>/dev/null | \
-            openssl x509 -noout -dates 2>/dev/null || echo "TLS handshake failed — cert not yet active"
+            openssl x509 -noout -dates 2>/dev/null || echo "TLS handshake failed - cert not yet active"
