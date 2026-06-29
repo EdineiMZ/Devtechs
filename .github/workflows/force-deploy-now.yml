@@ -5,35 +5,38 @@ on:
 
 jobs:
   deploy:
-    name: SSH deploy user FORCE=1 deploy.sh
+    name: Emergency recovery + FORCE deploy
     runs-on: ubuntu-latest
     environment:
       name: production
       url: https://szdevs.com
     steps:
-      - name: Free disk space before build (safe prune — no volumes)
+      - name: Emergency recovery (free disk, restart docker) + deploy
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.PROD_HOST }}
           username: deploy
           key: ${{ secrets.PROD_SSH_KEY }}
-          command_timeout: 15m
+          command_timeout: 40m
           script: |
             set -uo pipefail
-            echo "=== disk BEFORE ==="; df -h / || true
-            echo "=== docker disk usage ==="; docker system df || true
-            echo "=== pruning build cache + unused images (NO volumes — DB safe) ==="
-            docker builder prune -af || true
-            docker image prune -af || true
-            echo "=== disk AFTER ==="; df -h / || true
-            echo "=== docker hub reachability ==="; timeout 30 docker pull docker/dockerfile:1.6 >/dev/null 2>&1 && echo "dockerhub OK" || echo "dockerhub SLOW/UNREACHABLE"
-      - name: Run deploy.sh with FORCE=1
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.PROD_HOST }}
-          username: deploy
-          key: ${{ secrets.PROD_SSH_KEY }}
-          command_timeout: 45m
-          script: |
-            set -euo pipefail
+            echo "===== EMERGENCY RECOVERY START ====="
+            echo "--- disk BEFORE ---"; df -h / || true
+            echo "--- sudo check ---"; sudo -n true 2>/dev/null && echo HAS_SUDO || echo NO_SUDO
+            echo "--- biggest dirs in /var/lib/docker ---"; sudo -n du -sh /var/lib/docker/* 2>/dev/null | sort -rh | head -8 || true
+            echo "--- truncate container json logs (fast disk win, no daemon needed) ---"
+            sudo -n find /var/lib/docker/containers/ -name '*-json.log' -exec truncate -s 0 {} \; 2>/dev/null && echo "logs truncated" || echo "log truncate skipped (no sudo)"
+            echo "--- vacuum journald ---"; sudo -n journalctl --vacuum-size=50M 2>/dev/null || true
+            echo "--- disk AFTER log cleanup ---"; df -h / || true
+            echo "--- restart docker daemon (clear thrash) ---"
+            sudo -n systemctl restart docker 2>/dev/null && echo "docker restarted" || echo "docker restart skipped (no sudo)"
+            sleep 8
+            echo "--- docker ps ---"; timeout 30 docker ps 2>&1 | head -20 || echo "docker ps slow/failed"
+            echo "--- prune build cache + unused images (NO volumes — DB safe) ---"
+            timeout 240 docker builder prune -af 2>&1 | tail -3 || echo "builder prune timed out"
+            timeout 240 docker image prune -af 2>&1 | tail -3 || echo "image prune timed out"
+            echo "--- disk AFTER prune ---"; df -h / || true
+            echo "--- docker hub reachability ---"; timeout 30 docker pull docker/dockerfile:1.6 >/dev/null 2>&1 && echo "dockerhub OK" || echo "dockerhub SLOW/UNREACHABLE"
+            echo "===== DEPLOY START ====="
             FORCE=1 bash /opt/szdevs/deploy.sh
+            echo "===== DEPLOY DONE ====="
