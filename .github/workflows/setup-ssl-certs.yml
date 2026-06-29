@@ -47,7 +47,7 @@ jobs:
       - name: Fix DNS and diagnose VPS
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.PROD_HOST }}
+          host: 76.13.165.130
           username: root
           password: ${{ secrets.PROD_ROOT_PASS }}
           command_timeout: 2m
@@ -85,7 +85,7 @@ jobs:
         if: inputs.mode == 'selfsigned' || inputs.mode == 'restore-nginx'
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.PROD_HOST }}
+          host: 76.13.165.130
           username: root
           password: ${{ secrets.PROD_ROOT_PASS }}
           command_timeout: 3m
@@ -116,7 +116,7 @@ jobs:
         if: inputs.mode == 'selfsigned' || inputs.mode == 'restore-nginx'
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.PROD_HOST }}
+          host: 76.13.165.130
           username: root
           password: ${{ secrets.PROD_ROOT_PASS }}
           command_timeout: 3m
@@ -156,7 +156,7 @@ jobs:
 
           echo ""
           echo "=== TLS direct to VPS IP (bypasses Cloudflare) ==="
-          echo | timeout 20 openssl s_client -connect ${{ secrets.PROD_HOST }}:443 -servername szdevs.com 2>/dev/null \
+          echo | timeout 20 openssl s_client -connect 76.13.165.130:443 -servername szdevs.com 2>/dev/null \
             | openssl x509 -noout -dates 2>/dev/null \
             || echo "Direct TLS to VPS also failed"
 
