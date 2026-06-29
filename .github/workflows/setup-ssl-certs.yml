@@ -38,7 +38,7 @@ jobs:
           echo "=== Generated cert info ==="
           openssl x509 -in /tmp/SZDevs.crt -noout -dates -subject
 
-      - name: Diagnose VPS
+      - name: Diagnose - all containers and port owners
         uses: appleboy/ssh-action@v1
         with:
           host: 76.13.165.130
@@ -48,47 +48,44 @@ jobs:
           script: |
             set +e
 
-            echo "=== Cert directory ==="
-            ls -la /opt/szdevs/infra/certs/ 2>/dev/null || echo "CERTS_DIR_NOT_FOUND"
+            echo "=== ALL docker containers (any state) ==="
+            docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}\t{{.Image}}"
 
             echo ""
-            echo "=== Who owns port 80 ==="
-            ss -tlnp | grep ':80 ' || echo "nothing on port 80"
+            echo "=== Find nginx in container names or image ==="
+            docker ps -a --format "{{.Names}} {{.Image}} {{.Status}}" | grep -i nginx || echo "no nginx containers"
 
             echo ""
-            echo "=== Who owns port 443 ==="
-            ss -tlnp | grep ':443 ' || echo "nothing on port 443"
+            echo "=== Port 80 and 443 listeners ==="
+            ss -tlnp | grep -E ':80 |:443 '
 
             echo ""
-            echo "=== ALL running Docker containers ==="
-            docker ps --format "{{.Names}} | {{.Status}} | {{.Ports}}"
+            echo "=== Certs dir ==="
+            ls -la /opt/szdevs/infra/certs/
 
             echo ""
-            echo "=== Host nginx config ==="
-            nginx -t 2>&1 || true
-            ls /etc/nginx/sites-enabled/ 2>/dev/null || echo "no sites-enabled"
-            ls /etc/nginx/certs/ 2>/dev/null || echo "no /etc/nginx/certs/"
-            cat /etc/nginx/nginx.conf 2>/dev/null | head -20 || true
+            echo "=== Docker networks ==="
+            docker network ls
 
             echo ""
-            echo "=== deploy sudo capabilities ==="
-            sudo -l 2>&1 | head -10 || echo "no sudo"
+            echo "=== docker ps -a full output ==="
+            docker ps -a
 
             exit 0
 
-      - name: Fix host nginx SSL certs
+      - name: Fix: stop port-80/443 holder, install cert, start nginx
         if: inputs.mode == 'selfsigned' || inputs.mode == 'restore-nginx'
         uses: appleboy/ssh-action@v1
         with:
           host: 76.13.165.130
           username: deploy
           key: ${{ secrets.PROD_SSH_KEY }}
-          command_timeout: 5m
+          command_timeout: 10m
           envs: CERT_B64,KEY_B64
           script: |
             set +e
 
-            echo "=== Install certs to docker volume path ==="
+            echo "=== Install fresh cert to /opt/szdevs/infra/certs/ ==="
             mkdir -p /home/deploy/szdevs-certs
             echo "$CERT_B64" | base64 -d > /home/deploy/szdevs-certs/SZDevs.crt
             echo "$KEY_B64"  | base64 -d > /home/deploy/szdevs-certs/SZDevs.key
@@ -106,26 +103,34 @@ jobs:
               "
 
             echo ""
-            echo "=== Try to install certs to /etc/nginx/certs/ via sudo ==="
-            if sudo -l 2>&1 | grep -q nginx; then
-              echo "sudo nginx access found"
-              sudo mkdir -p /etc/nginx/certs
-              sudo cp /home/deploy/szdevs-certs/SZDevs.crt /etc/nginx/certs/SZDevs.crt
-              sudo cp /home/deploy/szdevs-certs/SZDevs.key /etc/nginx/certs/SZDevs.key
-              sudo chmod 644 /etc/nginx/certs/SZDevs.crt
-              sudo chmod 600 /etc/nginx/certs/SZDevs.key
-              echo "Certs copied to /etc/nginx/certs/"
-              sudo nginx -t && sudo nginx -s reload && echo "nginx reloaded"
+            echo "=== Find nginx container (by image) ==="
+            NGINX_ID=$(docker ps -a --filter ancestor=nginx -q | head -1)
+            NGINX_NAME=$(docker ps -a --filter ancestor=nginx --format "{{.Names}}" | head -1)
+            echo "nginx container: $NGINX_ID / $NGINX_NAME"
+
+            echo ""
+            echo "=== Reload nginx if running or start it ==="
+            if docker ps --filter name="$NGINX_NAME" --filter status=running -q | grep -q .; then
+              echo "nginx is running: $NGINX_NAME - reloading"
+              docker exec "$NGINX_NAME" nginx -t 2>&1
+              docker exec "$NGINX_NAME" nginx -s reload 2>&1
+              echo "reloaded"
+            elif [ -n "$NGINX_ID" ]; then
+              echo "nginx container exists but not running: $NGINX_NAME - restarting"
+              docker restart "$NGINX_NAME" 2>&1
+              sleep 3
+              docker exec "$NGINX_NAME" nginx -s reload 2>&1 || true
             else
-              echo "No direct sudo nginx -- trying tee approach"
-              echo "$CERT_B64" | base64 -d | sudo tee /etc/nginx/certs/SZDevs.crt > /dev/null 2>&1 && echo "cert written via tee"
-              echo "$KEY_B64"  | base64 -d | sudo tee /etc/nginx/certs/SZDevs.key > /dev/null 2>&1 && echo "key written via tee"
-              sudo nginx -t 2>&1 && sudo nginx -s reload 2>&1 && echo "nginx reloaded"
+              echo "=== No nginx container - starting via compose ==="
+              cd /opt/szdevs/infra
+              docker compose --profile prod up -d --no-deps nginx 2>&1 || true
             fi
 
             echo ""
-            echo "=== Try reload via sudoers nginx reload ==="
-            sudo systemctl reload nginx 2>&1 || sudo service nginx reload 2>&1 || true
+            echo "=== Final state ==="
+            docker ps --filter name=nginx --format "{{.Names}} {{.Status}} {{.Ports}}"
+            ss -tlnp | grep -E ':443|:80 '
+            curl -sk -o /dev/null -w "https://127.0.0.1/health -> %{http_code}\n" --insecure https://127.0.0.1/health || true
         env:
           CERT_B64: ${{ env.CERT_B64 }}
           KEY_B64: ${{ env.KEY_B64 }}
@@ -136,8 +141,7 @@ jobs:
 
           echo "=== TLS direct to VPS IP ==="
           echo | timeout 20 openssl s_client -connect 76.13.165.130:443 -servername szdevs.com 2>&1 \
-            | grep -E "CONNECTED|subject|issuer|error|SSL|notBefore|notAfter|DONE|alert" \
-            || echo "Direct TLS to VPS failed"
+            | grep -E "CONNECTED|subject|issuer|error|alert|notBefore|notAfter|DONE"
 
           echo ""
           echo "=== HTTP status via szdevs.com ==="
