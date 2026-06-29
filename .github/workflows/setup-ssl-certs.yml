@@ -28,7 +28,12 @@ jobs:
       - name: Generate self-signed cert (runner)
         if: inputs.mode == 'selfsigned' || inputs.mode == 'restore-nginx'
         run: |
-          openssl req -x509 -nodes -newkey rsa:2048             -keyout /tmp/SZDevs.key             -out /tmp/SZDevs.crt             -days 365             -subj "/CN=szdevs.com/O=SZDevs/C=BR"             -addext "subjectAltName=DNS:szdevs.com,DNS:*.szdevs.com"
+          openssl req -x509 -nodes -newkey rsa:2048 \
+            -keyout /tmp/SZDevs.key \
+            -out /tmp/SZDevs.crt \
+            -days 365 \
+            -subj "/CN=szdevs.com/O=SZDevs/C=BR" \
+            -addext "subjectAltName=DNS:szdevs.com,DNS:*.szdevs.com"
 
           echo "CERT_B64=$(base64 -w0 /tmp/SZDevs.crt)" >> "$GITHUB_ENV"
           echo "KEY_B64=$(base64 -w0 /tmp/SZDevs.key)"  >> "$GITHUB_ENV"
@@ -50,9 +55,7 @@ jobs:
             set -euo pipefail
 
             echo "=== Fixing DNS first (no external lookup needed) ==="
-            printf 'nameserver 8.8.8.8
-nameserver 1.1.1.1
-' > /etc/resolv.conf
+            printf 'nameserver 8.8.8.8\nnameserver 1.1.1.1\n' > /etc/resolv.conf
             echo "DNS fixed."
 
             echo ""
@@ -147,15 +150,17 @@ nameserver 1.1.1.1
           sleep 10
 
           echo "=== TLS handshake to szdevs.com ==="
-          echo | timeout 20 openssl s_client -connect szdevs.com:443 -servername szdevs.com 2>/dev/null             | openssl x509 -noout -dates -subject 2>/dev/null             || echo "TLS FAILED (may still be 522 if CF mode is Full strict with self-signed)"
+          echo | timeout 20 openssl s_client -connect szdevs.com:443 -servername szdevs.com 2>/dev/null \
+            | openssl x509 -noout -dates -subject 2>/dev/null \
+            || echo "TLS FAILED (may still be 522 if CF mode is Full strict with self-signed)"
 
           echo ""
           echo "=== TLS direct to VPS IP (bypasses Cloudflare) ==="
-          echo | timeout 20 openssl s_client -connect ${{ secrets.PROD_HOST }}:443 -servername szdevs.com 2>/dev/null             | openssl x509 -noout -dates 2>/dev/null             || echo "Direct TLS to VPS also failed"
+          echo | timeout 20 openssl s_client -connect ${{ secrets.PROD_HOST }}:443 -servername szdevs.com 2>/dev/null \
+            | openssl x509 -noout -dates 2>/dev/null \
+            || echo "Direct TLS to VPS also failed"
 
           echo ""
           echo "=== HTTP status via szdevs.com ==="
-          curl -fsS -o /dev/null -w "szdevs.com/health -> %{http_code}
-" --max-time 20 "https://szdevs.com/health" 2>/dev/null || true
-          curl -fsS -o /dev/null -w "szdevs.com/forgot-password -> %{http_code}
-" --max-time 20 "https://szdevs.com/forgot-password" 2>/dev/null || true
+          curl -fsS -o /dev/null -w "szdevs.com/health -> %{http_code}\n" --max-time 20 "https://szdevs.com/health" 2>/dev/null || true
+          curl -fsS -o /dev/null -w "szdevs.com/forgot-password -> %{http_code}\n" --max-time 20 "https://szdevs.com/forgot-password" 2>/dev/null || true
