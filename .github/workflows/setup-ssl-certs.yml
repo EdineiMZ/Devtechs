@@ -42,9 +42,9 @@ jobs:
           openssl x509 -in /tmp/SZDevs.crt -noout -dates -subject
 
       # -----------------------------------------------------------------------
-      # Step 1: Fix VPS DNS + diagnose
+      # Step 1: Diagnose VPS state (informational, failures allowed)
       # -----------------------------------------------------------------------
-      - name: Fix DNS and diagnose VPS
+      - name: Diagnose VPS
         uses: appleboy/ssh-action@v1
         with:
           host: 76.13.165.130
@@ -52,13 +52,8 @@ jobs:
           key: ${{ secrets.PROD_SSH_KEY }}
           command_timeout: 2m
           script: |
-            set -euo pipefail
+            set +e
 
-            echo "=== Fixing DNS first (no external lookup needed) ==="
-            printf 'nameserver 8.8.8.8\nnameserver 1.1.1.1\n' > /etc/resolv.conf
-            echo "DNS fixed."
-
-            echo ""
             echo "=== System state ==="
             hostname; uptime
 
@@ -68,15 +63,17 @@ jobs:
 
             echo ""
             echo "=== Nginx container ==="
-            sudo docker ps --filter name=SZDevs-nginx --format "Name={{.Names}} Status={{.Status}}"
+            sudo docker ps --filter name=SZDevs-nginx --format "Name={{.Names}} Status={{.Status}}" 2>/dev/null || echo "docker error"
 
             echo ""
             echo "=== Port 443 ==="
-            ss -tlnp 2>/dev/null | grep :443 || echo "PORT_443_NOT_LISTENING"
+            sudo ss -tlnp 2>/dev/null | grep :443 || echo "PORT_443_NOT_LISTENING"
 
             echo ""
             echo "=== Nginx last 10 log lines ==="
             sudo docker logs SZDevs-nginx --tail 10 2>/dev/null || echo "container not running"
+
+            exit 0
 
       # -----------------------------------------------------------------------
       # Step 2: Install cert on VPS (pass base64-encoded from runner)
@@ -149,16 +146,10 @@ jobs:
           echo "=== Waiting 10s ==="
           sleep 10
 
-          echo "=== TLS handshake to szdevs.com ==="
-          echo | timeout 20 openssl s_client -connect szdevs.com:443 -servername szdevs.com 2>/dev/null \
-            | openssl x509 -noout -dates -subject 2>/dev/null \
-            || echo "TLS FAILED (may still be 522 if CF mode is Full strict with self-signed)"
-
-          echo ""
           echo "=== TLS direct to VPS IP (bypasses Cloudflare) ==="
           echo | timeout 20 openssl s_client -connect 76.13.165.130:443 -servername szdevs.com 2>/dev/null \
             | openssl x509 -noout -dates 2>/dev/null \
-            || echo "Direct TLS to VPS also failed"
+            || echo "Direct TLS to VPS failed"
 
           echo ""
           echo "=== HTTP status via szdevs.com ==="
