@@ -56,16 +56,12 @@ jobs:
             ls -la /opt/szdevs/infra/certs/ 2>/dev/null || echo "CERTS_DIR_NOT_FOUND"
 
             echo ""
-            echo "=== Nginx container ==="
-            docker ps --filter name=SZDevs-nginx --format "Name={{.Names}} Status={{.Status}}" 2>/dev/null || echo "docker error"
+            echo "=== Containers (all) ==="
+            docker ps -a --format "{{.Names}} {{.Status}}" 2>/dev/null || echo "docker ps failed"
 
             echo ""
             echo "=== Port 443 ==="
             ss -tlnp 2>/dev/null | grep :443 || echo "PORT_443_NOT_LISTENING"
-
-            echo ""
-            echo "=== Nginx last 10 log lines ==="
-            docker logs SZDevs-nginx --tail 10 2>/dev/null || echo "container not running"
 
             exit 0
 
@@ -105,34 +101,33 @@ jobs:
           CERT_B64: ${{ env.CERT_B64 }}
           KEY_B64: ${{ env.KEY_B64 }}
 
-      - name: Start and reload nginx
+      - name: Start all services (including nginx)
         if: inputs.mode == 'selfsigned' || inputs.mode == 'restore-nginx'
         uses: appleboy/ssh-action@v1
         with:
           host: 76.13.165.130
           username: deploy
           key: ${{ secrets.PROD_SSH_KEY }}
-          command_timeout: 3m
+          command_timeout: 5m
           script: |
             set -euo pipefail
 
             cd /opt/szdevs/infra
 
-            echo "=== Testing nginx config ==="
-            docker compose --profile prod exec -T nginx nginx -t 2>&1 || true
+            echo "=== Starting all prod services (no rebuild) ==="
+            docker compose --profile prod up -d --remove-orphans 2>&1
 
-            echo "=== Ensuring nginx is up ==="
-            docker compose --profile prod up -d nginx 2>&1
-            sleep 5
+            echo "=== Waiting 15s for nginx to start ==="
+            sleep 15
 
-            echo "=== Reloading nginx ==="
-            docker compose --profile prod exec -T nginx nginx -s reload 2>&1 || true
-
-            echo "=== Port 443 after reload ==="
+            echo "=== Port 443 after start ==="
             ss -tlnp | grep :443 || echo "PORT_443_STILL_NOT_LISTENING"
 
             echo "=== Nginx status ==="
             docker ps --filter name=SZDevs-nginx --format "Status: {{.Status}}"
+
+            echo "=== HTTP health check ==="
+            curl -s -o /dev/null -w "localhost/health -> %{http_code}\n" http://localhost/health 2>/dev/null || echo "health check failed"
 
       - name: Verify HTTPS externally (from runner)
         run: |
