@@ -8,6 +8,7 @@ import { AppShell } from '@/components/app/app-shell';
 import { Icon } from '@/components/app/icons';
 import { CLIENT_NAV_ITEMS } from '@/components/app/nav-config';
 import { StatCard } from '@/components/app/stat-card';
+import { fetchAiBalance } from '@/lib/szdevs-api';
 
 /**
  * Client dashboard — the authenticated landing for non-admin
@@ -24,6 +25,7 @@ export default async function PerfilPage(): Promise<JSX.Element> {
     redirect('/login?callbackUrl=/perfil');
   }
   const user = session.user;
+  const aiBalance = await fetchAiBalance(user.id as string);
 
   return (
     <AppShell
@@ -77,7 +79,7 @@ export default async function PerfilPage(): Promise<JSX.Element> {
         <h2 className="mb-4 font-mono text-[10px] font-semibold uppercase tracking-widest text-ash/60">
           {'// indicadores'}
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             label="Tickets abertos"
             value={0}
@@ -98,6 +100,17 @@ export default async function PerfilPage(): Promise<JSX.Element> {
             hint="tudo em dia"
             accent="violet"
             icon={Icon.alert}
+          />
+          <StatCard
+            label="Saldo IA"
+            value={aiBalance ? `${aiBalance.aiBalance.remaining} docs` : '—'}
+            hint={
+              aiBalance
+                ? `${aiBalance.aiBalance.used} de ${aiBalance.aiBalance.limit} usados este mês`
+                : 'sem plano ativo'
+            }
+            accent="copper"
+            icon={Icon.zap}
           />
         </div>
       </section>
