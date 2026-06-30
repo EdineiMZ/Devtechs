@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Mode: diagnose | selfsigned'
+        description: 'Mode: diagnose | verify'
         required: false
-        default: 'selfsigned'
+        default: 'verify'
         type: choice
         options:
           - diagnose
-          - selfsigned
+          - verify
 
 jobs:
   fix-ssl:
@@ -21,100 +21,28 @@ jobs:
       url: https://szdevs.com
 
     steps:
-      - name: Generate self-signed cert
-        if: inputs.mode == 'selfsigned'
+      - name: Verify nginx and Cloudflare
+        if: inputs.mode == 'verify'
         run: |
-          openssl req -x509 -nodes -newkey rsa:2048 \
-            -keyout /tmp/SZDevs.key \
-            -out /tmp/SZDevs.crt \
-            -days 365 \
-            -subj "/CN=szdevs.com/O=SZDevs/C=BR" \
-            -addext "subjectAltName=DNS:szdevs.com,DNS:*.szdevs.com"
-          echo "CERT_B64=$(base64 -w0 /tmp/SZDevs.crt)" >> "$GITHUB_ENV"
-          echo "KEY_B64=$(base64 -w0 /tmp/SZDevs.key)" >> "$GITHUB_ENV"
-          openssl x509 -in /tmp/SZDevs.crt -noout -dates -subject
+          echo "=== TLS direct to VPS (bypasses Cloudflare) ==="
+          echo | timeout 15 openssl s_client -connect 76.13.165.130:443 -servername szdevs.com 2>&1 \
+            | grep -E "CONNECTED|subject|error|alert|DONE" || echo "TLS: timeout or no match"
+          echo ""
+          echo "=== HTTP direct to VPS ==="
+          curl -sS -o /dev/null -w "direct http://76.13.165.130/health -> %{http_code}\n" \
+            -H "Host: szdevs.com" --max-time 10 http://76.13.165.130/health || echo "http direct failed"
+          echo ""
+          echo "=== HTTPS direct to VPS (self-signed, skip cert verify) ==="
+          curl -sk -o /dev/null -w "direct https://76.13.165.130/health -> %{http_code}\n" \
+            -H "Host: szdevs.com" --max-time 10 https://76.13.165.130/health || echo "https direct failed"
+          echo ""
+          echo "=== Response headers from Cloudflare ==="
+          curl -sS -I --max-time 20 "https://szdevs.com/health" 2>&1 || echo "curl failed"
+          echo ""
+          echo "=== Response headers direct ==="
+          curl -sk -I -H "Host: szdevs.com" --max-time 10 https://76.13.165.130/health 2>&1 || echo "curl failed"
 
-      - name: Fetch latest nginx.conf from repo
-        if: inputs.mode == 'selfsigned'
-        run: |
-          curl -sL \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github.raw" \
-            "https://api.github.com/repos/EdineiMZ/Devtechs/contents/infra/nginx.conf?ref=main" \
-            > /tmp/nginx.conf
-          echo "NGINX_B64=$(base64 -w0 /tmp/nginx.conf)" >> "$GITHUB_ENV"
-          echo "Fetched nginx.conf: $(wc -l < /tmp/nginx.conf) lines"
-
-      - name: Install cert, update nginx.conf, recreate nginx
-        if: inputs.mode == 'selfsigned'
-        uses: appleboy/ssh-action@v1
-        with:
-          host: 76.13.165.130
-          username: deploy
-          key: ${{ secrets.PROD_SSH_KEY }}
-          command_timeout: 10m
-          envs: CERT_B64,KEY_B64,NGINX_B64
-          script: |
-            set +e
-
-            echo "=== Install certs ==="
-            mkdir -p /home/deploy/szdevs-certs
-            echo "$CERT_B64" | base64 -d > /home/deploy/szdevs-certs/SZDevs.crt
-            echo "$KEY_B64" | base64 -d > /home/deploy/szdevs-certs/SZDevs.key
-            docker run --rm \
-              -v /home/deploy/szdevs-certs:/src:ro \
-              -v /opt/szdevs/infra:/infra \
-              alpine sh -c "mkdir -p /infra/certs && cp /src/SZDevs.crt /infra/certs/ && chmod 644 /infra/certs/SZDevs.crt && cp /src/SZDevs.key /infra/certs/ && chmod 644 /infra/certs/SZDevs.key && ls -la /infra/certs/"
-
-            echo ""
-            echo "=== Update nginx.conf ==="
-            echo "$NGINX_B64" | base64 -d > /tmp/nginx_new.conf
-            echo "Lines: $(wc -l < /tmp/nginx_new.conf)"
-            docker run --rm \
-              -v /tmp/nginx_new.conf:/src/nginx.conf:ro \
-              -v /opt/szdevs/infra:/infra \
-              alpine sh -c "cp /src/nginx.conf /infra/nginx.conf && echo updated"
-
-            echo ""
-            echo "=== Validate nginx config ==="
-            docker run --rm \
-              -v /opt/szdevs/infra/nginx.conf:/etc/nginx/nginx.conf:ro \
-              -v /opt/szdevs/infra/certs:/etc/nginx/certs:ro \
-              nginx:alpine nginx -t 2>&1
-
-            echo ""
-            echo "=== Stop and remove stale nginx container ==="
-            docker stop SZDevs-nginx 2>/dev/null && echo "stopped" || echo "not running"
-            docker rm SZDevs-nginx 2>/dev/null && echo "removed" || echo "did not exist"
-
-            echo ""
-            echo "=== Recreate nginx via compose ==="
-            cd /opt/szdevs/infra
-            docker compose --profile prod up -d --no-deps nginx 2>&1
-            sleep 8
-
-            echo ""
-            echo "=== nginx state ==="
-            docker ps -a --filter name=SZDevs-nginx --format "{{.Names}} | {{.Status}} | {{.Ports}}"
-
-            echo ""
-            echo "=== nginx logs ==="
-            docker logs --tail 20 SZDevs-nginx 2>&1 || echo "no logs"
-
-            echo ""
-            echo "=== ports ==="
-            ss -tlnp | grep -E ':80 |:443 ' || echo "nothing on 80/443"
-
-            echo ""
-            echo "=== local health ==="
-            curl -sk --insecure -o /dev/null -w "https://127.0.0.1/health -> %{http_code}\n" https://127.0.0.1/health || true
-            curl -sk -o /dev/null -w "http://127.0.0.1/health -> %{http_code}\n" http://127.0.0.1/health || true
-        env:
-          CERT_B64: ${{ env.CERT_B64 }}
-          KEY_B64: ${{ env.KEY_B64 }}
-          NGINX_B64: ${{ env.NGINX_B64 }}
-
-      - name: Diagnose only
+      - name: Diagnose VPS
         if: inputs.mode == 'diagnose'
         uses: appleboy/ssh-action@v1
         with:
@@ -130,14 +58,3 @@ jobs:
             ls -la /opt/szdevs/infra/certs/
             grep "resolver" /opt/szdevs/infra/nginx.conf || echo "no resolver in nginx.conf"
             exit 0
-
-      - name: Verify externally
-        run: |
-          sleep 15
-          echo "=== TLS direct ==="
-          echo | timeout 20 openssl s_client -connect 76.13.165.130:443 -servername szdevs.com 2>&1 \
-            | grep -E "CONNECTED|subject|error|alert|DONE" || echo "TLS: timeout or no match"
-          echo ""
-          echo "=== via Cloudflare ==="
-          curl -sS -o /dev/null -w "szdevs.com/health -> %{http_code}\n" --max-time 25 "https://szdevs.com/health" 2>&1 || echo "curl failed"
-          curl -sS -o /dev/null -w "szdevs.com/forgot-password -> %{http_code}\n" --max-time 25 "https://szdevs.com/forgot-password" 2>&1 || echo "curl failed"
