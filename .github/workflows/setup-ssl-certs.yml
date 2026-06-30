@@ -46,20 +46,14 @@ jobs:
             echo "=== ALL containers any state ==="
             docker ps -a
             echo ""
-            echo "=== nginx by image ==="
-            docker ps -a --format "{{.Names}} | {{.Image}} | {{.Status}}" | grep -i nginx || echo "no nginx containers found"
-            echo ""
             echo "=== Port 80 and 443 ==="
-            ss -tlnp | grep -E ':80 |:443 '
+            ss -tlnp | grep -E ':80 |:443 ' || echo "ports 80/443 empty"
             echo ""
             echo "=== Certs dir ==="
             ls -la /opt/szdevs/infra/certs/ 2>/dev/null || echo "certs dir not found"
-            echo ""
-            echo "=== sudo check ==="
-            sudo -n true 2>&1 && echo "passwordless sudo YES" || echo "passwordless sudo NO"
             exit 0
 
-      - name: Install cert and reload nginx
+      - name: Install cert, recreate nginx with correct ports
         if: inputs.mode == 'selfsigned'
         uses: appleboy/ssh-action@v1
         with:
@@ -70,6 +64,8 @@ jobs:
           envs: CERT_B64,KEY_B64
           script: |
             set +e
+
+            echo "=== Install certs ==="
             mkdir -p /home/deploy/szdevs-certs
             echo "$CERT_B64" | base64 -d > /home/deploy/szdevs-certs/SZDevs.crt
             echo "$KEY_B64" | base64 -d > /home/deploy/szdevs-certs/SZDevs.key
@@ -77,35 +73,39 @@ jobs:
               -v /home/deploy/szdevs-certs:/src:ro \
               -v /opt/szdevs/infra:/infra \
               alpine sh -c "mkdir -p /infra/certs && cp /src/SZDevs.crt /infra/certs/ && chmod 644 /infra/certs/SZDevs.crt && cp /src/SZDevs.key /infra/certs/ && chmod 600 /infra/certs/SZDevs.key && ls -la /infra/certs/"
-            NGINX_NAME=$(docker ps -a --format "{{.Names}}" | grep -i nginx | head -1)
-            echo "nginx container: $NGINX_NAME"
-            if docker ps --filter name="$NGINX_NAME" --filter status=running -q 2>/dev/null | grep -q .; then
-              echo "nginx running: reloading"
-              docker exec "$NGINX_NAME" nginx -t 2>&1
-              docker exec "$NGINX_NAME" nginx -s reload 2>&1
-            elif [ -n "$NGINX_NAME" ]; then
-              echo "nginx exists not running: starting"
-              docker start "$NGINX_NAME" 2>&1
-              sleep 5
-              docker exec "$NGINX_NAME" nginx -t 2>&1 || true
-            else
-              echo "no nginx container: compose up"
-              cd /opt/szdevs/infra && docker compose --profile prod up -d --no-deps nginx 2>&1 || true
-            fi
+
+            echo ""
+            echo "=== Stop and remove stale nginx container ==="
+            docker stop SZDevs-nginx 2>/dev/null && echo "stopped" || echo "was not running"
+            docker rm SZDevs-nginx 2>/dev/null && echo "removed" || echo "did not exist"
+
+            echo ""
+            echo "=== Recreate nginx via compose with correct 80:80 and 443:443 ==="
+            cd /opt/szdevs/infra
+            docker compose --profile prod up -d --no-deps nginx 2>&1
+            sleep 5
+
+            echo ""
+            echo "=== nginx config test ==="
+            docker exec SZDevs-nginx nginx -t 2>&1 || true
+
             echo ""
             echo "=== Result ==="
-            docker ps --format "{{.Names}} | {{.Status}} | {{.Ports}}" | grep -i nginx || echo "nginx not running"
-            curl -sk --insecure -o /dev/null -w "local https: %{http_code}\n" https://127.0.0.1/health || true
+            docker ps --format "{{.Names}} | {{.Status}} | {{.Ports}}" | grep -i nginx || echo "nginx not in docker ps"
+            ss -tlnp | grep -E ':80 |:443 ' || echo "no 80/443"
+            curl -sk --insecure -o /dev/null -w "local https 443: %{http_code}\n" https://127.0.0.1/health || true
+            curl -sk -o /dev/null -w "local http 80: %{http_code}\n" http://127.0.0.1/health || true
         env:
           CERT_B64: ${{ env.CERT_B64 }}
           KEY_B64: ${{ env.KEY_B64 }}
 
       - name: Verify externally
         run: |
-          sleep 10
-          echo "=== TLS direct ==="
-          echo | timeout 20 openssl s_client -connect 76.13.165.130:443 -servername szdevs.com 2>&1 | grep -E "CONNECTED|subject|error|alert|DONE"
+          sleep 15
+          echo "=== TLS direct to VPS ==="
+          echo | timeout 20 openssl s_client -connect 76.13.165.130:443 -servername szdevs.com 2>&1 \
+            | grep -E "CONNECTED|subject|error|alert|DONE" || echo "TLS test: no match or timeout"
           echo ""
           echo "=== via Cloudflare ==="
-          curl -sS -o /dev/null -w "szdevs.com/health -> %{http_code}\n" --max-time 20 "https://szdevs.com/health" || true
-          curl -sS -o /dev/null -w "szdevs.com/forgot-password -> %{http_code}\n" --max-time 20 "https://szdevs.com/forgot-password" || true
+          curl -sS -o /dev/null -w "szdevs.com/health -> %{http_code}\n" --max-time 25 "https://szdevs.com/health" 2>&1 || echo "curl failed"
+          curl -sS -o /dev/null -w "szdevs.com/forgot-password -> %{http_code}\n" --max-time 25 "https://szdevs.com/forgot-password" 2>&1 || echo "curl failed"
