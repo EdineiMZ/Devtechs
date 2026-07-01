@@ -14,7 +14,7 @@ import { auth } from '@/auth';
  *      completed the mid-session 2FA challenge (/2fa-verificar).
  */
 
-const PROTECTED_PREFIXES = ['/perfil', '/admin', '/developer', '/verificar-email'] as const;
+const PROTECTED_PREFIXES = ['/perfil', '/dashboard', '/admin', '/developer', '/verificar-email'] as const;
 const AUTH_PAGES = ['/login', '/register'] as const;
 /** Routes that require 2FA completion when twoFactorEnabled=true. */
 const TWO_FA_GATED_PREFIXES = ['/admin', '/developer'] as const;
@@ -92,6 +92,8 @@ export const config = {
     '/register/:path*',
     '/perfil',
     '/perfil/:path*',
+    '/dashboard',
+    '/dashboard/:path*',
     '/admin',
     '/admin/:path*',
     '/developer',
