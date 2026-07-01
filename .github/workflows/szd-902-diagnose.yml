@@ -1,0 +1,37 @@
+name: "[SZD-902] Diagnostic - Auth Service Logs"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    name: Check auth-service logs + VPS state
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH into VPS and collect diagnostics
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
+          command_timeout: 5m
+          script: |
+            echo "=== Container State ==="
+            docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' | head -30
+
+            echo "=== Auth-service logs (last 80 lines) ==="
+            docker logs SZDevs-auth-service --tail 80 2>&1 || echo "Container not found or no logs"
+
+            echo "=== Disk and Memory ==="
+            df -h /
+            free -h
+
+            echo "=== .env presence check (no values) ==="
+            ls -la /opt/szdevs/.env 2>/dev/null && echo ".env exists" || echo ".env MISSING"
+            grep -o '^[A-Z_]*=' /opt/szdevs/.env 2>/dev/null || echo "Cannot read .env"
+
+            echo "=== Docker images for SZDevs ==="
+            docker images | grep -i "infra\|szdevs" | head -20
+
+            echo "=== Auth-service inspect ==="
+            docker inspect SZDevs-auth-service --format "Image: {{.Image}} State: {{.State.Status}} ExitCode: {{.State.ExitCode}}" 2>/dev/null || echo "Container not found"
