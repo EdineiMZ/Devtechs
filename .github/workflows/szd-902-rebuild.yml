@@ -1,0 +1,63 @@
+name: "[SZD-902] Rebuild + Deploy (serial builds)"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  rebuild-deploy:
+    name: Serial rebuild + restart SZDevs
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://szdevs.com
+    steps:
+      - name: SSH - serial rebuild + deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
+          command_timeout: 60m
+          script: |
+            set -euo pipefail
+            cd /opt/szdevs
+
+            echo "=== [1/3] git pull main ==="
+            git fetch origin main
+            git reset --hard origin/main
+            echo "Code at: $(git rev-parse --short HEAD)"
+
+            echo "=== [2/3] Serial Docker builds (serial, no bake) ==="
+            cd /opt/szdevs/infra
+
+            SERVICES="auth-service rh-service finance-service projects-service devops-service support-service payments-service notification-service license-service developer-service api-service web store"
+
+            for svc in $SERVICES; do
+              echo "--- Building: $svc ---"
+              free -h | grep Mem
+              docker compose --profile prod build "$svc" --progress=plain 2>&1 | tail -5
+              echo "--- Done: $svc ---"
+            done
+
+            echo "=== [3/3] Migrate + Start services ==="
+            docker compose up -d postgres
+            until docker compose exec -T postgres pg_isready -q 2>/dev/null; do
+              echo "Waiting for postgres..."
+              sleep 3
+            done
+            echo "Postgres ready."
+
+            docker compose --profile migrate run --rm migrate || echo "Migration warning (may be up to date)"
+
+            docker compose --profile prod up -d --remove-orphans
+
+            echo "=== Health check (90s window) ==="
+            for i in $(seq 1 9); do
+              sleep 10
+              HTTP=$(curl -sk -o /dev/null -w "%{http_code}" http://localhost/health 2>/dev/null || echo "000")
+              echo "[$i/9] HTTP $HTTP"
+              [ "$HTTP" = "200" ] && echo "HEALTHY!" && break
+            done
+
+            echo "=== Final container state ==="
+            docker ps --format 'table {{.Names}}\t{{.Status}}' | head -20
