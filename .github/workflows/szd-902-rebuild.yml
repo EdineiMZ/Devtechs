@@ -30,7 +30,7 @@ jobs:
             echo "=== [2/3] Serial Docker builds (serial, no bake) ==="
             cd /opt/szdevs/infra
 
-            SERVICES="auth-service rh-service finance-service projects-service devops-service support-service payments-service notification-service license-service developer-service api-service web store"
+            SERVICES="auth-service rh-service finance-service projects-service devops-service support-service payments-service notification-service license-service developer-service web store"
 
             for svc in $SERVICES; do
               echo "--- Building: $svc ---"

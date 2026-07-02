@@ -82,7 +82,7 @@ jobs:
             sleep 5
 
             echo "=== [4/6] Serial Docker rebuild with fixed Dockerfile ==="
-            SERVICES="auth-service rh-service finance-service projects-service devops-service support-service payments-service notification-service license-service developer-service api-service"
+            SERVICES="auth-service rh-service finance-service projects-service devops-service support-service payments-service notification-service license-service developer-service"
             for svc in $SERVICES; do
               echo "--- Building: $svc ---"
               free -h | grep Mem || true
