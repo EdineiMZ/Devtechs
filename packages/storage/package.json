@@ -5,6 +5,7 @@
   "description": "SZDevs - storage adapter pattern (Cloudflare R2 + local filesystem)",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": ["dist", "src"],
   "scripts": {
     "build": "tsc",
     "lint": "eslint \"src/**/*.ts\"",
