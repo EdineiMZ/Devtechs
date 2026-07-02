@@ -1,45 +1,16 @@
 # syntax=docker/dockerfile:1.6
 #
-# =============================================================================
-# SZDevs — NestJS service image
-#
-# Multi-stage build that produces a minimal, node-user production image for
-# any workspace under `services/*`. The target package is selected at build
-# time via --build-arg PACKAGE_NAME=@szdevs/<service-name>.
-#
-#   docker build \
-#     --file Dockerfile.service \
-#     --build-arg PACKAGE_NAME=@szdevs/auth-service \
-#     --tag ghcr.io/org/auth-service:sha \
-#     .
-#
-# Stages:
-#   1. base     — alpine + corepack-activated pnpm, shared by builder+runtime
-#   2. builder  — install workspace, generate Prisma client, run `turbo build`
-#                  for the target + its deps, then `pnpm deploy` the package
-#                  to /app so the runtime stage can copy a single directory.
-#   3. runtime  — clean alpine, copies /app, drops privileges to `node`, and
-#                  execs with dumb-init so SIGTERM from `docker stop` reaches
-#                  the Node process cleanly (dumb-init fixes PID-1 zombie-reap
-#                  and signal-forwarding for Node in containers).
-# =============================================================================
+# SZDevs - NestJS service image
 
 ARG NODE_VERSION=20-alpine
 
-# ---------------------------------------------------------------------------
-# Stage 1: base
-# ---------------------------------------------------------------------------
 FROM node:${NODE_VERSION} AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
 RUN corepack enable && corepack prepare pnpm@9 --activate
-# `libc6-compat` is needed by some native node modules (Prisma engines, bcrypt)
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /repo
 
-# ---------------------------------------------------------------------------
-# Stage 2: builder
-# ---------------------------------------------------------------------------
 FROM base AS builder
 ARG PACKAGE_NAME
 RUN test -n "${PACKAGE_NAME}" || (echo "PACKAGE_NAME build arg is required" && exit 1)
@@ -47,57 +18,48 @@ RUN test -n "${PACKAGE_NAME}" || (echo "PACKAGE_NAME build arg is required" && e
 ENV NODE_ENV=development
 ENV TURBO_TELEMETRY_DISABLED=1
 
-# Copy the full workspace. .dockerignore strips node_modules, build outputs,
-# env files, and VCS metadata, so the context is small.
 COPY . .
 
-# `pnpm install --frozen-lockfile` runs once at the workspace root. The
-# BuildKit cache mount keeps pnpm's content-addressable store warm across
-# builds, so the first layer of every subsequent build is fast.
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm install --frozen-lockfile --ignore-scripts
 
-# Prisma client generation is a post-install-ish step that's skipped by
-# `--ignore-scripts` above. Run it explicitly here — every NestJS service
-# that touches the database imports from @szdevs/database.
 RUN pnpm --filter @szdevs/database prisma:generate
 
-# Build the target package AND everything it depends on (`^...` = deps,
-# not dependents). This is scoped so a change in an unrelated service
-# doesn't force a rebuild here.
 RUN pnpm --filter "${PACKAGE_NAME}^..." build \
     && pnpm --filter "${PACKAGE_NAME}" build
 
-# `pnpm deploy` creates a self-contained, prod-only copy at /app with
-# node_modules fully resolved (workspace:* links turned into real files).
-# This is what the runtime stage will ship — no source, no dev deps.
 RUN pnpm --filter "${PACKAGE_NAME}" --prod deploy /app
 
-# ---------------------------------------------------------------------------
-# Stage 3: runtime
-# ---------------------------------------------------------------------------
+# Copy generated Prisma client into the deployed package.
+# pnpm deploy strips .prisma (generated artifacts outside pnpm store).
+RUN set -e; \
+    SRC=$(find /repo/node_modules/.pnpm -maxdepth 4 -type d -name ".prisma" 2>/dev/null | head -1); \
+    DST_PKG=$(find /app/node_modules/.pnpm -maxdepth 3 -type d -name "node_modules" -path "*@prisma+client*" 2>/dev/null | head -1); \
+    if [ -n "$SRC" ] && [ -n "$DST_PKG" ]; then \
+        cp -r "$SRC" "$DST_PKG/"; \
+        echo "[prisma] copied $SRC -> $DST_PKG/"; \
+    else \
+        echo "[prisma] fallback: prisma generate in /app"; \
+        SCHEMA=$(find /app/node_modules -name "schema.prisma" 2>/dev/null | head -1); \
+        [ -n "$SCHEMA" ] || (echo "ERROR: no schema.prisma" && exit 1); \
+        /app/node_modules/.bin/prisma generate --schema="$SCHEMA"; \
+    fi
+
 FROM node:${NODE_VERSION} AS runtime
 ENV NODE_ENV=production
 
-# dumb-init = PID 1 that forwards signals and reaps zombies. Without it
-# `docker stop` leaves the Node process running until the 10s SIGKILL.
-RUN apk add --no-cache dumb-init libc6-compat \
+# openssl required by Prisma query engine at runtime.
+RUN apk add --no-cache dumb-init libc6-compat openssl \
     && rm -rf /var/cache/apk/*
 
 WORKDIR /app
 
-# Bring over the deployed package + its resolved prod node_modules.
 COPY --from=builder --chown=node:node /app /app
 
-# Drop privileges — `node:alpine` ships a pre-created `node` user.
 USER node
 
-# NestJS services default to their own port from env (AUTH_SERVICE_PORT, etc.)
-# but we expose 3001 as the canonical NestJS port. Compose overrides as needed.
 EXPOSE 3001
 
-# Healthcheck hits the service's /health route, which every NestJS app in
-# this monorepo implements via HealthController.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 3001) + '/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
