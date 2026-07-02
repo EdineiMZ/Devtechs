@@ -1,4 +1,4 @@
-// =============================================================================
+﻿// =============================================================================
 // SZDevs - Prisma schema
 //
 // Initial version: authentication & permissions domain only.
@@ -8,7 +8,6 @@
 
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -76,12 +75,12 @@ model User {
   rolesAssigned       UserRole[]       @relation("UserRoleAssignedBy")
   permissionsAssigned UserPermission[] @relation("UserPermissionAssignedBy")
 
-  // Inverse of Employee.userId — each User may have at most one employee
+  // Inverse of Employee.userId â€” each User may have at most one employee
   // profile in the RH module. Users without an employee profile are
   // typically admins / devs without an HR record.
   employee Employee?
 
-  // Projects module — every relation a user can have to a Project.
+  // Projects module â€” every relation a user can have to a Project.
   // Six named relations because Project / Task / TimeEntry each
   // touch User from multiple sides (owner, client, assignee,
   // reporter, member, time logger).
@@ -92,7 +91,7 @@ model User {
   tasksReported      Task[]          @relation("TaskReporter")
   timeEntries        TimeEntry[]
 
-  // Finance module — the user may play three roles against
+  // Finance module â€” the user may play three roles against
   // finance records. Named relations because FinanceTransaction
   // only touches the creator, while Invoice touches both the
   // client (billed party) and the creator (issuer), so a single
@@ -101,12 +100,12 @@ model User {
   invoicesAsClient           Invoice[]            @relation("InvoiceClient")
   invoicesCreated            Invoice[]            @relation("InvoiceCreator")
 
-  // Notifications module — in-app notifications addressed to
+  // Notifications module â€” in-app notifications addressed to
   // this user. Cascade on delete so removing a user also removes
   // their notification inbox (no orphan rows).
   notifications Notification[]
 
-  // Support module — a user can open tickets, be assigned to
+  // Support module â€” a user can open tickets, be assigned to
   // tickets, and author messages on tickets. Named relations
   // because Ticket touches User from multiple sides (client,
   // assignee) and we need Prisma to disambiguate.
@@ -114,28 +113,28 @@ model User {
   ticketsAssigned Ticket[]        @relation("TicketAssignee")
   ticketMessages  TicketMessage[] @relation("TicketMessageAuthor")
 
-  // DevOps module — a user may execute deployments. Restricted
+  // DevOps module â€” a user may execute deployments. Restricted
   // FK on delete so the audit trail survives user removal.
   deploymentsTriggered Deployment[] @relation("DeploymentDeployedBy")
 
-  // Payments module — subscriptions and payment history.
+  // Payments module â€” subscriptions and payment history.
   subscriptions Subscription[]
   payments      Payment[]
 
-  // License module — product bindings, tokens issued/revoked, activations.
+  // License module â€” product bindings, tokens issued/revoked, activations.
   clientProductBindings   ClientProductBinding[] @relation("LicenseClient")
   productBindingsGranted  ClientProductBinding[] @relation("LicenseAssignedBy")
   activationTokensOwned   ActivationToken[]      @relation("TokenClient")
   activationTokensIssued  ActivationToken[]      @relation("TokenIssuedBy")
   activationTokensRevoked ActivationToken[]      @relation("TokenRevokedBy")
 
-  // VPS management module — a user can be the client a VPS is
+  // VPS management module â€” a user can be the client a VPS is
   // attached to OR the operator who attached it. Two named relations
   // because both FKs target User.
   clientVps   ClientVPS[] @relation("ClientVPSClient")
   vpsAttached ClientVPS[] @relation("ClientVPSAttachedBy")
 
-  // 2FA recovery codes — one-time bypass codes the user can use
+  // 2FA recovery codes â€” one-time bypass codes the user can use
   // when they lose access to their authenticator app. Each code is
   // stored hashed (bcrypt) so a DB leak doesn't expose live codes.
   recoveryCodes TwoFactorRecoveryCode[]
@@ -323,7 +322,7 @@ model AuditLog {
   resourceId String?
   meta       Json             @default("{}")
   ipAddress  String?
-  /// Browser / client User-Agent header. Stored verbatim — useful for
+  /// Browser / client User-Agent header. Stored verbatim â€” useful for
   /// post-incident forensics (identify device type, browser, OS) without
   /// needing to join the sessions table (which may already be revoked).
   userAgent  String?
@@ -344,12 +343,12 @@ model AuditLog {
 }
 
 // =============================================================================
-// RH module — employees, positions, departments, documents.
+// RH module â€” employees, positions, departments, documents.
 //
 // Migration name: add_rh_module
 //
 // Design notes:
-//   - Employee.userId is nullable — not every person on HR's roster has
+//   - Employee.userId is nullable â€” not every person on HR's roster has
 //     a platform account. The link is a soft reference via SetNull so
 //     deleting a user keeps the employee row but detaches it.
 //   - Department.managerId points at an Employee (circular with
@@ -437,7 +436,7 @@ model Employee {
   // one is whichever has the latest `effectiveFrom <= now()`.
   workSchedules WorkSchedule[]
 
-  // Inverse of Department.managerId — this employee may manage zero
+  // Inverse of Department.managerId â€” this employee may manage zero
   // or more departments. Named so Prisma can disambiguate from the
   // DepartmentEmployees relation above.
   managedDepartments Department[] @relation("DepartmentManager")
@@ -495,7 +494,7 @@ model EmployeeDocument {
   type       EmployeeDocumentType @default(OTHER)
   /// Opaque key into the `@szdevs/storage` adapter (R2 or local).
   /// The storage adapter resolves this to the real object at download
-  /// time — this column is intentionally format-agnostic so swapping
+  /// time â€” this column is intentionally format-agnostic so swapping
   /// R2 for another S3 provider requires no schema change.
   fileKey    String
   fileSize   Int?
@@ -532,7 +531,7 @@ enum VacationRequestType {
 /// Vacation / absence request. Covers both planned vacations and
 /// ad-hoc absences (sick leave, personal, parental) under a single
 /// model, discriminated by the `type` enum. The whole lifecycle
-/// (request → review → approval/rejection → cancellation) is tracked
+/// (request â†’ review â†’ approval/rejection â†’ cancellation) is tracked
 /// in-place on the same row so HR can audit every decision without
 /// a separate history table.
 model VacationRequest {
@@ -541,7 +540,7 @@ model VacationRequest {
   type       VacationRequestType   @default(VACATION)
   startDate  DateTime              @db.Date
   endDate    DateTime              @db.Date
-  /// Number of business days the request covers — computed by the
+  /// Number of business days the request covers â€” computed by the
   /// service (excluding weekends) when the row is created. Stored
   /// rather than recomputed on every read so queries that filter by
   /// "days off this year" stay fast.
@@ -561,7 +560,7 @@ model VacationRequest {
   /// Free-text notes submitted by the requester, e.g. "trip to family
   /// wedding". Optional.
   notes           String?
-  /// Populated only when the request is REJECTED — the reviewer's
+  /// Populated only when the request is REJECTED â€” the reviewer's
   /// explanation, surfaced to the employee via the notification.
   rejectionReason String?
   updatedAt       DateTime  @updatedAt
@@ -578,7 +577,7 @@ model VacationRequest {
 }
 
 /// Weekly work schedule for an employee. A new row is created every
-/// time the schedule changes — the "current" schedule is whichever
+/// time the schedule changes â€” the "current" schedule is whichever
 /// row has the latest `effectiveFrom <= now()`. Previous rows are
 /// never updated or deleted, giving HR an immutable history.
 ///
@@ -602,7 +601,7 @@ model WorkSchedule {
   /// uniqueness per (employeeId, effectiveFrom) to prevent two
   /// schedules from claiming the same start date.
   effectiveFrom DateTime @db.Date
-  /// Optional free-text explanation — "reduced hours during maternity
+  /// Optional free-text explanation â€” "reduced hours during maternity
   /// leave", "remote Fridays", etc.
   notes         String?
 
@@ -637,18 +636,18 @@ model PerformanceReview {
 }
 
 // =============================================================================
-// Projects module — projects, sprints, kanban boards, tasks, time tracking.
+// Projects module â€” projects, sprints, kanban boards, tasks, time tracking.
 //
 // Migration name: add_projects_module
 //
 // Performance design:
 //   - Tasks carry an `order` int per column so the board query can
 //     return them sorted with a single index lookup. The `(columnId,
-//     order)` composite index is the hot path — every drag-and-drop
+//     order)` composite index is the hot path â€” every drag-and-drop
 //     and every board fetch uses it.
 //   - The board endpoint (`GET /projects/:id/board`) issues ONE
-//     Prisma query with nested includes — Prisma's join planner
-//     resolves it into 2-3 batched SQL queries (board → columns →
+//     Prisma query with nested includes â€” Prisma's join planner
+//     resolves it into 2-3 batched SQL queries (board â†’ columns â†’
 //     tasks), never N+1 per task.
 //   - `(boardId, order)` on Column for the column-ordering query.
 //   - Composite `(projectId, status)` on Project + Sprint for the
@@ -715,7 +714,7 @@ model Project {
   /// have no client. SetNull on user delete so the project history
   /// survives a user being removed.
   clientId String?
-  /// Project owner — the principal accountable person. Required.
+  /// Project owner â€” the principal accountable person. Required.
   /// Restricted on delete so we never orphan a project; admins must
   /// reassign ownership before deleting a user.
   ownerId  String
@@ -725,7 +724,7 @@ model Project {
   /// detail page to link to the repo directly.
   githubRepo String?
 
-  /// Overall project progress 0–100 (%) updated manually by the
+  /// Overall project progress 0â€“100 (%) updated manually by the
   /// project manager or computed from completed milestones.
   progressPercent Int @default(0)
 
@@ -747,12 +746,12 @@ model Project {
   costCenters         CostCenter[]
   invoices            Invoice[]
 
-  // DevOps module back-references — one project can own many
+  // DevOps module back-references â€” one project can own many
   // environments and many pipelines.
   environments Environment[]
   pipelines    Pipeline[]
 
-  // VPS bindings — a project can have one or more VPS attached.
+  // VPS bindings â€” a project can have one or more VPS attached.
   vpsBindings ClientVPS[]
 
   @@index([status])
@@ -815,7 +814,7 @@ model Sprint {
   tasks   Task[]
 
   @@index([projectId])
-  /// Composite — the "active sprint" lookup hits this directly.
+  /// Composite â€” the "active sprint" lookup hits this directly.
   @@index([projectId, status])
   @@map("project_sprints")
 }
@@ -840,7 +839,7 @@ model Column {
   boardId  String
   name     String
   /// Display order within the board. Hot index for the board fetch
-  /// (column ordering) — see `@@index([boardId, order])` below.
+  /// (column ordering) â€” see `@@index([boardId, order])` below.
   order    Int    @default(0)
   /// Optional Work-In-Progress limit (number of tasks allowed in
   /// this column). The service enforces it on `move-to-column`;
@@ -853,7 +852,7 @@ model Column {
   board Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
   tasks Task[]
 
-  /// Hot path — used by `GET /projects/:id/board` to fetch columns
+  /// Hot path â€” used by `GET /projects/:id/board` to fetch columns
   /// in display order in a single index range scan.
   @@index([boardId, order])
   @@map("project_columns")
@@ -865,7 +864,7 @@ model Task {
   /// Optional sprint assignment. Tasks in the backlog have no sprint.
   sprintId  String?
   /// The current Kanban column. Required because every task lives
-  /// on the board somewhere — the "backlog" is itself a column.
+  /// on the board somewhere â€” the "backlog" is itself a column.
   columnId  String
 
   title       String
@@ -877,17 +876,17 @@ model Task {
   /// Nullable for open work items (community-tagged tickets). When
   /// set, must be a member of the project (enforced by the service).
   assigneeId String?
-  /// The reporter is required — every task has someone who created
+  /// The reporter is required â€” every task has someone who created
   /// it. Restricted on delete so audit trails survive user removal.
   reporterId String
 
-  /// Decimal (10, 2) is plenty — no real task tracks fractional
+  /// Decimal (10, 2) is plenty â€” no real task tracks fractional
   /// minutes finer than 0.01h. Estimates are nullable because new
   /// tasks may not have a sizing yet.
   estimatedHours Decimal? @db.Decimal(10, 2)
   loggedHours    Decimal  @default(0) @db.Decimal(10, 2)
 
-  /// Optional deadline. Different from the sprint endDate — a task
+  /// Optional deadline. Different from the sprint endDate â€” a task
   /// can have its own due date inside a sprint or out of one.
   dueDate DateTime? @db.Date
 
@@ -916,7 +915,7 @@ model Task {
   subtasks    Task[]      @relation("TaskSubtasks")
   timeEntries TimeEntry[]
 
-  /// HOTTEST INDEX — every board fetch and every drag-and-drop hits
+  /// HOTTEST INDEX â€” every board fetch and every drag-and-drop hits
   /// this composite. With it, "all tasks in column X ordered by
   /// position" is one index range scan.
   @@index([columnId, order])
@@ -928,7 +927,7 @@ model Task {
   @@index([sprintId])
   /// "My open tasks" dashboard query.
   @@index([assigneeId, status])
-  /// Subtask resolution — used when expanding an epic.
+  /// Subtask resolution â€” used when expanding an epic.
   @@index([parentId])
   @@map("project_tasks")
 }
@@ -948,7 +947,7 @@ model TimeEntry {
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Restrict)
 
-  /// Burndown rollup — `(taskId, date)` is the composite the sprint
+  /// Burndown rollup â€” `(taskId, date)` is the composite the sprint
   /// burndown query groups on, so the per-day sum is an index-only
   /// scan instead of a heap scan.
   @@index([taskId, date])
@@ -957,21 +956,21 @@ model TimeEntry {
 }
 
 // =============================================================================
-// Finance module — transactions, cost centers, invoices.
+// Finance module â€” transactions, cost centers, invoices.
 //
 // Migration name: add_finance_module
 //
 // Design notes:
-//   - `FinanceTransaction` (not `Transaction`) — `Transaction` is a
+//   - `FinanceTransaction` (not `Transaction`) â€” `Transaction` is a
 //     reserved word inside the generated Prisma client (collides
 //     with `$transaction`), so the public model name is prefixed.
 //     The table is still mapped to `finance_transactions`.
 //   - Decimal(14, 2) everywhere so no real R$ amount ever overflows
-//     and cents are always preserved. 14 digits cover R$ 999 bilhões.
+//     and cents are always preserved. 14 digits cover R$ 999 bilhÃµes.
 //   - Every filterable column on FinanceTransaction has an index so
 //     the DRE / cashflow groupBy hits the index instead of the heap.
 //   - Composite `(status, dueDate)` index powers the daily OVERDUE
-//     sweep — the BullMQ job filters by exactly those two columns
+//     sweep â€” the BullMQ job filters by exactly those two columns
 //     (`status = PENDING AND dueDate < now()`), so the composite
 //     turns the sweep into an index range scan.
 //   - Invoice.number is generated by the service (YYYY-0001), kept
@@ -1010,7 +1009,7 @@ enum InvoiceStatus {
   REFUNDED
 }
 
-/// A single financial record — either income (customer payment,
+/// A single financial record â€” either income (customer payment,
 /// invoice settlement) or expense (payroll, infrastructure cost,
 /// tax). Drives the DRE and cash-flow reports.
 ///
@@ -1024,7 +1023,7 @@ model FinanceTransaction {
   category      FinanceTransactionCategory
   description   String
   /// The signed amount of the transaction. ALWAYS stored as a
-  /// positive number — direction (income vs expense) is encoded
+  /// positive number â€” direction (income vs expense) is encoded
   /// in `type`, never via sign. This makes aggregations simple
   /// and avoids signed/unsigned bugs in the DRE query.
   amount        Decimal                    @db.Decimal(14, 2)
@@ -1053,7 +1052,7 @@ model FinanceTransaction {
   costCenter CostCenter? @relation(fields: [costCenterId], references: [id], onDelete: SetNull)
   creator    User        @relation("FinanceTransactionCreator", fields: [createdBy], references: [id], onDelete: Restrict)
 
-  /// DRE / cashflow hot path — groupBy(type, category, date) slices
+  /// DRE / cashflow hot path â€” groupBy(type, category, date) slices
   /// by each column independently, so single-column indexes on the
   /// discriminators keep those queries index-only.
   @@index([type])
@@ -1063,7 +1062,7 @@ model FinanceTransaction {
   @@index([projectId])
   @@index([costCenterId])
   @@index([createdBy])
-  /// Hottest index — the daily OVERDUE sweep filters by
+  /// Hottest index â€” the daily OVERDUE sweep filters by
   /// `status = PENDING AND dueDate < now()`. The composite turns
   /// that sweep into a single index range scan.
   @@index([status, dueDate])
@@ -1095,8 +1094,8 @@ model CostCenter {
 }
 
 /// Configurable installment interest conditions used in transparent checkout.
-/// Each row represents one available installment option (e.g. "3× sem juros"
-/// or "6× com 1.99% a.m."). The checkout UI picks the right condition based
+/// Each row represents one available installment option (e.g. "3Ã— sem juros"
+/// or "6Ã— com 1.99% a.m."). The checkout UI picks the right condition based
 /// on the chosen installment count.
 model PaymentCondition {
   id           String  @id @default(cuid())
@@ -1116,7 +1115,7 @@ model PaymentCondition {
   @@map("finance_payment_conditions")
 }
 
-/// Customer-facing invoice — header row. Line items live in
+/// Customer-facing invoice â€” header row. Line items live in
 /// `InvoiceItem`. `subtotal`, `tax`, and `total` are all stored
 /// rather than recomputed on read so the PDF renderer and the
 /// financial reports see the same frozen values even if the
@@ -1179,13 +1178,13 @@ model InvoiceItem {
 }
 
 // =============================================================================
-// Notifications module — in-app notifications.
+// Notifications module â€” in-app notifications.
 //
 // Migration name: add_notifications
 //
 // Design notes:
 //   - `type` is a free-form string (not an enum) because the set of
-//     notification kinds evolves fast — the notification-service
+//     notification kinds evolves fast â€” the notification-service
 //     adds new ones without requiring a schema migration each time.
 //   - `read` is a denormalized boolean alongside `readAt` so the
 //     unread-count query is a simple index range scan instead of
@@ -1214,17 +1213,17 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  /// Hottest index — the inbox fetch filters by userId and the
+  /// Hottest index â€” the inbox fetch filters by userId and the
   /// unread flag in one composite range scan.
   @@index([userId, read])
-  /// Secondary — paginated history by recency for the full inbox.
+  /// Secondary â€” paginated history by recency for the full inbox.
   @@index([userId, createdAt])
   @@index([type])
   @@map("notifications")
 }
 
 // =============================================================================
-// Support module — tickets, messages, attachments, SLA.
+// Support module â€” tickets, messages, attachments, SLA.
 //
 // Migration name: add_support_module
 //
@@ -1233,7 +1232,7 @@ model Notification {
 //     cuid primary key so humans can reference "#1042" instead of a
 //     25-char opaque id. A Postgres sequence backs it; uniqueness is
 //     enforced at the DB level.
-//   - `status` has no `CANCELLED` value — closed tickets move to
+//   - `status` has no `CANCELLED` value â€” closed tickets move to
 //     CLOSED after RESOLVED, which makes SLA reporting simpler
 //     (RESOLVED means SLA fulfilled; CLOSED means the conversation
 //     is over and includes abandoned/duplicate cases).
@@ -1241,7 +1240,7 @@ model Notification {
 //     never overwritten. Drives the first-response-SLA metric.
 //   - `resolvedAt` is set when the status flips to RESOLVED. Drives
 //     the resolution-SLA metric. Re-opening a ticket does NOT clear
-//     resolvedAt — we keep the original for reporting and instead
+//     resolvedAt â€” we keep the original for reporting and instead
 //     stamp a new resolvedAt only if the agent re-resolves.
 //   - Hot indexes: (status), (assigneeId, status), (clientId, status)
 //     so the three main inbox queries are all index-only scans.
@@ -1332,7 +1331,7 @@ model TicketMessage {
   ticketId   String
   authorId   String
   body       String
-  /// Internal note — visible only to support staff, never to the
+  /// Internal note â€” visible only to support staff, never to the
   /// client. Enforced in the service layer, not at the DB.
   isInternal Boolean @default(false)
 
@@ -1369,7 +1368,7 @@ model TicketAttachment {
   @@map("support_ticket_attachments")
 }
 
-/// SLA policy — one active row per priority level. The service
+/// SLA policy â€” one active row per priority level. The service
 /// reads the row for the ticket's priority at creation time and
 /// computes `slaDeadline` from it. `isActive` lets ops toggle a
 /// policy on/off without deleting history.
@@ -1391,7 +1390,7 @@ model SLAPolicy {
 }
 
 // =============================================================================
-// DevOps module — environments, pipelines, deployments.
+// DevOps module â€” environments, pipelines, deployments.
 //
 // Migration name: add_devops_module
 //
@@ -1406,7 +1405,7 @@ model SLAPolicy {
 //     even if the same webhook fires twice.
 //   - `Pipeline.status` uses DB-managed enum with all four states.
 //     `duration` is stored on the row (precomputed when finishedAt
-//     lands) instead of recomputed on read — the list query stays
+//     lands) instead of recomputed on read â€” the list query stays
 //     index-only.
 //   - Hot indexes: `(projectId, status)` for the board,
 //     `(status)` for the "all running pipelines" filter,
@@ -1530,7 +1529,7 @@ model Pipeline {
   logs        PipelineLog[]
   deployments Deployment[]
 
-  /// Webhook idempotency — the webhook handler upserts on this
+  /// Webhook idempotency â€” the webhook handler upserts on this
   /// composite so the same delivery never creates two rows.
   @@unique([provider, externalId])
   @@index([projectId, status])
@@ -1544,7 +1543,7 @@ model PipelineLog {
   id         String            @id @default(cuid())
   pipelineId String
   /// Human-readable step name (usually the job/step name from
-  /// the provider — "install", "test", "deploy").
+  /// the provider â€” "install", "test", "deploy").
   step       String
   /// Raw output from the step. TEXT so huge logs don't overflow.
   /// The service caps per-row at 1MB when persisting via webhook.
@@ -1567,7 +1566,7 @@ model Deployment {
   deployedAt    DateTime         @default(now())
   rolledBackAt  DateTime?
   /// The user who triggered the deployment. Restricted on delete
-  /// so the audit trail survives — admins must reassign before
+  /// so the audit trail survives â€” admins must reassign before
   /// removing a user who has deployments on record.
   deployedBy    String
 
@@ -1583,7 +1582,7 @@ model Deployment {
 }
 
 // =============================================================================
-// Payments module — plans, subscriptions, payments, coupons.
+// Payments module â€” plans, subscriptions, payments, coupons.
 //
 // Migration name: add_payments_module
 //
@@ -1669,7 +1668,7 @@ model Subscription {
   currentPeriodStart DateTime
   currentPeriodEnd   DateTime
   cancelledAt        DateTime?
-  /// Trial end — null when the plan has trialDays=0.
+  /// Trial end â€” null when the plan has trialDays=0.
   trialEnd           DateTime?
 
   createdAt DateTime @default(now())
@@ -1688,7 +1687,7 @@ model Subscription {
 model Payment {
   id             String        @id @default(cuid())
   subscriptionId String?
-  /// Optional — links this payment to a specific Finance invoice.
+  /// Optional â€” links this payment to a specific Finance invoice.
   invoiceId      String?
   userId         String
   amount         Decimal       @db.Decimal(14, 2)
@@ -1697,12 +1696,12 @@ model Payment {
   status         PaymentStatus @default(PENDING)
   /// Provider payment id (MP payment_id / Stripe pi_xxx).
   externalId     String?       @unique
-  /// Checkout URL — the MP init_point or Stripe checkout
+  /// Checkout URL â€” the MP init_point or Stripe checkout
   /// session URL the frontend redirects to.
   externalUrl    String?
   paidAt         DateTime?
   expiresAt      DateTime?
-  /// Freeform provider-specific data — pix QR code, boleto
+  /// Freeform provider-specific data â€” pix QR code, boleto
   /// barcode, card last 4 digits, etc.
   metadata       Json          @default("{}")
 
@@ -1737,9 +1736,9 @@ model Coupon {
   @@map("payments_coupons")
 }
 
-// ──────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // License Module
-// ──────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 enum TokenStatus {
   ACTIVE
@@ -1784,7 +1783,7 @@ model ActivationToken {
   id           String      @id @default(cuid())
   /// UUID v4 activation key delivered to the client.
   key          String      @unique
-  /// SHA-256 hex digest of `key` — enables offline verification
+  /// SHA-256 hex digest of `key` â€” enables offline verification
   /// without exposing the raw key in the database.
   hash         String
   clientId     String
@@ -1830,7 +1829,7 @@ model TokenActivation {
 }
 
 // =============================================================================
-// VPS management module — links Hostinger VMs to internal clients.
+// VPS management module â€” links Hostinger VMs to internal clients.
 //
 // Migration name: add_vps_management
 //
@@ -1842,7 +1841,7 @@ model TokenActivation {
 //   - `clientId` is restricted on delete so we don't lose the link to
 //     a billing client by mistake. Detaching the VPS is an explicit
 //     operation (POST /vps/<id>/detach in the controller).
-//   - `notes` is internal-only — used by ops to remember things like
+//   - `notes` is internal-only â€” used by ops to remember things like
 //     "renew SSL on 2026-12", not exposed to clients.
 //   - All actuator actions (start/stop/restart/snapshot) audit through
 //     AuditLog with module = DEVELOPER and action = VPS_*.
@@ -1865,7 +1864,7 @@ model ClientVPS {
 
   /// Monthly billing price in BRL. Null = unmanaged (no auto-billing).
   monthlyPrice         Decimal?  @db.Decimal(14, 2)
-  /// Day-of-month (1–28) the recurring invoice is generated.
+  /// Day-of-month (1â€“28) the recurring invoice is generated.
   billingDayOfMonth    Int       @default(1)
   /// When the last auto-invoice was created for this VPS.
   lastBilledAt         DateTime?
@@ -1886,7 +1885,7 @@ model ClientVPS {
 }
 
 // =============================================================================
-// Company Settings — legal data shown on invoices, pages and documents.
+// Company Settings â€” legal data shown on invoices, pages and documents.
 //
 // Migration name: add_company_settings
 //
@@ -1900,16 +1899,16 @@ model ClientVPS {
 
 model CompanySettings {
   id                String  @id @default(cuid())
-  /// Singleton guard — this row is always `true`; unique prevents a second insert.
+  /// Singleton guard â€” this row is always `true`; unique prevents a second insert.
   singleton         Boolean @unique @default(true)
 
   name              String
   tradeName         String?
   /// CNPJ in digits-only format (14 chars). Formatted for display by the UI.
   cnpj              String?
-  /// Inscrição Estadual
+  /// InscriÃ§Ã£o Estadual
   stateRegistration String?
-  /// Inscrição Municipal
+  /// InscriÃ§Ã£o Municipal
   municipalRegistration String?
 
   email             String?
@@ -1923,7 +1922,7 @@ model CompanySettings {
   addressNeighborhood String?
   addressCity       String?
   addressState      String?
-  /// Brazilian CEP — 8 digits
+  /// Brazilian CEP â€” 8 digits
   addressZip        String?
 
   /// Payment address if different from operational address

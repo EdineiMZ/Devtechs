@@ -1,12 +1,12 @@
-# syntax=docker/dockerfile:1.6
+﻿# syntax=docker/dockerfile:1.6
 #
 # =============================================================================
-# SZDevs — Next.js app image
+# SZDevs â€” Next.js app image
 #
 # Multi-stage build for any workspace under `apps/*`, using Next's
 # `output: 'standalone'` mode. The standalone build produces a minimal
 # server.js with its own hand-picked node_modules subset (~50MB vs ~800MB
-# for a naive copy) — that's what the runtime stage ships.
+# for a naive copy) â€” that's what the runtime stage ships.
 #
 #   docker build \
 #     --file Dockerfile.app \
@@ -33,7 +33,7 @@ FROM node:${NODE_VERSION} AS base
 ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
 RUN corepack enable && corepack prepare pnpm@9 --activate
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /repo
 
 # ---------------------------------------------------------------------------
@@ -54,17 +54,18 @@ ENV TURBO_TELEMETRY_DISABLED=1
 COPY . .
 
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile --ignore-scripts
+    NODE_ENV=development pnpm install --frozen-lockfile --ignore-scripts
 
 # Prisma client is needed by any app that imports @szdevs/database.
 # Harmless on apps that don't touch it.
-RUN pnpm --filter @szdevs/database prisma:generate
+RUN /repo/node_modules/.bin/prisma generate --schema=/repo/packages/database/prisma/schema.prisma || true
 
 # Build the target app (and its workspace deps). Standalone output lands
 # under apps/<name>/.next/standalone and the static chunks under
 # apps/<name>/.next/static.
 RUN pnpm --filter "${PACKAGE_NAME}^..." build \
-    && pnpm --filter "${PACKAGE_NAME}" build
+    && pnpm --filter "${PACKAGE_NAME}" build \
+    && mkdir -p "/repo/apps/${APP_NAME}/public"
 
 # ---------------------------------------------------------------------------
 # Stage 3: runtime

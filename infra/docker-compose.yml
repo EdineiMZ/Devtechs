@@ -372,6 +372,7 @@ services:
       - ../.env
     environment:
       PORT: 4000
+      SZDEVS_API_URL: ${SZDEVS_API_URL:-http://172.16.1.1:5100}
     expose:
       - "4000"
     networks:

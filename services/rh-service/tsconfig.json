@@ -11,13 +11,7 @@
     "sourceMap": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "baseUrl": ".",
-    "paths": {
-      "@szdevs/database": ["../../packages/database/dist"],
-      "@szdevs/database/*": ["../../packages/database/dist/*"],
-      "@szdevs/storage": ["../../packages/storage/dist"],
-      "@szdevs/storage/*": ["../../packages/storage/dist/*"]
-    }
+    "baseUrl": "."
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "test"]

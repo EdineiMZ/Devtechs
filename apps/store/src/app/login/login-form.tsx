@@ -19,27 +19,35 @@ export function LoginForm() {
     setError('');
     setLoading(true);
 
-    const res = await signIn('credentials', {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const res = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      });
 
-    setLoading(false);
+      setLoading(false);
 
-    if (res?.error) {
-      setError('Email ou senha invalidos');
-      return;
+      if (res?.error) {
+        setError('Email ou senha inválidos');
+        return;
+      }
+
+      router.push(callbackUrl);
+      router.refresh();
+    } catch {
+      setLoading(false);
+      setError('Email ou senha inválidos');
     }
-
-    router.push(callbackUrl);
-    router.refresh();
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error ? (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div
+          role="alert"
+          className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
           {error}
         </div>
       ) : null}

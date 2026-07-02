@@ -44,7 +44,6 @@ RUN set -e; \
         [ -n "$SCHEMA" ] || (echo "ERROR: no schema.prisma" && exit 1); \
         /app/node_modules/.bin/prisma generate --schema="$SCHEMA"; \
     fi
-
 FROM node:${NODE_VERSION} AS runtime
 ENV NODE_ENV=production
 
