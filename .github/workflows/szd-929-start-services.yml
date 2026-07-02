@@ -16,30 +16,39 @@ jobs:
           key: ${{ secrets.PROD_SSH_KEY }}
           command_timeout: 5m
           script: |
-            cd /opt/szdevs/infra
-
-            echo "=== Starting all prod services (no rebuild) ==="
-            docker compose --profile prod up -d --remove-orphans
+            echo "=== Starting NestJS services directly (bypassing compose/nginx conflict) ==="
+            docker start \
+              SZDevs-auth-service \
+              SZDevs-developer-service \
+              SZDevs-rh-service \
+              SZDevs-devops-service \
+              SZDevs-notification-service \
+              SZDevs-license-service \
+              SZDevs-finance-service \
+              SZDevs-payments-service \
+              SZDevs-projects-service \
+              SZDevs-support-service \
+              SZDevs-store \
+              || true
 
             echo "=== Waiting 20s for services to stabilize ==="
             sleep 20
 
             echo "=== Container states ==="
-            docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Image}}" | grep -i "szdevs\|infra" | head -30
+            docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Image}}" | grep -i "szdevs\|infra" | head -20
 
-            echo "=== Checking auth-service logs for MODULE_NOT_FOUND ==="
-            docker logs SZDevs-auth-service --tail 30 2>&1 | grep -i "module_not_found\|Cannot find module" || echo "NO MODULE_NOT_FOUND in auth-service"
-
-            echo "=== Checking all NestJS service logs for MODULE_NOT_FOUND ==="
+            echo "=== Checking NestJS services for MODULE_NOT_FOUND ==="
+            FAIL_COUNT=0
             for svc in auth-service developer-service devops-service notification-service license-service finance-service payments-service projects-service support-service rh-service; do
-              RESULT=$(docker logs SZDevs-$svc --tail 20 2>&1 | grep -i "Cannot find module" || true)
+              RESULT=$(docker logs SZDevs-$svc --tail 30 2>&1 | grep -i "Cannot find module" || true)
               if [ -n "$RESULT" ]; then
                 echo "FAIL $svc: $RESULT"
+                FAIL_COUNT=$((FAIL_COUNT+1))
               else
                 echo "OK $svc: no MODULE_NOT_FOUND"
               fi
             done
 
+            echo "=== MODULE_NOT_FOUND failures: $FAIL_COUNT ==="
             echo "=== HTTP health check ==="
-            HTTP=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/health 2>/dev/null || echo "000")
-            echo "Health check HTTP: $HTTP"
+            curl -s -o /dev/null -w "Health HTTP: %{http_code}\n" http://localhost/health 2>/dev/null || echo "Health check failed"
